@@ -16,7 +16,7 @@ public class JwtTokenProvider {
 
     public JwtTokenProvider() {
         this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    }
+    } // TODO: 추후에 비밀키로 관리할 것
 
     public String createAccessToken(Long userId) {
         Date now = new Date();
