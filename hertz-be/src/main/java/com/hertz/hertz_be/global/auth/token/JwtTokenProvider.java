@@ -53,4 +53,16 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody(); // Claims(payload 부분)만 반환
     }
+
+    public String createRefreshToken(Long userId) {
+        Date now = new Date();
+        Date expiryDate = Date.from(Instant.now().plus(14, ChronoUnit.DAYS));
+
+        return Jwts.builder()
+                .setSubject(userId.toString())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
 }
