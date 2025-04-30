@@ -18,11 +18,11 @@ public class UserOauth {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @Column(name = "provider_id", nullable = false)
-    private Long providerId;
+    private String providerId;
 
     @Column(nullable = false, length = 10)
     private String provider;
