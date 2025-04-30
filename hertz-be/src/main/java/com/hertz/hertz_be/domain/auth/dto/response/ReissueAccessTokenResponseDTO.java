@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.auth.dto.response;
+package com.hertz.hertz_be.domain.auth.dto.response;
 
 public class ReissueAccessTokenResponseDTO {
     private final String accessToken;

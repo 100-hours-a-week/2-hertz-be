@@ -1,8 +1,8 @@
-package com.hertz.hertz_be.auth.controller;
+package com.hertz.hertz_be.domain.auth.controller;
 
-import com.hertz.hertz_be.auth.dto.response.ReissueAccessTokenResponseDTO;
-import com.hertz.hertz_be.auth.service.AuthTokenService;
-import com.hertz.hertz_be.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
+import com.hertz.hertz_be.domain.auth.service.AuthTokenService;
+import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.Cookie;

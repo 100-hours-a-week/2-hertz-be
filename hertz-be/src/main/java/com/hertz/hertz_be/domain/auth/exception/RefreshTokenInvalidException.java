@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.auth.exception;
+package com.hertz.hertz_be.domain.auth.exception;
 
 import com.hertz.hertz_be.global.common.ResponseCode;
 

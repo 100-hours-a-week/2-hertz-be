@@ -1,7 +1,7 @@
 package com.hertz.hertz_be.global;
 
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.auth.service.RefreshTokenService;
+import com.hertz.hertz_be.domain.auth.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

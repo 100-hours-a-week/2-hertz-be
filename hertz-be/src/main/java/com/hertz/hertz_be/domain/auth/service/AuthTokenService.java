@@ -1,7 +1,7 @@
-package com.hertz.hertz_be.auth.service;
+package com.hertz.hertz_be.domain.auth.service;
 
-import com.hertz.hertz_be.auth.dto.response.ReissueAccessTokenResponseDTO;
-import com.hertz.hertz_be.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
+import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;

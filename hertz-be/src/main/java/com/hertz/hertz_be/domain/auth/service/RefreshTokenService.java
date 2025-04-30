@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.auth.service;
+package com.hertz.hertz_be.domain.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
