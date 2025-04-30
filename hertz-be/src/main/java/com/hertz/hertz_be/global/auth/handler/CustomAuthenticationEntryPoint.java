@@ -26,7 +26,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         response.setContentType("application/json;charset=UTF-8");
 
         Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("code", ResponseCode.UNAUTHORIZED); // TODO: 추후에 상수화 처리 할 것
+        errorResponse.put("code", ResponseCode.UNAUTHORIZED); // TODO: 추후에 ResponceCode로 수정 될 예정
         errorResponse.put("message", "지정한 리소스에 대한 액세스 권한이 없습니다.");
         errorResponse.put("data", null);
 
