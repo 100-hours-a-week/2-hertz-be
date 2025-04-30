@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll() // TODO: 추후에 프론트엔드 서버와 AI 서버 도메인만 남기기
+                        .requestMatchers("/auth/**","/api/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll() // TODO: 추후에 수정
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
