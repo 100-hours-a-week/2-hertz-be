@@ -8,10 +8,27 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.hertz.hertz_be.domain.auth")
 public class AuthExceptionHandler {
-    @ExceptionHandler(RefreshTokenInvalidException.class)
-    public ResponseEntity<?> handleRefreshTokenError(RefreshTokenInvalidException ex) {
+
+    @ExceptionHandler({
+            RefreshTokenInvalidException.class,
+            ProviderInvalidException.class,
+            OAuthStateInvalidException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> handleAuthBadRequestExceptions(RuntimeException ex) {
+        String code = ((BaseAuthException) ex).getCode();
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(new ResponseDto<>(ex.getCode(), ex.getMessage(), null));
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
     }
+
+    @ExceptionHandler({
+            RateLimitException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> handleAuthTooManyRequestExceptions(RuntimeException ex) {
+        String code = ((BaseAuthException) ex).getCode();
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
+    }
+
 }

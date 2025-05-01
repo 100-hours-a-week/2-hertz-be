@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.auth.service;
 
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ import java.util.Map;
 public class AuthService {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenService;
 
     public Map.Entry<ReissueAccessTokenResponseDTO, String> reissueAccessToken(String refreshToken) {
         try {

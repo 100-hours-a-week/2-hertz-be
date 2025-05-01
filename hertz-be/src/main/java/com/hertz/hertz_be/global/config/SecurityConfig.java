@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**","/api/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll() // TODO: 추후에 수정
+                        .requestMatchers("/auth/**","/api/**", "/swagger-ui/**", "/v3/api-docs/**", "/signup/**").permitAll() // TODO: 추후에 수정
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)

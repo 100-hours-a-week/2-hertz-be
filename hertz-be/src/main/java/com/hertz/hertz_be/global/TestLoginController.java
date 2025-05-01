@@ -1,7 +1,7 @@
 package com.hertz.hertz_be.global;
 
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.domain.auth.service.RefreshTokenService;
+import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +13,9 @@ import java.util.Map;
 public class TestLoginController {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenService;
 
-    public TestLoginController(JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService) {
+    public TestLoginController(JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
     }
