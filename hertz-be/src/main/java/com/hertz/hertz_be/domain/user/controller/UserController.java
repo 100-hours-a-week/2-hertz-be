@@ -18,6 +18,11 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * 사용자 생성
+     * @param userInfoRequestDto
+     * @author daisy.lee
+     */
     @PostMapping("/users")
     public ResponseEntity<ResponseDto<UserInfoResponseDto>> createUser(@RequestBody UserInfoRequestDto userInfoRequestDto) {
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
@@ -25,9 +30,12 @@ public class UserController {
         return ResponseEntity.ok(
                 new ResponseDto<>("PROFILE_SAVED_SUCCESSFULLY", "개인정보가 정상적으로 저장되었습니다.", userInfoResponseDto)
         );
-
     }
 
+    /**
+     * 랜덤 닉네임 반환
+     * @author daisy.lee
+     */
     @GetMapping("/nickname")
     public ResponseEntity<ResponseDto<Map<String, String>>> generateNickname() {
         String nickname = userService.fetchRandomNickname();
@@ -36,4 +44,6 @@ public class UserController {
                 new ResponseDto<>("NICKNAME_CREATED", "닉네임이 성공적으로 생성되었습니다.", data)
         );
     }
+
+
 }

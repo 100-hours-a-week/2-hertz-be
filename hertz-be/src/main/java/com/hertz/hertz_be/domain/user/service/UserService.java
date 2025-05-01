@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -69,7 +68,7 @@ public class UserService {
 
         while (true) {
             if (System.nanoTime() - startTime > timeoutNanos) {
-                throw new UserException("NICKNAME_GENERATION_TIMEOUT", "10초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
+                throw new UserException("NICKNAME_GENERATION_TIMEOUT", "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
             }
 
             String nickname;
