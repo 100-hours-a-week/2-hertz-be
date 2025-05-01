@@ -6,8 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.hertz.hertz_be.auth") // TODO: 병합 이후에 경로 수정
-public class RefreshTokenExceptionHandler {
+@RestControllerAdvice(basePackages = "com.hertz.hertz_be.domain.auth")
+public class AuthExceptionHandler {
     @ExceptionHandler(RefreshTokenInvalidException.class)
     public ResponseEntity<?> handleRefreshTokenError(RefreshTokenInvalidException ex) {
         return ResponseEntity
