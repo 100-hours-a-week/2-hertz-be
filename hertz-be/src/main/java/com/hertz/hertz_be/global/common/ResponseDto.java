@@ -13,4 +13,12 @@ public class ResponseDto<T> {
         this.message = message;
         this.data = data;
     }
+
+    public String getCode() {
+        return this.code;
+    }
+
+    public T getData() {
+        return this.data;
+    }
 }
