@@ -1,9 +1,11 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -33,18 +35,14 @@ public class SignalRoom {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "sender_matching_status", nullable = false, length = 15)
-    private String senderMatchingStatus;
+    private MatchingStatus senderMatchingStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "receiver_matching_status", nullable = false, length = 15)
-    private String receiverMatchingStatus;
+    private MatchingStatus receiverMatchingStatus;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }
 
