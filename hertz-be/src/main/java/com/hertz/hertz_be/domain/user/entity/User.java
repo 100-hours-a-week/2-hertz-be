@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.entity;
 
+import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
@@ -78,4 +79,7 @@ public class User {
 
     @OneToMany(mappedBy = "receiverUser")
     private List<SignalRoom> receivedSignalRooms = new ArrayList<>();
+
+    @OneToMany(mappedBy = "senderUserId")
+    private List<SignalMessage> sendMessages = new ArrayList<>();
 }
