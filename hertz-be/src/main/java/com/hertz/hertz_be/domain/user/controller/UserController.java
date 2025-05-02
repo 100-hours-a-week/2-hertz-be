@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.user.controller;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.service.UserService;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +29,7 @@ public class UserController {
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
         return ResponseEntity.ok(
-                new ResponseDto<>("PROFILE_SAVED_SUCCESSFULLY", "개인정보가 정상적으로 저장되었습니다.", userInfoResponseDto)
+                new ResponseDto<>(ResponseCode.PROFILE_SAVED_SUCCESSFULLY, "개인정보가 정상적으로 저장되었습니다.", userInfoResponseDto)
         );
     }
 
@@ -41,9 +42,11 @@ public class UserController {
         String nickname = userService.fetchRandomNickname();
         Map<String, String> data = Map.of("nickname", nickname);
         return ResponseEntity.ok(
-                new ResponseDto<>("NICKNAME_CREATED", "닉네임이 성공적으로 생성되었습니다.", data)
+                new ResponseDto<>(ResponseCode.NICKNAME_CREATED, "닉네임이 성공적으로 생성되었습니다.", data)
         );
     }
+
+
 
 
 }

@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,8 +20,8 @@ import org.springframework.web.client.RestTemplate;
 public class UserService {
     private final UserRepository userRepository;
     private final RedisTemplate<String, Object> redisTemplate;
-    private UserInfoResponseDto userInfoResponseDto;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
     @Value("${external.api.nickname-url}")
     private String NICKNAME_API_URL;
@@ -63,11 +64,10 @@ public class UserService {
     }
 
     public String fetchRandomNickname() {
-        final long timeoutNanos = 5_000_000_000L; // 5초 = 5_000_000_000 나노초
         final long startTime = System.nanoTime();
 
         while (true) {
-            if (System.nanoTime() - startTime > timeoutNanos) {
+            if (System.nanoTime() - startTime > TIMEOUT_NANOS) {
                 throw new UserException("NICKNAME_GENERATION_TIMEOUT", "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
             }
 
@@ -75,7 +75,7 @@ public class UserService {
             try {
                 nickname = callExternalNicknameApi();
             } catch (Exception e) {
-                throw new UserException("NICKNAME_API_FAILED", "닉네임 생성 API 호출 실패", e);
+                throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 호출 실패");
             }
 
             if (!userRepository.existsByNickname(nickname)) {
@@ -89,6 +89,6 @@ public class UserService {
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             return response.getBody().trim();
         }
-        throw new UserException("NICKNAME_API_FAILED", "닉네임 생성 API 응답 실패");
+        throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 응답 실패");
     }
 }

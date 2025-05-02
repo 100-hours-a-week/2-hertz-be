@@ -3,8 +3,10 @@ package com.hertz.hertz_be.domain.interests.controller;
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.response.UserInterestsResponseDto;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,11 +28,12 @@ public class InterestsController {
      * @author daisy.lee
      */
     @PostMapping("/users/interests")
-    public ResponseEntity<ResponseDto<UserInterestsResponseDto>> createUser(@RequestBody UserInterestsRequestDto userInterestsRequestDto) throws Exception {
-        interestsService.saveUserInterests(userInterestsRequestDto);
+    public ResponseEntity<ResponseDto<UserInterestsResponseDto>> createUser(@RequestBody UserInterestsRequestDto userInterestsRequestDto,
+                                                                            @AuthenticationPrincipal Long userId) throws Exception {
+        interestsService.saveUserInterests(userInterestsRequestDto, userId);
 
         return ResponseEntity.ok(
-                new ResponseDto<>("PROFILE_SAVED_SUCCESSFULLY", "개인정보가 정상적으로 저장되었습니다.", null)
+                new ResponseDto<>(ResponseCode.INTERESTS_SAVED_SUCCESSFULLY, "개인정보가 정상적으로 저장되었습니다.", null)
         );
     }
 }

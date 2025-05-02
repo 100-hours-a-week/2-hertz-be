@@ -9,8 +9,9 @@ import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryItemRepos
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.UserContext;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,11 +29,11 @@ public class InterestsService {
     private final UserRepository userRepository;
 
     @Transactional
-    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto) throws Exception {
+    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) throws Exception {
         Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
         Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
-        User user = userRepository.findById(UserContext.getCurrentUserId())
-                .orElseThrow(() -> new Exception("사용자 없음"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
 
         // 키워드 처리
         keywordsMap.forEach((categoryName, itemName) -> {
