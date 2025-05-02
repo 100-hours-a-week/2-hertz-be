@@ -1,8 +1,10 @@
 package com.hertz.hertz_be.domain.user.entity.enums;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
+@RequiredArgsConstructor
 public enum AgeGroup {
 
     AGE_20S("20대"),
@@ -12,8 +14,4 @@ public enum AgeGroup {
     AGE_60_PLUS("60대 이상");
 
     private final String label;
-
-    AgeGroup(String label) {
-        this.label = label;
-    }
 }
