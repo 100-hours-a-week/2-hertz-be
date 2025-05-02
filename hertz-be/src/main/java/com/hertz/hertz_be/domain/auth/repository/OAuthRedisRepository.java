@@ -26,11 +26,11 @@ public class OAuthRedisRepository {
         redisTemplate.opsForValue().set(key, value, Duration.ofDays(2));
     }
 
-    public String get(String providerId) {
+    public String get(String providerId) { //Todo: 메서드 네임 리팩토링 필요
         return redisTemplate.opsForValue().get(PREFIX + providerId);
     }
 
-    public void delete(String providerId) {
+    public void delete(String providerId) { //Todo: 메서드 네임 리팩토링 필요
         redisTemplate.delete(PREFIX + providerId);
     }
 }
