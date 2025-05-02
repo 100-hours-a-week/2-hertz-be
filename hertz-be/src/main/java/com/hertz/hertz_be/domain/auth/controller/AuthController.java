@@ -1,8 +1,8 @@
-package com.hertz.hertz_be.auth.controller;
+package com.hertz.hertz_be.domain.auth.controller;
 
-import com.hertz.hertz_be.auth.dto.response.ReissueAccessTokenResponseDTO;
-import com.hertz.hertz_be.auth.service.AuthTokenService;
-import com.hertz.hertz_be.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
+import com.hertz.hertz_be.domain.auth.service.AuthService;
+import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.Cookie;
@@ -19,7 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthTokenService authTokenService;
+    private final AuthService authTokenService;
 
     @PostMapping("/v1/auth/token")
     public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDTO>> reissueAccessToken(

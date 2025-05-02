@@ -1,14 +1,14 @@
-package com.hertz.hertz_be.auth.service;
+package com.hertz.hertz_be.domain.auth.repository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
 
-@Service
+@Repository
 @RequiredArgsConstructor
-public class RefreshTokenService {
+public class RefreshTokenRepository {
 
     private final StringRedisTemplate redisTemplate;
     private static final String REFRESH_TOKEN_PREFIX = "RT:";

@@ -1,7 +1,7 @@
 package com.hertz.hertz_be.global;
 
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.auth.service.RefreshTokenService;
+import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,13 +9,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api")
 public class TestLoginController {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenService;
 
-    public TestLoginController(JwtTokenProvider jwtTokenProvider, RefreshTokenService refreshTokenService) {
+    public TestLoginController(JwtTokenProvider jwtTokenProvider, RefreshTokenRepository refreshTokenService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
     }
@@ -44,5 +44,10 @@ public class TestLoginController {
         // Access Token은 JSON body로 반환
         return ResponseEntity.ok()
                 .body(Map.of("accessToken", accessToken));
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong");
     }
 }

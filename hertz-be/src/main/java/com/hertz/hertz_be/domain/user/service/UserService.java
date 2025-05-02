@@ -92,3 +92,4 @@ public class UserService {
         throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 응답 실패");
     }
 }
+
