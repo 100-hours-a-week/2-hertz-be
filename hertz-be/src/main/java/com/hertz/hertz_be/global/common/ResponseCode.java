@@ -30,4 +30,9 @@ public class ResponseCode {
     public static final String INTERESTS_SAVED_SUCCESSFULLY = "INTERESTS_SAVED_SUCCESSFULLY";
     public static final String EMPTY_LIST_NOT_ALLOWED = "EMPTY_LIST_NOT_ALLOWED";
 
+    //시그널 관련 응답 code
+    public static final String SIGNAL_ROOM_CREATED = "SIGNAL_ROOM_CREATED";
+    public static final String USER_DEACTIVATED = "USER_DEACTIVATED";
+    public static final String ALREADY_IN_CONVERSATION = "ALREADY_IN_CONVERSATION";
+
 }
