@@ -17,7 +17,7 @@ import jakarta.validation.constraints.NotNull;
 public class UserInfoRequestDto {
 
     @NotBlank
-    private Long providerId;
+    private String providerId;
 
     @NotBlank
     private String provider;
