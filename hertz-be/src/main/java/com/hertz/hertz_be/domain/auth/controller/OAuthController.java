@@ -19,7 +19,7 @@ public class OAuthController {
 
     private final OAuthService oAuthService;
 
-    @GetMapping("/v1/oauth/{provider}/redirect")
+    @GetMapping("/v1/oauth/{provider}/redirection")
     public ResponseEntity<Void> getOAuthRedirectUrl(@PathVariable String provider) {
         String url = oAuthService.getRedirectUrl(provider);
         return ResponseEntity.status(302)
