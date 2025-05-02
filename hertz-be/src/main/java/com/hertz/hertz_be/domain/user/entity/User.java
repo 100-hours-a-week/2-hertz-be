@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.entity;
 
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import com.hertz.hertz_be.domain.user.entity.enums.MembershipType;
@@ -9,6 +10,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "user")
@@ -69,4 +72,10 @@ public class User {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "senderUser")
+    private List<SignalRoom> sentSignalRooms = new ArrayList<>();
+
+    @OneToMany(mappedBy = "receiverUser")
+    private List<SignalRoom> receivedSignalRooms = new ArrayList<>();
 }
