@@ -25,6 +25,7 @@ public class ResponseCode {
     public static final String DUPLICATE_NICKNAME = "DUPLICATE_NICKNAME";
     public static final String NICKNAME_CREATED = "NICKNAME_CREATED";
     public static final String NICKNAME_API_FAILED = "NICKNAME_API_FAILED";
+    public static final String NICKNAME_GENERATION_TIMEOUT = "NICKNAME_GENERATION_TIMEOUT";
 
     // 취향 선택 응답 code
     public static final String INTERESTS_SAVED_SUCCESSFULLY = "INTERESTS_SAVED_SUCCESSFULLY";
