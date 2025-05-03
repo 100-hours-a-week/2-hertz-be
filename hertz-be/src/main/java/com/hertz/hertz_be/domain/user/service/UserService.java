@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.domain.user.service;
 
-import com.hertz.hertz_be.domain.user.dto.OauthTokenInfo;
+import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -8,6 +8,7 @@ import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.ResponseCode;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -15,10 +16,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final OAuthRedisRepository oauthRedisRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
@@ -27,20 +31,23 @@ public class UserService {
     private String NICKNAME_API_URL;
 
 
-    public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
+    public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto, HttpServletRequest request) {
+
         // 랜덤 닉네임 반환 (무한루프)
+        String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
 
-        String redisKey = "kakao:oauth:providerId:" + userInfoRequestDto.getProviderId();
-
-        OauthTokenInfo tokenInfo = (OauthTokenInfo) redisTemplate.opsForValue().get(redisKey);
-        if (tokenInfo == null) {
-            // throw new InvalidOauthStateException("OAuth 인증 정보가 만료되었거나 존재하지 않습니다.");
+        if (redisValue == null) {
+            throw new UserException(ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 올바르지 않습니다.");
         }
+
+        String refreshTokenValue = redisValue.split(",")[0];
+        LocalDateTime refreshTokenExpiredAt = LocalDateTime.parse(redisValue.split(",")[1]);
 
         User user = User.builder()
                 .ageGroup(userInfoRequestDto.getAgeGroup())
                 .profileImageUrl(userInfoRequestDto.getProfileImage())
                 .nickname(userInfoRequestDto.getNickname())
+                .email(userInfoRequestDto.getEmail())
                 .gender(userInfoRequestDto.getGender())
                 .oneLineIntroduction(userInfoRequestDto.getOneLineIntroduction())
                 .build();
@@ -48,8 +55,8 @@ public class UserService {
         UserOauth userOauth = UserOauth.builder()
                 .provider(userInfoRequestDto.getProvider())
                 .providerId(userInfoRequestDto.getProviderId())
-                .refreshToken(tokenInfo.getRefreshToken())
-                .refreshTokenExpiresAt(tokenInfo.getRefreshTokenExpiresAt())
+                .refreshToken(refreshTokenValue)
+                .refreshTokenExpiresAt(refreshTokenExpiredAt)
                 .user(user)
                 .build();
 
@@ -59,6 +66,8 @@ public class UserService {
 
         return UserInfoResponseDto.builder()
                 .userId(savedUser.getId())
+                .accessToken((String) request.getAttribute("accessToken"))
+                .refreshToken(refreshTokenValue)
                 .build();
 
     }
@@ -68,7 +77,7 @@ public class UserService {
 
         while (true) {
             if (System.nanoTime() - startTime > TIMEOUT_NANOS) {
-                throw new UserException("NICKNAME_GENERATION_TIMEOUT", "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
+                throw new UserException(ResponseCode.NICKNAME_GENERATION_TIMEOUT, "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
             }
 
             String nickname;

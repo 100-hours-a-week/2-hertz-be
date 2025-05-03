@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UserInfoResponseDto {
     private Long userId;
-    private String nickname;
-    private String profileImage;
+    private String accessToken;
+    private String refreshToken;
 }
