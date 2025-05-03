@@ -21,7 +21,7 @@ public class UserOauth {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "provider_id", nullable = false)
+    @Column(name = "provider_id", nullable = false, unique = true)
     private String providerId;
 
     @Column(nullable = false, length = 10)
