@@ -17,13 +17,16 @@ import jakarta.validation.constraints.NotNull;
 public class UserInfoRequestDto {
 
     @NotBlank
-    private Long providerId;
+    private String providerId;
 
     @NotBlank
     private String provider;
 
     @NotBlank
     private String profileImage;
+
+    @NotBlank
+    private String email;
 
     @NotBlank
     private String nickname;
@@ -36,4 +39,6 @@ public class UserInfoRequestDto {
 
     @NotBlank
     private String oneLineIntroduction;
+
+
 }
