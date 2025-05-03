@@ -30,9 +30,8 @@ public class UserController {
      */
     @PostMapping("/users")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(@RequestBody UserInfoRequestDto userInfoRequestDto,
-                                                                       HttpServletResponse response,
-                                                                       HttpServletRequest request) {
-        UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto, request);
+                                                                       HttpServletResponse response) {
+        UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
         Cookie refreshTokenCookie = new Cookie("refreshToken", userInfoResponseDto.getRefreshToken());
         refreshTokenCookie.setHttpOnly(true);

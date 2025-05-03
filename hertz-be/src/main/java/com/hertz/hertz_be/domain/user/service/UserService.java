@@ -7,11 +7,10 @@ import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,7 +23,7 @@ import java.time.LocalDateTime;
 public class UserService {
     private final UserRepository userRepository;
     private final OAuthRedisRepository oauthRedisRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
@@ -32,7 +31,7 @@ public class UserService {
     private String NICKNAME_API_URL;
 
 
-    public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto, HttpServletRequest request) {
+    public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
 
         // 랜덤 닉네임 반환 (무한루프)
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
@@ -43,6 +42,7 @@ public class UserService {
 
         String refreshTokenValue = redisValue.split(",")[0];
         LocalDateTime refreshTokenExpiredAt = LocalDateTime.parse(redisValue.split(",")[1]);
+
         // 현재 시간과 refreshToken의 만료 일시까지를 계산 (cookie 만료 시간 설정 시 만료일자를 정할 수 없기 때문)
         long secondsUntilExpiry = Duration.between(LocalDateTime.now(), refreshTokenExpiredAt).getSeconds();
         int maxAge = (int) Math.max(0, secondsUntilExpiry);
@@ -70,7 +70,7 @@ public class UserService {
 
         return UserInfoResponseDto.builder()
                 .userId(savedUser.getId())
-                .accessToken((String) request.getAttribute("accessToken"))
+                .accessToken(jwtTokenProvider.createAccessToken(savedUser.getId()))
                 .refreshToken(refreshTokenValue)
                 .refreshSecondsUntilExpiry(maxAge)
                 .build();
