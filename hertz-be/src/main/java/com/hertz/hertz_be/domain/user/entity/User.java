@@ -44,17 +44,21 @@ public class User {
     private String oneLineIntroduction;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     @Column(name = "membership_type", nullable = false, length = 25)
-    private MembershipType membershipType;
+    private MembershipType membershipType = MembershipType.GENERAL_USER;
 
+    @Builder.Default
     @Column(name = "is_friend_allowed", nullable = false)
-    private Boolean isFriendAllowed;
+    private Boolean isFriendAllowed = true;
 
+    @Builder.Default
     @Column(name = "is_couple_allowed", nullable = false)
-    private Boolean isCoupleAllowed;
+    private Boolean isCoupleAllowed = true;
 
+    @Builder.Default
     @Column(name = "is_meal_friend_allowed", nullable = false)
-    private Boolean isMealFriendAllowed;
+    private Boolean isMealFriendAllowed = true;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private UserOauth userOauth;
