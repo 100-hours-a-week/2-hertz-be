@@ -38,7 +38,7 @@ public class UserController {
         refreshTokenCookie.setHttpOnly(true);
         refreshTokenCookie.setSecure(true); // 배포환경에서만 true
         refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(60 * 60 * 24 * 7); // 7일
+        refreshTokenCookie.setMaxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry()); // 만료일자까지 남은 시간
 
         response.addCookie(refreshTokenCookie);
 

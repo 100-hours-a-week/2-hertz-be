@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -42,6 +43,9 @@ public class UserService {
 
         String refreshTokenValue = redisValue.split(",")[0];
         LocalDateTime refreshTokenExpiredAt = LocalDateTime.parse(redisValue.split(",")[1]);
+        // 현재 시간과 refreshToken의 만료 일시까지를 계산 (cookie 만료 시간 설정 시 만료일자를 정할 수 없기 때문)
+        long secondsUntilExpiry = Duration.between(LocalDateTime.now(), refreshTokenExpiredAt).getSeconds();
+        int maxAge = (int) Math.max(0, secondsUntilExpiry);
 
         User user = User.builder()
                 .ageGroup(userInfoRequestDto.getAgeGroup())
@@ -68,6 +72,7 @@ public class UserService {
                 .userId(savedUser.getId())
                 .accessToken((String) request.getAttribute("accessToken"))
                 .refreshToken(refreshTokenValue)
+                .refreshSecondsUntilExpiry(maxAge)
                 .build();
 
     }
