@@ -35,5 +35,6 @@ public class ResponseCode {
     public static final String SIGNAL_ROOM_CREATED = "SIGNAL_ROOM_CREATED";
     public static final String USER_DEACTIVATED = "USER_DEACTIVATED";
     public static final String ALREADY_IN_CONVERSATION = "ALREADY_IN_CONVERSATION";
+    public static final String TUNING_SUCCESS = "TUNING_SUCCESS";
 
 }
