@@ -29,7 +29,8 @@ public class InterestsService {
     private final UserRepository userRepository;
 
     @Transactional
-    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) throws Exception {
+    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) {
+
         Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
         Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
         User user = userRepository.findById(userId)
@@ -58,7 +59,7 @@ public class InterestsService {
                                 .build()));
 
         InterestsCategoryItem categoryItem = interestsCategoryItemRepository
-                .findByCategoryTypeAndName(category, itemName)
+                .findByCategoryAndName(category, itemName)
                 .orElseGet(() -> interestsCategoryItemRepository.save(
                         InterestsCategoryItem.builder()
                                 .category(category)

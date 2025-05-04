@@ -8,8 +8,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface InterestsCategoryItemRepository extends JpaRepository<InterestsCategory, Long> {
-    Optional<InterestsCategoryItem> findByCategoryTypeAndName(InterestsCategory category, String itemName);
+public interface InterestsCategoryItemRepository extends JpaRepository<InterestsCategoryItem, Long> {
+    Optional<InterestsCategoryItem> findByCategoryAndName(InterestsCategory category, String itemName);
 
     InterestsCategoryItem save(InterestsCategoryItem newItem);
 }
