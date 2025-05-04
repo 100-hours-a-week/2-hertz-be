@@ -13,12 +13,15 @@ import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -85,5 +88,20 @@ public class ChannelService {
                         "hobbies", List.of("GAMING")
                 )
         );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasNewMessages(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(InternalServerErrorException::new);
+
+        List<SignalRoom> allRooms = Stream.concat(
+                user.getSentSignalRooms().stream(),
+                user.getReceivedSignalRooms().stream()
+        ).collect(Collectors.toList());
+
+        if (allRooms.isEmpty()) return false;
+
+        return signalMessageRepository.existsBySignalRoomIdInAndSenderUserIdNotAndIsReadFalse(allRooms, user);
     }
 }
