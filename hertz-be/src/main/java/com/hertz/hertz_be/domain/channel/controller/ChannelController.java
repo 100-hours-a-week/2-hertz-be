@@ -38,4 +38,19 @@ public class ChannelController {
                 new ResponseDto<>(ResponseCode.TUNING_SUCCESS, "튜닝된 사용자가 정상적으로 조회되었습니다.", response)
         );
     }
+
+    @GetMapping("/v1/new-messages")
+    public ResponseEntity<ResponseDto<Void>> checkNewMessages(@AuthenticationPrincipal Long userId) {
+        boolean hasNewMessage = channelService.hasNewMessages(userId);
+
+        if (hasNewMessage) {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(ResponseCode.NEW_MESSAGE, "새 메시지가 정상적으로 조회되었습니다.", null)
+            );
+        } else {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(ResponseCode.NO_ANY_NEW_MESSAGE, "새 메시지가 없습니다.", null)
+            );
+        }
+    }
 }
