@@ -34,7 +34,7 @@ public class ChannelService {
     @Transactional
     public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
         User sender = userRepository.findById(senderUserId)
-                .orElseThrow();
+                .orElseThrow(InternalServerErrorException::new);
 
         User receiver = userRepository.findById(dto.getReceiverUserId())
                 .orElseThrow(UserWithdrawnException::new);
