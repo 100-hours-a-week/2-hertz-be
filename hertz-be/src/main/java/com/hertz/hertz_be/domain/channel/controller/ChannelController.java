@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.channel.controller;
 
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 public class ChannelController {
 
     private final ChannelService channelService;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/v1/tuning/signal")
     public ResponseEntity<ResponseDto<SendSignalResponseDTO>> sendSignal(
@@ -28,6 +28,14 @@ public class ChannelController {
         SendSignalResponseDTO response = channelService.sendSignal(userId, requestDTO);
         return ResponseEntity.status(201).body(
                 new ResponseDto<>(ResponseCode.SIGNAL_ROOM_CREATED, "시그널 룸이 성공적으로 생성되었습니다.", response)
+        );
+    }
+
+    @GetMapping("/v1/tuning")
+    public ResponseEntity<ResponseDto<TuningResponseDTO>> getTunedUser(@AuthenticationPrincipal Long userId) {
+        TuningResponseDTO response = channelService.getTunedUser(userId);
+        return ResponseEntity.ok(
+                new ResponseDto<>(ResponseCode.TUNING_SUCCESS, "튜닝된 사용자가 정상적으로 조회되었습니다.", response)
         );
     }
 }
