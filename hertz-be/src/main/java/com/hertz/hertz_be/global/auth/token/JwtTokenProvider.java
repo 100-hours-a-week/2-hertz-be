@@ -2,22 +2,29 @@ package com.hertz.hertz_be.global.auth.token;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
 
-    private final Key key;
+    @Value("${jwt.secret}")
+    private String secretKeyBase64;
 
-    public JwtTokenProvider() {
-        this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    } // TODO: 추후에 비밀키로 관리할 것
+    private Key key;
 
+    @PostConstruct
+    public void init() {
+        byte[] decodedKey = Base64.getDecoder().decode(secretKeyBase64);
+        this.key = Keys.hmacShaKeyFor(decodedKey);
+    }
     public String createAccessToken(Long userId) {
         Date now = new Date();
         Date expiryDate = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));

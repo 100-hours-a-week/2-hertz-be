@@ -2,7 +2,7 @@ package com.hertz.hertz_be.global.config;
 
 import com.hertz.hertz_be.global.auth.filter.JwtAuthenticationFilter;
 import com.hertz.hertz_be.global.auth.handler.CustomAuthenticationEntryPoint;
-import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,16 +16,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider,
-                          CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,7 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").permitAll() // TODO: 추후에 수정
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 

@@ -34,7 +34,7 @@ public class UserInterestsRequestDto {
     public static class Keywords {
 
         @NotBlank
-        private String MBTI;
+        private String mbti;
 
         @NotBlank
         private String religion;
@@ -47,7 +47,7 @@ public class UserInterestsRequestDto {
 
         public Map<String, String> toMap() {
             Map<String, String> map = new LinkedHashMap<>();
-            map.put("MBTI", MBTI);
+            map.put("mbti", mbti);
             map.put("religion", religion);
             map.put("smoking", smoking);
             map.put("drinking", drinking);
