@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "signal_message")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -32,7 +31,7 @@ public class SignalMessage {
     private String message;
 
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead = false;
+    private Boolean isRead;
 
     @CreationTimestamp
     @Column(name = "send_at", nullable = false)

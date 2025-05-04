@@ -45,4 +45,15 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ResponseDto<>(ResponseCode.BAD_REQUEST, "잘못된 요청입니다.", null));
     }
+
+    @ExceptionHandler(InternalServerErrorException.class)
+    public ResponseEntity<ResponseDto<Void>> handleInternalServerError(InternalServerErrorException ex) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDto<>(
+                        ex.getCode(),
+                        ex.getMessage(),
+                        null
+                ));
+    }
 }

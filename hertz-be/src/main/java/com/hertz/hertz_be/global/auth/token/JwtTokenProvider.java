@@ -3,8 +3,8 @@ package com.hertz.hertz_be.global.auth.token;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.security.Key;
 import java.time.Instant;
@@ -25,6 +25,7 @@ public class JwtTokenProvider {
         byte[] decodedKey = Base64.getDecoder().decode(secretKeyBase64);
         this.key = Keys.hmacShaKeyFor(decodedKey);
     }
+
     public String createAccessToken(Long userId) {
         Date now = new Date();
         Date expiryDate = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));
