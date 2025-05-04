@@ -20,6 +20,6 @@ public class InterestsCategoryItem {
     @JoinColumn(name = "category_id", nullable = false)
     private InterestsCategory category;
 
-    @Column(length = 15, nullable = false)
+    @Column(length = 20, nullable = false)
     private String name;
 }

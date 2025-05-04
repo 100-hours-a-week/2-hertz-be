@@ -17,7 +17,7 @@ public class InterestsCategory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 10, nullable = false)
+    @Column(length = 20, nullable = false)
     private String name;
 
     @Enumerated(EnumType.STRING)
