@@ -40,4 +40,8 @@ public class ResponseCode {
     public static final String NEW_MESSAGE = "NEW_MESSAGE";
     public static final String NO_ANY_NEW_MESSAGE = "NO_ANY_NEW_MESSAGE";
 
+    // 채널 정보 관련 응답 code
+    public static final String CHANNEL_ROOM_LIST_FETCHED = "CHANNEL_ROOM_LIST_FETCHED";
+    public static final String NO_CHANNEL_ROOM = "NO_CHANNEL_ROOM";
+
 }
