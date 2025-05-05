@@ -1,0 +1,53 @@
+package com.hertz.hertz_be.domain.channel.repository;
+
+import com.hertz.hertz_be.domain.channel.entity.ChannelRoom;
+import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ChannelRoomRepository extends JpaRepository<ChannelRoom, Long> {
+    @Query(value = """
+    SELECT 
+        cr.id AS channelRoomId,
+        u.profile_image_url AS partnerProfileImage,
+        u.nickname AS partnerNickname,
+        cm.message AS lastMessage,
+        cm.send_at AS lastMessageTime,
+        CASE 
+            WHEN cm.id <= COALESCE(cmlr.last_message_read_id, 0) THEN true
+            ELSE false
+        END AS isRead,
+        cr.category AS relationType
+    FROM channel_room cr
+    JOIN channel_join cj1 ON cj1.channel_room_id = cr.id
+    JOIN channel_join cj2 ON cj2.channel_room_id = cr.id AND cj2.user_id != :userId
+    JOIN user u ON u.id = cj2.user_id
+    LEFT JOIN channel_message cm ON cm.id = (
+        SELECT cm2.id FROM channel_message cm2 
+        WHERE cm2.channel_room_id = cr.id 
+        ORDER BY cm2.send_at DESC LIMIT 1
+    )
+    LEFT JOIN channel_message_last_read cmlr 
+        ON cmlr.channel_id = cr.id AND cmlr.user_id = :userId
+    WHERE cr.current_user_count = 2
+      AND cj1.user_id = :userId
+    ORDER BY cm.send_at DESC
+    """,
+            countQuery = """
+    SELECT COUNT(*)
+    FROM channel_room cr
+    JOIN channel_join cj1 ON cj1.channel_room_id = cr.id
+    WHERE cr.current_user_count = 2
+      AND cj1.user_id = :userId
+    """,
+            nativeQuery = true)
+    Page<ChannelRoomProjection> findChannelRoomsWithPartnerAndLastMessage(
+            @Param("userId") Long userId,
+            Pageable pageable);
+
+}

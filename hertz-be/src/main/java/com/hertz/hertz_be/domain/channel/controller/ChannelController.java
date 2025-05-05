@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.channel.controller;
 
 
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
@@ -52,5 +53,25 @@ public class ChannelController {
                     new ResponseDto<>(ResponseCode.NO_ANY_NEW_MESSAGE, "새 메시지가 없습니다.", null)
             );
         }
+    }
+
+    @GetMapping("/v1/channel")
+    public ResponseEntity<ResponseDto<ChannelListResponseDto>> getPersonalChannelList(@AuthenticationPrincipal Long userId,
+                                                                                      @RequestParam(defaultValue = "0") int page,
+                                                                                      @RequestParam(defaultValue = "10") int size) {
+        ChannelListResponseDto response = channelService.getPersonalChannelList(userId, page, size);
+
+        if(response == null) {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response)
+            );
+        } else {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(ResponseCode.NO_CHANNEL_ROOM, "참여 중인 채널이 없습니다.", response)
+            );
+        }
+
+
+
     }
 }

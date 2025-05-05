@@ -1,5 +1,7 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.ChannelSummaryDto;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
@@ -9,12 +11,17 @@ import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.exception.AlreadyInConversationException;
 import com.hertz.hertz_be.domain.channel.exception.UserWithdrawnException;
+import com.hertz.hertz_be.domain.channel.repository.ChannelRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,7 @@ public class ChannelService {
     private final UserRepository userRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
+    private final ChannelRoomRepository channelRoomRepository;
 
     @Transactional
     public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
@@ -103,5 +111,19 @@ public class ChannelService {
         if (allRooms.isEmpty()) return false;
 
         return signalMessageRepository.existsBySignalRoomIdInAndSenderUserIdNotAndIsReadFalse(allRooms, user);
+    }
+
+    public ChannelListResponseDto getPersonalChannelList(Long userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ChannelRoomProjection> result = channelRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+        if (result.isEmpty()) {
+            return null;
+        }
+
+        List<ChannelSummaryDto> list = result.getContent().stream()
+                .map(ChannelSummaryDto::fromProjection)
+                .toList();
+
+        return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
 }
