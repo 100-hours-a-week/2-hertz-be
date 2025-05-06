@@ -1,15 +1,12 @@
 package com.hertz.hertz_be.domain.channel.controller;
 
-
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
-import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +27,7 @@ public class ChannelController {
         return ResponseEntity.status(201).body(
                 new ResponseDto<>(ResponseCode.SIGNAL_ROOM_CREATED, "시그널 룸이 성공적으로 생성되었습니다.", response)
         );
+
     }
 
     @GetMapping("/v1/tuning")
@@ -56,22 +54,17 @@ public class ChannelController {
     }
 
     @GetMapping("/v1/channel")
-    public ResponseEntity<ResponseDto<ChannelListResponseDto>> getPersonalChannelList(@AuthenticationPrincipal Long userId,
-                                                                                      @RequestParam(defaultValue = "0") int page,
-                                                                                      @RequestParam(defaultValue = "10") int size) {
-        ChannelListResponseDto response = channelService.getPersonalChannelList(userId, page, size);
+    public ResponseEntity<ResponseDto<ChannelListResponseDto>> getPersonalSignalRoomList(@AuthenticationPrincipal Long userId,
+                                                                                         @RequestParam(defaultValue = "0") int page,
+                                                                                         @RequestParam(defaultValue = "10") int size) {
 
-        if(response == null) {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response)
-            );
-        } else {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.NO_CHANNEL_ROOM, "참여 중인 채널이 없습니다.", response)
-            );
+        // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
+        ChannelListResponseDto response = channelService.getPersonalSignalRoomList(userId, page, size);
+
+        if (response == null) {
+            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.NO_CHANNEL_ROOM, "참여 중인 채널이 없습니다.", null));
         }
-
-
-
+        return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response));
     }
+
 }

@@ -113,9 +113,12 @@ public class ChannelService {
         return signalMessageRepository.existsBySignalRoomIdInAndSenderUserIdNotAndIsReadFalse(allRooms, user);
     }
 
-    public ChannelListResponseDto getPersonalChannelList(Long userId, int page, int size) {
+
+    // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
+    public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ChannelRoomProjection> result = channelRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+
         if (result.isEmpty()) {
             return null;
         }
@@ -126,4 +129,5 @@ public class ChannelService {
 
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
+
 }
