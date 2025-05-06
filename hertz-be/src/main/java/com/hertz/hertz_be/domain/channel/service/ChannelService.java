@@ -1,27 +1,32 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.ChannelSummaryDto;
-import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.*;
+import com.hertz.hertz_be.domain.channel.entity.ChannelMessage;
+import com.hertz.hertz_be.domain.channel.entity.ChannelRoom;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
-import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.exception.AlreadyInConversationException;
+import com.hertz.hertz_be.domain.channel.exception.ChannelNotFoundException;
+import com.hertz.hertz_be.domain.channel.exception.UnauthorizedAccessException;
 import com.hertz.hertz_be.domain.channel.exception.UserWithdrawnException;
 import com.hertz.hertz_be.domain.channel.repository.ChannelRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +67,8 @@ public class ChannelService {
         signalRoomRepository.save(signalRoom);
 
         SignalMessage signalMessage = SignalMessage.builder()
-                .signalRoomId(signalRoom)
-                .senderUserId(sender)
+                .signalRoom(signalRoom)
+                .senderUser(sender)
                 .message(dto.getMessage())
                 .isRead(false)
                 .build();
@@ -128,4 +133,52 @@ public class ChannelService {
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
 
+    @Transactional(readOnly = true)
+    public ChannelRoomResponseDto getChannelRoomMessages(Long roomId, Long userId, int page, int size) {
+        SignalRoom room = signalRoomRepository.findById(roomId)
+                .orElseThrow(ChannelNotFoundException::new);
+
+        if (!room.isParticipant(userId)) {
+            throw new UnauthorizedAccessException();
+        }
+
+        Long partnerId = room.getPartnerUser(userId).getId();
+        User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
+                .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sendAt"));
+        Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
+
+        List<ChannelRoomResponseDto.MessageDto> messages = messagePage.getContent().stream()
+                .map(ChannelRoomResponseDto.MessageDto::from)
+                .toList();
+
+        return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
+    }
+
+    @Transactional
+    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDTO response) {
+        SignalRoom room = signalRoomRepository.findById(roomId)
+                .orElseThrow(ChannelNotFoundException::new);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        if (!room.isParticipant(userId)) {
+            throw new UnauthorizedAccessException();
+        }
+
+        Long partnerId = room.getPartnerUser(userId).getId();
+        userRepository.findByIdAndDeletedAtIsNull(partnerId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다."));
+
+        // 메시지 저장
+        SignalMessage signalMessage = SignalMessage.builder()
+                .signalRoom(room)
+                .senderUser(user)
+                .message(response.getMessage())
+                .build();
+
+        signalMessageRepository.save(signalMessage);
+    }
 }

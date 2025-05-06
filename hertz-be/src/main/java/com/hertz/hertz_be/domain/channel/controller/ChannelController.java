@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.channel.controller;
 
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
@@ -9,6 +10,7 @@ import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -67,5 +69,25 @@ public class ChannelController {
         return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response));
     }
 
+    @GetMapping("/v1/channel-rooms/{channelRoomId}")
+    public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> getChannelRoomMessages(@PathVariable Long channelRoomId,
+                                                                                      @AuthenticationPrincipal Long userId,
+                                                                                      @RequestParam(defaultValue = "0") int page,
+                                                                                      @RequestParam(defaultValue = "20") int size) {
 
+        ChannelRoomResponseDto response = channelService.getChannelRoomMessages(channelRoomId, userId, page, size);
+        return ResponseEntity.ok(new ResponseDto<>("CHANNEL_ROOM_SUCCESS", "채널방이 정상적으로 조회되었습니다.", response));
+    }
+
+    @PostMapping("/v1/channel-rooms/{channelRoomId}/messages")
+    public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> sendChannelMessage(@PathVariable Long channelRoomId,
+                                                                                  @AuthenticationPrincipal Long userId,
+                                                                                  @RequestBody SendSignalRequestDTO response) {
+
+        channelService.sendChannelMessage(channelRoomId, userId, response);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(ResponseCode.MESSAGE_CREATED, "메세지가 성공적으로 전송되었습니다.", null)
+        );
+    }
 }

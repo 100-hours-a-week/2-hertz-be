@@ -47,7 +47,32 @@ public class SignalRoom {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "signalRoomId")
+    @OneToMany(mappedBy = "signalRoom")
     private List<SignalMessage> messages = new ArrayList<>();
+
+    /**
+     * 현재 유저 기준으로 상대방을 반환
+     */
+    public User getPartnerUser(Long currentUserId) {
+        if (senderUser.getId().equals(currentUserId)) return receiverUser;
+        if (receiverUser.getId().equals(currentUserId)) return senderUser;
+        throw new IllegalArgumentException("해당 유저는 이 방의 참가자가 아닙니다.");
+    }
+
+    /**
+     * 현재 유저가 이 방에 참가 중인지 여부
+     */
+    public boolean isParticipant(Long userId) {
+        return senderUser.getId().equals(userId) || receiverUser.getId().equals(userId);
+    }
+
+    /**
+     * RelationType을 반환하는 유틸
+     */
+    public String getRelationType() {
+        // 상황에 따라 ENUM으로 바꿔도 됨
+        return "SIGNAL";
+    }
+
 }
 

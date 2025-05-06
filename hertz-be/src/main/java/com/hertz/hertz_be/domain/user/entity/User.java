@@ -84,6 +84,7 @@ public class User {
     @OneToMany(mappedBy = "receiverUser")
     private List<SignalRoom> receivedSignalRooms = new ArrayList<>();
 
-    @OneToMany(mappedBy = "senderUserId")
+    @OneToMany(mappedBy = "senderUser")
     private List<SignalMessage> sendMessages = new ArrayList<>();
+
 }

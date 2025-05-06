@@ -27,6 +27,7 @@ public class ResponseCode {
     public static final String NICKNAME_CREATED = "NICKNAME_CREATED";
     public static final String NICKNAME_API_FAILED = "NICKNAME_API_FAILED";
     public static final String NICKNAME_GENERATION_TIMEOUT = "NICKNAME_GENERATION_TIMEOUT";
+    public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
 
     // 취향 선택 응답 code
     public static final String INTERESTS_SAVED_SUCCESSFULLY = "INTERESTS_SAVED_SUCCESSFULLY";
@@ -43,5 +44,6 @@ public class ResponseCode {
     // 채널 정보 관련 응답 code
     public static final String CHANNEL_ROOM_LIST_FETCHED = "CHANNEL_ROOM_LIST_FETCHED";
     public static final String NO_CHANNEL_ROOM = "NO_CHANNEL_ROOM";
+    public static final String MESSAGE_CREATED = "MESSAGE_CREATED";
 
 }

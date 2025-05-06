@@ -21,17 +21,18 @@ public class SignalMessage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "signal_room_id", nullable = false)
-    private SignalRoom signalRoomId;
+    private SignalRoom signalRoom;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_user_id", nullable = false)
-    private User senderUserId;
+    private User senderUser;
 
     @Column(nullable = false, length = 300)
     private String message;
 
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead;
+    @Builder.Default
+    private Boolean isRead = false;
 
     @CreationTimestamp
     @Column(name = "send_at", nullable = false)
