@@ -1,0 +1,36 @@
+name: Notify Discord on PR Merged to Develop
+
+on:
+  pull_request:
+    types: [closed] # PR이 닫혔을 때 (병합 포함)
+    branches:
+      - develop # develop 브랜치로 PR 병합 시 감지
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true # 병합된 경우만 실행
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification (embed)
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_BODY: ${{ github.event.pull_request.body || '내용 없음' }}
+        run: |
+          # 이스케이프 처리
+          PR_BODY_ESCAPED=$(echo "$PR_BODY" | jq -Rs . | sed 's/^"//;s/"$//')
+
+          # 메시지 전송
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"embeds\": [
+                {
+                  \"title\": \"✅ PR Merged to \`$BASE_BRANCH\`! [PR 링크]\",
+                  \"url\": \"$PR_URL\",
+                  \"description\": \"**Title:** $PR_TITLE\\n**Author:** $PR_AUTHOR\\n\\n📝 **Description:**\\n\`\`\`\\n$PR_BODY_ESCAPED\\n\`\`\`\",
+                  \"color\": 3066993
+                }
+              ]
+            }" "${{ secrets.DISCORD_WEBHOOK_PR_URL }}"

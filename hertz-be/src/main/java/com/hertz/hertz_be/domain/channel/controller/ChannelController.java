@@ -67,4 +67,5 @@ public class ChannelController {
         return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response));
     }
 
+
 }

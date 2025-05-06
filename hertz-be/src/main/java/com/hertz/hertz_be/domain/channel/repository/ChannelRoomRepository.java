@@ -91,4 +91,5 @@ public interface ChannelRoomRepository extends JpaRepository<ChannelRoom, Long> 
 //            @Param("userId") Long userId,
 //            Pageable pageable);
 
+
 }
