@@ -56,4 +56,15 @@ public class GlobalExceptionHandler {
                         null
                 ));
     }
+
+    @ExceptionHandler(AiServerErrorException.class)
+    public ResponseEntity<ResponseDto<Void>> handleAiServerError(AiServerErrorException ex) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDto<>(
+                        ex.getCode(),
+                        ex.getMessage(),
+                        null
+                ));
+    }
 }
