@@ -10,6 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface SignalMessageRepository extends JpaRepository<SignalMessage, Long> {
-    boolean existsBySignalRoomIdInAndSenderUserIdNotAndIsReadFalse(List<SignalRoom> signalRooms, User senderUser);
+    boolean existsBySignalRoomInAndSenderUserNotAndIsReadFalse(List<SignalRoom> signalRooms, User senderUser);
     Page<SignalMessage> findBySignalRoom_Id(Long roomId, Pageable pageable);
 }
