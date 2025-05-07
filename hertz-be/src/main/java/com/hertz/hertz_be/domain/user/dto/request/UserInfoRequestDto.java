@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import lombok.Getter;
@@ -39,6 +40,11 @@ public class UserInfoRequestDto {
 
     @NotBlank
     private String oneLineIntroduction;
+
+
+    // Todo. FE 개발용 테스트 필드 (추후 삭제 필요)
+    @JsonProperty("isTest")
+    private boolean isTest;
 
 
 }

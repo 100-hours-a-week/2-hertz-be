@@ -32,10 +32,7 @@ public class UserService {
 
 
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
-
-        // 랜덤 닉네임 반환 (무한루프)
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
-
         if (redisValue == null) {
             throw new UserException(ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 올바르지 않습니다.");
         }
@@ -47,11 +44,23 @@ public class UserService {
         long secondsUntilExpiry = Duration.between(LocalDateTime.now(), refreshTokenExpiredAt).getSeconds();
         int maxAge = (int) Math.max(0, secondsUntilExpiry);
 
+        // Todo. FE 개발용 테스트 로직 (추후 삭제 필요)
+        if(userInfoRequestDto.isTest()) {
+            Long fakeUserId = -1L;
+
+            return UserInfoResponseDto.builder()
+                    .userId(fakeUserId)
+                    .accessToken(jwtTokenProvider.createAccessToken(fakeUserId))
+                    .refreshToken(refreshTokenValue)
+                    .refreshSecondsUntilExpiry(maxAge)
+                    .build();
+        }
+
         User user = User.builder()
                 .ageGroup(userInfoRequestDto.getAgeGroup())
                 .profileImageUrl(userInfoRequestDto.getProfileImage())
                 .nickname(userInfoRequestDto.getNickname())
-                .email(userInfoRequestDto.getEmail())
+                .email(userInfoRequestDto.getProviderId() + "@kakaotech.com") //
                 .gender(userInfoRequestDto.getGender())
                 .oneLineIntroduction(userInfoRequestDto.getOneLineIntroduction())
                 .build();
