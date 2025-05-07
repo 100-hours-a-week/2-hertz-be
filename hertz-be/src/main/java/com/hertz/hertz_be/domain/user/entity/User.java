@@ -2,6 +2,8 @@ package com.hertz.hertz_be.domain.user.entity;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import com.hertz.hertz_be.domain.user.entity.enums.MembershipType;
@@ -87,4 +89,6 @@ public class User {
     @OneToMany(mappedBy = "senderUser")
     private List<SignalMessage> sendMessages = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user")
+    private List<Tuning> recommendListByCategory = new ArrayList<>();
 }
