@@ -13,7 +13,7 @@ public class ChannelExceptionHandler {
     @ExceptionHandler({
             AlreadyInConversationException.class
     })
-    public ResponseEntity<ResponseDto<Void>> handleAlreadyInConversationException(RuntimeException ex) {
+    public ResponseEntity<ResponseDto<Void>> conflictException(RuntimeException ex) {
         String code = ((BaseChannelException) ex).getCode();
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
@@ -23,10 +23,20 @@ public class ChannelExceptionHandler {
     @ExceptionHandler({
             UserWithdrawnException.class
     })
-    public ResponseEntity<ResponseDto<Void>> handleUserWithdrawnException(RuntimeException ex) {
+    public ResponseEntity<ResponseDto<Void>> goneException(RuntimeException ex) {
         String code = ((BaseChannelException) ex).getCode();
         return ResponseEntity
                 .status(HttpStatus.GONE)
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler({
+            InterestsNotSelectedException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> badRequestException(RuntimeException ex) {
+        String code = ((BaseChannelException) ex).getCode();
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ResponseDto<>(code, ex.getMessage(), null));
     }
 }
