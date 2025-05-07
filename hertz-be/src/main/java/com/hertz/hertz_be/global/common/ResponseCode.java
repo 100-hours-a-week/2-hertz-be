@@ -9,6 +9,7 @@ public class ResponseCode {
     public static final String INTERNAL_ERROR = "INTERNAL_SERVER_ERROR";
     public static final String NOT_IMPLEMENTED = "NOT_IMPLEMENTED";
     public static final String INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR";
+    public static final String AI_SERVER_ERROR = "AI_SERVER_ERROR";
 
     // OAuth 관련 응답 code
     public static final String UNSUPPORTED_PROVIDER = "UNSUPPORTED_PROVIDER";
@@ -43,6 +44,11 @@ public class ResponseCode {
     public static final String TUNING_SUCCESS = "TUNING_SUCCESS";
     public static final String NEW_MESSAGE = "NEW_MESSAGE";
     public static final String NO_ANY_NEW_MESSAGE = "NO_ANY_NEW_MESSAGE";
+
+    // 튜닝 추천 상대 반환 로직 관련 응답 code
+    public static final String USER_INTERESTS_NOT_SELECTED = "USER_INTERESTS_NOT_SELECTED";
+    public static final String NO_TUNING_CANDIDATE = "NO_TUNING_CANDIDATE";
+
 
     // 채널 정보 관련 응답 code
     public static final String CHANNEL_ROOM_LIST_FETCHED = "CHANNEL_ROOM_LIST_FETCHED";
