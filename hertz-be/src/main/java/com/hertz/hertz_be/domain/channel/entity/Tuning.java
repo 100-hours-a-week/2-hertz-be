@@ -13,6 +13,8 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Builder
@@ -36,6 +38,6 @@ public class Tuning {
     @Column(nullable = false)
     private LocalDateTime created_at;
 
-    @OneToOne(mappedBy = "tuning")
-    private TuningResult tuningResult;
+    @OneToMany(mappedBy = "tuning", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TuningResult> tuningResults = new ArrayList<>();
 }
