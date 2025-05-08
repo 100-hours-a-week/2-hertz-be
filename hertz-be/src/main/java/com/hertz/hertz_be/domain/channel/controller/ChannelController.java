@@ -35,6 +35,9 @@ public class ChannelController {
     @GetMapping("/v1/tuning")
     public ResponseEntity<ResponseDto<TuningResponseDTO>> getTunedUser(@AuthenticationPrincipal Long userId) {
         TuningResponseDTO response = channelService.getTunedUser(userId);
+        if (response == null) {
+            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.NO_TUNING_CANDIDATE, "추천 가능한 상대가 현재 없습니다.", null));
+        }
         return ResponseEntity.ok(
                 new ResponseDto<>(ResponseCode.TUNING_SUCCESS, "튜닝된 사용자가 정상적으로 조회되었습니다.", response)
         );
