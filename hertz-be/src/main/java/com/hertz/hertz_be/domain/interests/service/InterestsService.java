@@ -27,6 +27,10 @@ public class InterestsService {
     private final InterestsCategoryRepository interestsCategoryRepository;
     private final InterestsCategoryItemRepository interestsCategoryItemRepository;
     private final UserRepository userRepository;
+    //private final WebClient.Builder webClientBuilder;
+
+    //@Value("${ai.server.ip}")
+    //private String AI_SERVER_IP;
 
     @Transactional
     public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) {
@@ -39,6 +43,7 @@ public class InterestsService {
         // 키워드 처리
         keywordsMap.forEach((categoryName, itemName) -> {
             saveSingleUserInterest(user, InterestsCategoryType.KEYWORD, categoryName, itemName);
+
         });
 
         // 관심사 처리
@@ -47,6 +52,27 @@ public class InterestsService {
                 saveSingleUserInterest(user, InterestsCategoryType.INTEREST, categoryName, itemName);
             });
         });
+
+        // AI - 데이터 합치는 과정
+//        EmbeddingRequestDto dto = EmbeddingRequestMapper.toDto(
+//                user.getId(),
+//                user.getEmail().split("@")[1],
+//                user.getGender().name(),
+//                user.getAgeGroup().name(),
+//                keywordsMap.
+//        );
+//
+//        // AI - 임베딩(회원 등록) API 연동
+//        String aiResponse = webClientBuilder.build()
+//                .post()
+//                .uri(AI_SERVER_IP)
+//                .bodyValue(dto)
+//                .retrieve()
+//                .bodyToMono(String.class)
+//                .block();
+//
+//        // 응답값 활용할 필요 있으면 여기에 처리
+//        System.out.println("AI 응답: " + aiResponse);
     }
 
     private void saveSingleUserInterest(User user, InterestsCategoryType categoryType, String categoryName, String itemName) {
