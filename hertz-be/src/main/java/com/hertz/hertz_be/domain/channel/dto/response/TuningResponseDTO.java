@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.dto.response;
 
+import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,7 +13,7 @@ public class TuningResponseDTO {
     private Long userId;
     private String profileImage;
     private String nickname;
-    private String gender;
+    private Gender gender;
     private String oneLineIntroduction;
     private Map<String, String> keywords;
     private Map<String, List<String>> sameInterests;
