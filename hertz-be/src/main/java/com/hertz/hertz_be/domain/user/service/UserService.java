@@ -6,6 +6,7 @@ import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.repository.UserOauthRepository;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final UserOauthRepository userOauthRepository;
     private final OAuthRedisRepository oauthRedisRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -35,6 +37,10 @@ public class UserService {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
         if (redisValue == null) {
             throw new UserException(ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 올바르지 않습니다.");
+        }
+
+        if (userOauthRepository.existsByProviderIdAndProvider(userInfoRequestDto.getProviderId(), userInfoRequestDto.getProvider())) {
+            throw new UserException(ResponseCode.DUPLICATE_USER, "이미 등록된 사용자입니다.");
         }
 
         String refreshTokenValue = redisValue.split(",")[0];

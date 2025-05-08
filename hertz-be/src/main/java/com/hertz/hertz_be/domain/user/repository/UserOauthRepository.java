@@ -10,4 +10,5 @@ public interface UserOauthRepository extends JpaRepository<UserOauth, Long> {
 
     Optional<UserOauth> findByProviderIdAndProvider(String providerId, String provider);
     boolean existsByProviderIdAndProvider(String providerId, String provider);
+
 }
