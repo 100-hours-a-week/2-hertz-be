@@ -1,10 +1,7 @@
 package com.hertz.hertz_be.domain.channel.service;
 
 import com.hertz.hertz_be.domain.channel.dto.response.*;
-import com.hertz.hertz_be.domain.channel.entity.ChannelMessage;
-import com.hertz.hertz_be.domain.channel.entity.ChannelRoom;
-import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
-import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
@@ -12,37 +9,65 @@ import com.hertz.hertz_be.domain.channel.exception.AlreadyInConversationExceptio
 import com.hertz.hertz_be.domain.channel.exception.ChannelNotFoundException;
 import com.hertz.hertz_be.domain.channel.exception.UnauthorizedAccessException;
 import com.hertz.hertz_be.domain.channel.exception.UserWithdrawnException;
-import com.hertz.hertz_be.domain.channel.repository.ChannelRoomRepository;
-import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
-import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
+import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.crossstore.ChangeSetPersister;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChannelService {
 
     private final UserRepository userRepository;
+    private final TuningRepository tuningRepository;
+    private final TuningResultRepository tuningResultRepository;
+    private final UserInterestsRepository userInterestsRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final ChannelRoomRepository channelRoomRepository;
+    private final WebClient webClient;
+
+    @Autowired
+    public ChannelService(UserRepository userRepository,
+                          TuningRepository tuningRepository,
+                          TuningResultRepository tuningResultRepository,
+                          UserInterestsRepository userInterestsRepository,
+                          SignalRoomRepository signalRoomRepository,
+                          SignalMessageRepository signalMessageRepository,
+                          ChannelRoomRepository channelRoomRepository,
+                          @Value("${ai.server.ip}") String aiServerIp) {
+        this.userRepository = userRepository;
+        this.tuningRepository = tuningRepository;
+        this.tuningResultRepository = tuningResultRepository;
+        this.userInterestsRepository = userInterestsRepository;
+        this.signalMessageRepository = signalMessageRepository;
+        this.signalRoomRepository = signalRoomRepository;
+        this.channelRoomRepository = channelRoomRepository;
+        this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
+    }
 
     @Transactional
     public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
@@ -77,30 +102,180 @@ public class ChannelService {
         return new SendSignalResponseDTO(signalRoom.getId());
     }
 
+    private User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(InternalServerErrorException::new);
+    }
+
+    @Transactional
     public TuningResponseDTO getTunedUser(Long userId) {
+        User requester = getUserById(userId);
+        Tuning tuning = getOrCreateTuning(requester);
+
+        if (!tuningResultRepository.existsByTuning(tuning)) {
+            fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+        }
+
+        while (true) {
+            TuningResult topResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning)
+                    .orElseThrow(InternalServerErrorException::new);
+            tuningResultRepository.delete(topResult);
+
+            User matchedUser = topResult.getMatchedUser();
+            if (matchedUser == null || matchedUser.getId() == null) {
+                log.warn("매칭 유저가 존재하지 않음. resultId: {}", topResult.getId());
+                if (tuningResultRepository.existsByTuning(tuning)) continue;
+                fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+                continue;
+            }
+
+            boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
+                    || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
+
+            if (!alreadyExists) {
+                return buildTuningResponseDTO(userId, matchedUser);
+            }
+
+            if (!tuningResultRepository.existsByTuning(tuning)) {
+                fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+            }
+        }
+    }
+
+    private void fetchAndSaveTuningResultsFromAiServer(Long userId, Tuning tuning) {
+        Map<String, Object> responseMap = requestTuningFromAiServer(userId);
+        String code = (String) responseMap.get("code");
+
+        switch (code) {
+            case "TUNING_SUCCESS_BUT_NO_MATCH" -> {
+                return;
+            }
+            case "TUNING_BAD_REQUEST", "TUNING_NOT_FOUND_USER", "TUNING_INTERNAL_SERVER_ERROR" ->
+                    throw new AiServerErrorException();
+            case "TUNING_SUCCESS" -> {
+                Object dataObj = responseMap.get("data");
+                if (!(dataObj instanceof Map data)) {
+                    throw new AiServerErrorException();
+                }
+
+                List<Integer> userIdList = (List<Integer>) data.get("userIdList");
+                if (userIdList == null || userIdList.isEmpty()) {
+                    throw new AiServerErrorException();
+                }
+
+                saveTuningResults(userIdList, tuning);
+            }
+            default -> throw new InternalServerErrorException();
+        }
+    }
+
+
+    private Map<String, Object> requestTuningFromAiServer(Long userId) {
+        String uri = "/api/v1/tuning?userId=" + userId;
+        Map<String, Object> responseMap = webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+
+        if (responseMap == null || !responseMap.containsKey("code")) {
+            throw new AiServerErrorException();
+        }
+        return responseMap;
+    }
+
+    private Tuning getOrCreateTuning(User user) {
+        return tuningRepository.findByUserAndCategory(user, Category.FRIEND)
+                .orElseGet(() -> tuningRepository.save(
+                        Tuning.builder()
+                                .user(user)
+                                .category(Category.FRIEND)
+                                .build()));
+    }
+
+    private void saveTuningResults(List<Integer> userIdList, Tuning tuning) {
+        int lineup = 1;
+        for (Integer matchedUserId : userIdList) {
+            Long matchedId = Long.valueOf(matchedUserId);
+
+            User matchedUser = userRepository.findById(matchedId)
+                    .orElseThrow(InternalServerErrorException::new);
+
+            tuningResultRepository.save(
+                    TuningResult.builder()
+                            .tuning(tuning)
+                            .matchedUser(matchedUser)
+                            .lineup(lineup++)
+                            .build()
+            );
+        }
+    }
+
+    private TuningResponseDTO buildTuningResponseDTO(Long requesterId, User target) {
+        Map<String, String> keywords = getUserKeywords(target.getId());
+
+        Map<String, List<String>> requesterInterests = getUserInterests(requesterId);
+        Map<String, List<String>> targetInterests = getUserInterests(target.getId());
+        Map<String, List<String>> sameInterests = extractSameInterests(requesterInterests, targetInterests);
+
         return new TuningResponseDTO(
-                2L,
-                "../image/profile.jpg",
-                "행복한 개구리",
-                "남성",
-                "안녕하세요, 프론트엔드 개발자입니다.",
-                Map.of(
-                        "MBTI", "ESTP",
-                        "religion", "NON_RELIGIOUS",
-                        "smoking", "NO_SMOKING",
-                        "drinking", "SOMETIMES"
-                ),
-                Map.of(
-                        "personality", List.of(),
-                        "preferredPeople", List.of("DOESNT_SWEAR"),
-                        "currentInterests", List.of(),
-                        "favoriteFoods", List.of("STREET_FOOD"),
-                        "likedSports", List.of("YOGA"),
-                        "pets", List.of("RABBIT"),
-                        "selfDevelopment", List.of("DIET"),
-                        "hobbies", List.of("GAMING")
-                )
+                target.getId(),
+                target.getProfileImageUrl(),
+                target.getNickname(),
+                target.getGender(),
+                target.getOneLineIntroduction(),
+                keywords,
+                sameInterests
         );
+    }
+
+
+    public Map<String, String> getUserKeywords(Long userId) {
+        Map<String, String> keywords = userInterestsRepository.findByUserId(userId).stream()
+                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.KEYWORD)
+                .collect(
+                        LinkedHashMap::new,
+                        (map, ui) -> map.put(ui.getCategoryItem().getCategory().getName(), ui.getCategoryItem().getName()),
+                        LinkedHashMap::putAll
+                );
+
+        return keywords;
+    }
+
+    public Map<String, List<String>> getUserInterests(Long userId) {
+        Map<String, List<String>> interestsMap = new LinkedHashMap<>();
+
+        userInterestsRepository.findByUserId(userId).stream()
+                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.INTEREST)
+                .forEach(ui -> {
+                    String categoryName = ui.getCategoryItem().getCategory().getName();
+                    String itemName = ui.getCategoryItem().getName();
+                    interestsMap.computeIfAbsent(categoryName, k -> new ArrayList<>()).add(itemName);
+                });
+
+        return interestsMap;
+    }
+
+    public Map<String, List<String>> extractSameInterests(Map<String, List<String>> interests1, Map<String, List<String>> interests2) {
+        Map<String, List<String>> sameInterests = new LinkedHashMap<>();
+
+        for (String category : interests1.keySet()) {
+            List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
+            List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
+
+            // 교집합 추출
+            Set<String> common = new HashSet<>(list1);
+            common.retainAll(list2);
+
+            // 값이 있으면 1개만 반환, 없으면 빈 리스트
+            if (!common.isEmpty()) {
+                sameInterests.put(category, List.of(common.iterator().next()));
+            } else {
+                sameInterests.put(category, Collections.emptyList());
+            }
+        }
+
+        return sameInterests;
     }
 
     @Transactional(readOnly = true)
