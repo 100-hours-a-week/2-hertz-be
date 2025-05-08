@@ -23,8 +23,8 @@ public class TuningResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tuning_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tuning_id", nullable = false)
     private Tuning tuning;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,5 +32,5 @@ public class TuningResult {
     private User matchedUser;
 
     @Column(nullable = false)
-    private Long lineup;
+    private int lineup;
 }
