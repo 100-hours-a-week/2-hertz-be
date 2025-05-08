@@ -23,11 +23,14 @@ public class ResponseCode {
 
     // 개인정보 등록 응답 code
     public static final String PROFILE_SAVED_SUCCESSFULLY = "PROFILE_SAVED_SUCCESSFULLY";
+    public static final String DUPLICATE_USER = "DUPLICATE_USER";
     public static final String DUPLICATE_NICKNAME = "DUPLICATE_NICKNAME";
     public static final String NICKNAME_CREATED = "NICKNAME_CREATED";
     public static final String NICKNAME_API_FAILED = "NICKNAME_API_FAILED";
     public static final String NICKNAME_GENERATION_TIMEOUT = "NICKNAME_GENERATION_TIMEOUT";
     public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
+    public static final String EMBEDDING_REGISTER_SUCCESS = "EMBEDDING_REGISTER_SUCCESS"; // AI API 연동 (사용자 취향 등록)
+
 
     // 취향 선택 응답 code
     public static final String INTERESTS_SAVED_SUCCESSFULLY = "INTERESTS_SAVED_SUCCESSFULLY";
@@ -45,5 +48,7 @@ public class ResponseCode {
     public static final String CHANNEL_ROOM_LIST_FETCHED = "CHANNEL_ROOM_LIST_FETCHED";
     public static final String NO_CHANNEL_ROOM = "NO_CHANNEL_ROOM";
     public static final String MESSAGE_CREATED = "MESSAGE_CREATED";
+
+
 
 }
