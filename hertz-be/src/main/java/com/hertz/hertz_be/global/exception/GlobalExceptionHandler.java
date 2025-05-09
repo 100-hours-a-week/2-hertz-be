@@ -67,4 +67,15 @@ public class GlobalExceptionHandler {
                         null
                 ));
     }
+
+    @ExceptionHandler(AccessTokenExpiredException.class)
+    public ResponseEntity<ResponseDto<Void>> handleAccessTokenExpiredError(AccessTokenExpiredException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ResponseDto<>(
+                        ex.getCode(),
+                        ex.getMessage(),
+                        null
+                ));
+    }
 }
