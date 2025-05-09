@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.global.auth.token;
 
+import com.hertz.hertz_be.global.exception.AccessTokenExpiredException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -28,7 +29,7 @@ public class JwtTokenProvider {
 
     public String createAccessToken(Long userId) {
         Date now = new Date();
-        Date expiryDate = Date.from(Instant.now().plus(30, ChronoUnit.DAYS));
+        Date expiryDate = Date.from(Instant.now().plus(15, ChronoUnit.SECONDS));
 
         return Jwts.builder()
                 .setSubject(userId.toString())
@@ -48,7 +49,7 @@ public class JwtTokenProvider {
             parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) { // 토큰 만료
-            return false;
+            throw new AccessTokenExpiredException();
         } catch (JwtException | IllegalArgumentException e) { // 토큰 손상/변조
             return false;
         }
@@ -58,7 +59,7 @@ public class JwtTokenProvider {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(token)// 만료 여부 검증 포함
                 .getBody(); // Claims(payload 부분)만 반환
     }
 

@@ -1,6 +1,8 @@
 package com.hertz.hertz_be.global.auth.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import com.hertz.hertz_be.global.exception.AccessTokenExpiredException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +31,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Swagger 요청은 필터 무시
         if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")
                 || path.startsWith("/swagger-resources") || path.startsWith("/webjars")
                 || path.equals("/swagger-ui.html")) {
@@ -35,16 +38,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = resolveToken(request);
+        try {
+            String token = resolveToken(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.getUserIdFromToken(token);
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+
+            filterChain.doFilter(request, response);
+
+        } catch (AccessTokenExpiredException ex) {
+            // AccessToken 만료 시 응답
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setContentType("application/json;charset=UTF-8");
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", "ACCESS_TOKEN_EXPIRED");
+            errorResponse.put("message", "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
+            errorResponse.put("data", null);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
         }
-
-        filterChain.doFilter(request, response);
     }
 
     private String resolveToken(HttpServletRequest request) {
