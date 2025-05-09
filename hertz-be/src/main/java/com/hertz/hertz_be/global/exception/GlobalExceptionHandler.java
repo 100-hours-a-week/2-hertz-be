@@ -46,6 +46,14 @@ public class GlobalExceptionHandler {
                 .body(new ResponseDto<>(ResponseCode.BAD_REQUEST, "잘못된 요청입니다.", null));
     }
 
+    // 존재하지 않는 URL
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ResponseDto<Void>> handleNotFound(NoHandlerFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ResponseDto<>(ResponseCode.NOT_FOUND, "존재하지 않는 API입니다.", null));
+    }
+
     @ExceptionHandler(InternalServerErrorException.class)
     public ResponseEntity<ResponseDto<Void>> handleInternalServerError(InternalServerErrorException ex) {
         return ResponseEntity
@@ -68,14 +76,4 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    @ExceptionHandler(AccessTokenExpiredException.class)
-    public ResponseEntity<ResponseDto<Void>> handleAccessTokenExpiredError(AccessTokenExpiredException ex) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ResponseDto<>(
-                        ex.getCode(),
-                        ex.getMessage(),
-                        null
-                ));
-    }
 }
