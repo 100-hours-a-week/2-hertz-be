@@ -2,7 +2,7 @@ package com.hertz.hertz_be.global.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.global.exception.AccessTokenExpiredException;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,9 +50,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
 
-        } catch (AccessTokenExpiredException ex) {
+        } catch (ExpiredJwtException ex) {
             // AccessToken 만료 시 응답
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
 
             Map<String, Object> errorResponse = new HashMap<>();

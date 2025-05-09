@@ -1,6 +1,5 @@
 package com.hertz.hertz_be.global.auth.token;
 
-import com.hertz.hertz_be.global.exception.AccessTokenExpiredException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -49,7 +48,7 @@ public class JwtTokenProvider {
             parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) { // 토큰 만료
-            throw new AccessTokenExpiredException();
+            throw e;
         } catch (JwtException | IllegalArgumentException e) { // 토큰 손상/변조
             return false;
         }
