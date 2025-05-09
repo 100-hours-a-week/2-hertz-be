@@ -113,19 +113,23 @@ public class ChannelService {
         Tuning tuning = getOrCreateTuning(requester);
 
         if (!tuningResultRepository.existsByTuning(tuning)) {
-            fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+            boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+            if (!saved) return null;
         }
 
         while (true) {
-            TuningResult topResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning)
-                    .orElseThrow(InternalServerErrorException::new);
+            Optional<TuningResult> optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
+            if (optionalResult.isEmpty()) {
+                boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+                if (!saved) return null;
+                continue;
+            }
+
+            TuningResult topResult = optionalResult.get();
             tuningResultRepository.delete(topResult);
 
             User matchedUser = topResult.getMatchedUser();
             if (matchedUser == null || matchedUser.getId() == null) {
-                log.warn("매칭 유저가 존재하지 않음. resultId: {}", topResult.getId());
-                if (tuningResultRepository.existsByTuning(tuning)) continue;
-                fetchAndSaveTuningResultsFromAiServer(userId, tuning);
                 continue;
             }
 
@@ -135,20 +139,17 @@ public class ChannelService {
             if (!alreadyExists) {
                 return buildTuningResponseDTO(userId, matchedUser);
             }
-
-            if (!tuningResultRepository.existsByTuning(tuning)) {
-                fetchAndSaveTuningResultsFromAiServer(userId, tuning);
-            }
         }
     }
 
-    private void fetchAndSaveTuningResultsFromAiServer(Long userId, Tuning tuning) {
+
+    private boolean fetchAndSaveTuningResultsFromAiServer(Long userId, Tuning tuning) {
         Map<String, Object> responseMap = requestTuningFromAiServer(userId);
         String code = (String) responseMap.get("code");
 
         switch (code) {
             case "TUNING_SUCCESS_BUT_NO_MATCH" -> {
-                return;
+                return false;
             }
             case "TUNING_BAD_REQUEST", "TUNING_NOT_FOUND_USER", "TUNING_INTERNAL_SERVER_ERROR" ->
                     throw new AiServerErrorException();
@@ -164,6 +165,7 @@ public class ChannelService {
                 }
 
                 saveTuningResults(userIdList, tuning);
+                return true;
             }
             default -> throw new InternalServerErrorException();
         }
