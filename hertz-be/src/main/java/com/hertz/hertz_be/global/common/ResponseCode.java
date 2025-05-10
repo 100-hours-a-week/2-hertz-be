@@ -30,7 +30,6 @@ public class ResponseCode {
     public static final String NICKNAME_API_FAILED = "NICKNAME_API_FAILED";
     public static final String NICKNAME_GENERATION_TIMEOUT = "NICKNAME_GENERATION_TIMEOUT";
     public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
-    public static final String EMBEDDING_REGISTER_SUCCESS = "EMBEDDING_REGISTER_SUCCESS"; // AI API 연동 (사용자 취향 등록)
 
 
     // 취향 선택 응답 code
@@ -55,6 +54,14 @@ public class ResponseCode {
     public static final String NO_CHANNEL_ROOM = "NO_CHANNEL_ROOM";
     public static final String MESSAGE_CREATED = "MESSAGE_CREATED";
 
+
+    /* AI Response */
+    public static final String EMBEDDING_REGISTER_SUCCESS = "EMBEDDING_REGISTER_SUCCESS";
+    public static final String EMBEDDING_REGISTER_BAD_REQUEST = "EMBEDDING_REGISTER_BAD_REQUEST";
+    public static final String EMBEDDING_CONFLICT_DUPLICATE_ID = "EMBEDDING_CONFLICT_DUPLICATE_ID";
+    public static final String BAD_REQUEST_VALIDATION_ERROR = "BAD_REQUEST_VALIDATION_ERROR";
+    public static final String EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED = "EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED";
+    public static final String EMBEDDING_REGISTER_SERVER_ERROR = "EMBEDDING_REGISTER_SERVER_ERROR";
 
 
 }

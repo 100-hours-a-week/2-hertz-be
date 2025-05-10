@@ -1,10 +1,14 @@
 package com.hertz.hertz_be.domain.interests.service;
 
+import com.hertz.hertz_be.domain.interests.dto.request.UserAiInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.entity.InterestsCategory;
 import com.hertz.hertz_be.domain.interests.entity.InterestsCategoryItem;
 import com.hertz.hertz_be.domain.interests.entity.UserInterests;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
+import com.hertz.hertz_be.domain.interests.exception.DuplicateIdException;
+import com.hertz.hertz_be.domain.interests.exception.RegisterBadRequestException;
+import com.hertz.hertz_be.domain.interests.exception.SimilarityUpdateFailedException;
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryItemRepository;
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
@@ -12,10 +16,17 @@ import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,27 +34,50 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InterestsService {
 
+    @Value("${ai.server.ip}")
+    private String AI_SERVER_IP;
+
     private final UserInterestsRepository userInterestsRepository;
     private final InterestsCategoryRepository interestsCategoryRepository;
     private final InterestsCategoryItemRepository interestsCategoryItemRepository;
     private final UserRepository userRepository;
-    //private final WebClient.Builder webClientBuilder;
+    private final WebClient webClient;
 
-    //@Value("${ai.server.ip}")
-    //private String AI_SERVER_IP;
+    @Autowired
+    public InterestsService(UserRepository userRepository,
+                            InterestsCategoryRepository interestsCategoryRepository,
+                            InterestsCategoryItemRepository interestsCategoryItemRepository,
+                            UserInterestsRepository userInterestsRepository,
+                            @Value("${ai.server.ip}") String aiServerIp) {
+        this.userInterestsRepository = userInterestsRepository;
+        this.interestsCategoryRepository = interestsCategoryRepository;
+        this.interestsCategoryItemRepository = interestsCategoryItemRepository;
+        this.userRepository = userRepository;
+        this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
+    }
+
+    private Map<String, Object> requestAiBody = new HashMap<>();
 
     @Transactional
-    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) {
+    public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) throws Exception {
 
         Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
         Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
+        Map<String, String> requestAiKeywordsBody = new HashMap<>(); // 키워드 담을 Map
+        Map<String, String[]> requestAiInterestsBody = new HashMap<>(); // 관심사 담을 Map
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
+
+        requestAiBody.put("userId", user.getId());
+        requestAiBody.put("emailDomain", user.getEmail().split("@")[1]);
+        requestAiBody.put("gender", user.getGender());
+        requestAiBody.put("ageGroup", user.getAgeGroup());
 
         try {
             // 키워드 처리
             keywordsMap.forEach((categoryName, itemName) -> {
                 saveSingleUserInterest(user, InterestsCategoryType.KEYWORD, categoryName, itemName);
+                requestAiKeywordsBody.put(categoryName, itemName);
             });
 
             // 관심사 처리
@@ -53,33 +87,38 @@ public class InterestsService {
                 }
                 itemNames.forEach(itemName -> {
                     saveSingleUserInterest(user, InterestsCategoryType.INTEREST, categoryName, itemName);
+                    requestAiInterestsBody.put(categoryName, itemNames.toArray(new String[0]));
                 });
             });
         } catch (Exception e) {
             throw new UserException("취향 등록 처리에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
         }
 
+        Map<String, Object> responseMap = saveInterestsToAiServer(requestAiKeywordsBody, requestAiInterestsBody);
+        String code = (String) responseMap.get("code");
 
-        // AI - 데이터 합치는 과정
-//        EmbeddingRequestDto dto = EmbeddingRequestMapper.toDto(
-//                user.getId(),
-//                user.getEmail().split("@")[1],
-//                user.getGender().name(),
-//                user.getAgeGroup().name(),
-//                keywordsMap.
-//        );
-//
-//        // AI - 임베딩(회원 등록) API 연동
-//        String aiResponse = webClientBuilder.build()
-//                .post()
-//                .uri(AI_SERVER_IP)
-//                .bodyValue(dto)
-//                .retrieve()
-//                .bodyToMono(String.class)
-//                .block();
-//
-//        // 응답값 활용할 필요 있으면 여기에 처리
-//        System.out.println("AI 응답: " + aiResponse);
+        switch (code) {
+            case ResponseCode.EMBEDDING_REGISTER_SUCCESS -> { // 성공
+                return;
+            }
+
+            case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> {
+                throw new DuplicateIdException();
+            }
+
+            case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> {
+                throw new SimilarityUpdateFailedException();
+            }
+
+            case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> {
+                throw new AiServerErrorException();
+            }
+
+            default -> { // EMBEDDING_REGISTER_BAD_REQUEST, BAD_REQUEST_VALIDATION_ERROR
+                throw new RegisterBadRequestException(code);
+            }
+        }
+
     }
 
     private void saveSingleUserInterest(User user, InterestsCategoryType categoryType, String categoryName, String itemName) {
@@ -112,5 +151,40 @@ public class InterestsService {
             throw new UserException("단일 취향 아이템 저장에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
         }
 
+    }
+
+    private Map<String, Object> saveInterestsToAiServer(Map<String, String> keywordMap, Map<String, String[]> interestsMap) {
+        String uri = "/api/v1/users";
+        UserAiInterestsRequestDto aiRequest = UserAiInterestsRequestDto.builder()
+                .userId((Long) requestAiBody.get("userId"))
+                .emailDomain((String) requestAiBody.get("emailDomain"))
+                .gender(String.valueOf(requestAiBody.get("gender")))
+                .ageGroup(String.valueOf(requestAiBody.get("ageGroup")))
+                .MBTI(keywordMap.get("mbti"))
+                .religion(keywordMap.get("religion"))
+                .smoking(keywordMap.get("smoking"))
+                .drinking(keywordMap.get("drinking"))
+                .personality(interestsMap.get("personality"))
+                .preferredPeople(interestsMap.get("preferredPeople"))
+                .currentInterests(interestsMap.get("currentInterests"))
+                .favoriteFoods(interestsMap.get("favoriteFoods"))
+                .likedSports(interestsMap.get("likedSports"))
+                .pets(interestsMap.get("pets"))
+                .selfDevelopment(interestsMap.get("selfDevelopment"))
+                .hobbies(interestsMap.get("hobbies"))
+                .build();
+
+        Map<String, Object> responseMap = webClient.post()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON) // JSON 형식으로 보내겠다고 명시
+                .bodyValue(aiRequest) // requestBody를 POST 요청 본문에 담음
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+
+        if (responseMap == null || !responseMap.containsKey("code")) {
+            throw new AiServerErrorException();
+        }
+        return responseMap;
     }
 }
