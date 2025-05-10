@@ -107,6 +107,7 @@ public class ChannelService {
                 .orElseThrow(InternalServerErrorException::new);
     }
 
+
     @Transactional
     public TuningResponseDTO getTunedUser(Long userId) {
         User requester = getUserById(userId);
@@ -117,29 +118,22 @@ public class ChannelService {
             if (!saved) return null;
         }
 
-        while (true) {
-            Optional<TuningResult> optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
-            if (optionalResult.isEmpty()) {
-                boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning);
-                if (!saved) return null;
-                continue;
-            }
+        Optional<TuningResult> optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
+        if (optionalResult.isEmpty()) {
+            boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning);
+            if (!saved) return null;
 
-            TuningResult topResult = optionalResult.get();
-            tuningResultRepository.delete(topResult);
-
-            User matchedUser = topResult.getMatchedUser();
-            if (matchedUser == null || matchedUser.getId() == null) {
-                continue;
-            }
-
-            boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
-                    || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
-
-            if (!alreadyExists) {
-                return buildTuningResponseDTO(userId, matchedUser);
-            }
+            optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
+            if (optionalResult.isEmpty()) return null;
         }
+
+        TuningResult topResult = optionalResult.get();
+        tuningResultRepository.delete(topResult);
+
+        User matchedUser = topResult.getMatchedUser();
+        if (matchedUser == null || matchedUser.getId() == null) return null;
+
+        return buildTuningResponseDTO(userId, matchedUser);
     }
 
 
@@ -197,11 +191,18 @@ public class ChannelService {
 
     private void saveTuningResults(List<Integer> userIdList, Tuning tuning) {
         int lineup = 1;
+        User requester = tuning.getUser();
+
         for (Integer matchedUserId : userIdList) {
             Long matchedId = Long.valueOf(matchedUserId);
 
             User matchedUser = userRepository.findById(matchedId)
                     .orElseThrow(InternalServerErrorException::new);
+
+            boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
+                    || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
+
+            if (alreadyExists) continue;
 
             tuningResultRepository.save(
                     TuningResult.builder()
