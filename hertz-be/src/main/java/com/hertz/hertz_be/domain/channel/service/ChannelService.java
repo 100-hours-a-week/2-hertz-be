@@ -324,7 +324,7 @@ public class ChannelService {
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sendAt"));
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
         List<ChannelRoomResponseDto.MessageDto> messages = messagePage.getContent().stream()
