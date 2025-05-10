@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.interests.entity.InterestsCategoryItem;
 import com.hertz.hertz_be.domain.interests.entity.UserInterests;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
 import com.hertz.hertz_be.domain.interests.exception.DuplicateIdException;
+import com.hertz.hertz_be.domain.interests.exception.InvalidException;
 import com.hertz.hertz_be.domain.interests.exception.RegisterBadRequestException;
 import com.hertz.hertz_be.domain.interests.exception.SimilarityUpdateFailedException;
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryItemRepository;
@@ -33,9 +34,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class InterestsService {
-
-    @Value("${ai.server.ip}")
-    private String AI_SERVER_IP;
 
     private final UserInterestsRepository userInterestsRepository;
     private final InterestsCategoryRepository interestsCategoryRepository;
@@ -98,23 +96,31 @@ public class InterestsService {
         String code = (String) responseMap.get("code");
 
         switch (code) {
-            case ResponseCode.EMBEDDING_REGISTER_SUCCESS -> { // 성공
+            case ResponseCode.EMBEDDING_REGISTER_SUCCESS -> { // 201
                 return;
             }
 
-            case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> {
+            case ResponseCode.EMBEDDING_REGISTER_BAD_REQUEST -> { // 400
+                throw new RegisterBadRequestException(code);
+            }
+
+            case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> { // 409
                 throw new DuplicateIdException();
             }
 
-            case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> {
+            case ResponseCode.BAD_REQUEST_VALIDATION_ERROR -> { // 422
+                throw new InvalidException();
+            }
+
+            case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> { // 500
                 throw new SimilarityUpdateFailedException();
             }
 
-            case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> {
+            case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> { // 500
                 throw new AiServerErrorException();
             }
 
-            default -> { // EMBEDDING_REGISTER_BAD_REQUEST, BAD_REQUEST_VALIDATION_ERROR
+            default -> {
                 throw new RegisterBadRequestException(code);
             }
         }
