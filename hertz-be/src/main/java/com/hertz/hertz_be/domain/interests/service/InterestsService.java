@@ -6,10 +6,7 @@ import com.hertz.hertz_be.domain.interests.entity.InterestsCategory;
 import com.hertz.hertz_be.domain.interests.entity.InterestsCategoryItem;
 import com.hertz.hertz_be.domain.interests.entity.UserInterests;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
-import com.hertz.hertz_be.domain.interests.exception.DuplicateIdException;
-import com.hertz.hertz_be.domain.interests.exception.InvalidException;
-import com.hertz.hertz_be.domain.interests.exception.RegisterBadRequestException;
-import com.hertz.hertz_be.domain.interests.exception.SimilarityUpdateFailedException;
+import com.hertz.hertz_be.domain.interests.exception.*;
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryItemRepository;
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
@@ -63,6 +60,10 @@ public class InterestsService {
         Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
         Map<String, String> requestAiKeywordsBody = new HashMap<>(); // 키워드 담을 Map
         Map<String, String[]> requestAiInterestsBody = new HashMap<>(); // 관심사 담을 Map
+
+        // 키워드, 관심사 null 및 공백 체크
+        validateUserInterestsInput(userInterestsRequestDto.getKeywords().toMap(), userInterestsRequestDto.getInterests().toMap());
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
 
@@ -192,5 +193,30 @@ public class InterestsService {
             throw new AiServerErrorException();
         }
         return responseMap;
+    }
+
+    public void validateUserInterestsInput(Map<String, String> keywordsMap, Map<String, List<String>> interestsMap) {
+        // 1. keywordsMap: null 또는 공백 체크
+        for (Map.Entry<String, String> entry : keywordsMap.entrySet()) {
+            String value = entry.getValue();
+            if (value == null || value.trim().isEmpty()) {
+                throw new InvalidInterestsInputException();
+            }
+        }
+
+        // 2. interestsMap: 리스트 자체 or 내부 요소가 null/공백인지 체크
+        for (Map.Entry<String, List<String>> entry : interestsMap.entrySet()) {
+            List<String> list = entry.getValue();
+
+            if (list == null || list.isEmpty()) {
+                throw new InvalidInterestsInputException();
+            }
+
+            for (String item : list) {
+                if (item == null || item.trim().isEmpty()) {
+                    throw new InvalidInterestsInputException();
+                }
+            }
+        }
     }
 }
