@@ -64,7 +64,7 @@ public class JwtTokenProvider {
 
     public String createRefreshToken(Long userId) {
         Date now = new Date();
-        Date expiryDate = Date.from(Instant.now().plus(14, ChronoUnit.DAYS));
+        Date expiryDate = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));
 
         return Jwts.builder()
                 .setSubject(userId.toString())
