@@ -31,7 +31,8 @@ public class ChannelExceptionHandler {
     }
 
     @ExceptionHandler({
-            InterestsNotSelectedException.class
+            InterestsNotSelectedException.class,
+            CannotSendSignalToSelfException.class
     })
     public ResponseEntity<ResponseDto<Void>> badRequestException(RuntimeException ex) {
         String code = ((BaseChannelException) ex).getCode();

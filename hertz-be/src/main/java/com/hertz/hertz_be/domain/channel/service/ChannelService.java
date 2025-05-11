@@ -5,10 +5,7 @@ import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
-import com.hertz.hertz_be.domain.channel.exception.AlreadyInConversationException;
-import com.hertz.hertz_be.domain.channel.exception.ChannelNotFoundException;
-import com.hertz.hertz_be.domain.channel.exception.UnauthorizedAccessException;
-import com.hertz.hertz_be.domain.channel.exception.UserWithdrawnException;
+import com.hertz.hertz_be.domain.channel.exception.*;
 import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
@@ -77,9 +74,18 @@ public class ChannelService {
         User receiver = userRepository.findById(dto.getReceiverUserId())
                 .orElseThrow(UserWithdrawnException::new);
 
-        boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(sender, receiver);
-        if (alreadyExists) {
+        // user_pair_signal 컬럼 누락으로 인한 수정 진행
+//        boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(sender, receiver);
+//        if (alreadyExists) {
+//            throw new AlreadyInConversationException();
+//        }
+
+        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
+        Optional<SignalRoom> existingRoom = signalRoomRepository.findByUserPairSignal(userPairSignal);
+        if (existingRoom.isPresent()) {
             throw new AlreadyInConversationException();
+        } else if (Objects.equals(sender.getId(), receiver.getId())) {
+            throw new CannotSendSignalToSelfException();
         }
 
         SignalRoom signalRoom = SignalRoom.builder()
@@ -88,6 +94,7 @@ public class ChannelService {
                 .category(Category.FRIEND)
                 .senderMatchingStatus(MatchingStatus.SIGNAL)
                 .receiverMatchingStatus(MatchingStatus.SIGNAL)
+                .userPairSignal(userPairSignal)
                 .build();
         signalRoomRepository.save(signalRoom);
 
@@ -100,6 +107,12 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         return new SendSignalResponseDTO(signalRoom.getId());
+    }
+
+    public static String generateUserPairSignal(Long userId1, Long userId2) {
+        Long min = Math.min(userId1, userId2);
+        Long max = Math.max(userId1, userId2);
+        return min + "_" + max;
     }
 
     private User getUserById(Long userId) {

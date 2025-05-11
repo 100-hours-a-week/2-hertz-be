@@ -7,7 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     boolean existsBySenderUserAndReceiverUser(User sender, User receiver);
-    Page<SignalMessage> findById(Long roomId, Pageable pageable);
+    Optional<SignalRoom> findByUserPairSignal(String userPairSignal);
 }

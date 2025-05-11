@@ -35,6 +35,9 @@ public class SignalRoom {
     @Column(nullable = false, length = 10)
     private Category category;
 
+    @Column(name = "user_pair_signal", nullable = false, unique = true, length = 35)
+    private String userPairSignal;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "sender_matching_status", nullable = false, length = 15)
     private MatchingStatus senderMatchingStatus;
