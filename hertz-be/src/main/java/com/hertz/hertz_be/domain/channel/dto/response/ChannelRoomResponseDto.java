@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.AllArgsConstructor;
@@ -71,6 +72,7 @@ public class ChannelRoomResponseDto {
     public static class PageableInfo {
         private int pageNumber;
         private int pageSize;
+        @JsonProperty("isLast")
         private boolean isLast;
 
         public PageableInfo(Page<?> page) {
