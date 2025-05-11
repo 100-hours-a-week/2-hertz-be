@@ -21,7 +21,11 @@ public interface ChannelRoomRepository extends JpaRepository<ChannelRoom, Long> 
             sm.message AS lastMessage,
             sm.send_at AS lastMessageTime,
             sm.is_read AS isRead,
-            sr.category AS relationType
+            CASE
+                WHEN sr.receiver_matching_status = 'MATCHED' AND sr.sender_matching_status = 'MATCHED'
+                THEN 'MATCHING'
+                ELSE 'SIGNAL'
+            END AS relationType
         FROM signal_room sr
         JOIN user u ON 
             (CASE 

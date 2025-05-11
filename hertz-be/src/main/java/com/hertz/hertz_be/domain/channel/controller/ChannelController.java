@@ -23,8 +23,8 @@ public class ChannelController {
     private final ChannelService channelService;
 
     @PostMapping("/v1/tuning/signal")
-    public ResponseEntity<ResponseDto<SendSignalResponseDTO>> sendSignal(
-            @RequestBody @Valid SendSignalRequestDTO requestDTO, @AuthenticationPrincipal Long userId) {
+    public ResponseEntity<ResponseDto<SendSignalResponseDTO>> sendSignal(@RequestBody @Valid SendSignalRequestDTO requestDTO,
+                                                                         @AuthenticationPrincipal Long userId) {
         SendSignalResponseDTO response = channelService.sendSignal(userId, requestDTO);
         return ResponseEntity.status(201).body(
                 new ResponseDto<>(ResponseCode.SIGNAL_ROOM_CREATED, "시그널 룸이 성공적으로 생성되었습니다.", response)
