@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +15,7 @@ public class ChannelSummaryDto {
     private String partnerNickname;
     private String lastMessage;
     private LocalDateTime lastMessageTime;
+    @JsonProperty("isRead")
     private boolean isRead;
     private String relationType;
 
