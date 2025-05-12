@@ -41,7 +41,7 @@ public class OAuthController {
 
         if (result.isRegistered()) {
             String cookieValue = String.format(
-                    "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=" + (isLocal ? "Lax" : "None"),
+                    "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "Lax" : "None; Secure;"),
                     result.getRefreshToken(), 1209600
             );
             response.setHeader("Set-Cookie", cookieValue);

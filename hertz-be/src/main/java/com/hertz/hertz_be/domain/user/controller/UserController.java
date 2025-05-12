@@ -33,7 +33,7 @@ public class UserController {
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
         String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=" + (isLocal ? "Lax" : "None"),
+                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "Lax" : "None; Secure;"),
                 userInfoResponseDto.getRefreshToken(), userInfoResponseDto.getRefreshSecondsUntilExpiry()
         );
         response.setHeader("Set-Cookie", cookieValue);
