@@ -14,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface UserInterestsRepository extends JpaRepository<UserInterests, Long> {
     boolean existsByUserAndCategoryItem(User user, InterestsCategoryItem item);
+    boolean existsByUser(User user);
 
     @Query("SELECT ui FROM UserInterests ui JOIN FETCH ui.categoryItem ci JOIN FETCH ci.category WHERE ui.user.id = :userId")
     List<UserInterests> findByUserId(@Param("userId") Long userId);

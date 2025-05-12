@@ -124,6 +124,12 @@ public class ChannelService {
     @Transactional
     public TuningResponseDTO getTunedUser(Long userId) {
         User requester = getUserById(userId);
+
+        boolean isUserChooseInterests = userInterestsRepository.existsByUser(requester);
+        if (!isUserChooseInterests){
+            throw new InterestsNotSelectedException();
+        }
+
         Tuning tuning = getOrCreateTuning(requester);
 
         if (!tuningResultRepository.existsByTuning(tuning)) {
