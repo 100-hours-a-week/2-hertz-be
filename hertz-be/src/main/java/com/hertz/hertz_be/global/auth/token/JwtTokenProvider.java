@@ -28,7 +28,7 @@ public class JwtTokenProvider {
 
     public String createAccessToken(Long userId) {
         Date now = new Date();
-        Date expiryDate = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));
+        Date expiryDate = Date.from(Instant.now().plus(1, ChronoUnit.MINUTES));
 
         return Jwts.builder()
                 .setSubject(userId.toString())
