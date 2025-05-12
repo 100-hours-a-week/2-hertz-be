@@ -9,6 +9,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,9 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authTokenService;
+
+    @Value("${is.local}")
+    private boolean isLocal;
 
     @PostMapping("/v1/auth/token")
     public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDTO>> reissueAccessToken(
@@ -36,7 +40,7 @@ public class AuthController {
         String newRefreshToken = result.getValue();
 
         String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=None",
+                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=" + (isLocal ? "Lax" : "None"),
                 newRefreshToken, 1209600
         );
         response.setHeader("Set-Cookie", cookieValue);

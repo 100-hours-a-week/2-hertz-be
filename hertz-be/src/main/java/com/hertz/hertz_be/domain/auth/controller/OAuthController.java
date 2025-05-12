@@ -9,6 +9,7 @@ import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 public class OAuthController {
 
     private final OAuthService oAuthService;
+
+    @Value("${is.local}")
+    private boolean isLocal;
 
     @GetMapping("/v1/oauth/{provider}/redirection")
     public ResponseEntity<Void> getOAuthRedirectUrl(@PathVariable String provider) {
@@ -37,7 +41,7 @@ public class OAuthController {
 
         if (result.isRegistered()) {
             String cookieValue = String.format(
-                    "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=None",
+                    "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=" + (isLocal ? "Lax" : "None"),
                     result.getRefreshToken(), 1209600
             );
             response.setHeader("Set-Cookie", cookieValue);

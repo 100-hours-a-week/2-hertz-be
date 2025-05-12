@@ -5,9 +5,9 @@ import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +16,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
+@RequiredArgsConstructor
 public class UserController {
+    @Value("${is.local}")
+    private boolean isLocal;
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     /**
      * 사용자 생성 (개인정보 등록)
@@ -33,13 +32,11 @@ public class UserController {
                                                                        HttpServletResponse response) {
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
-        Cookie refreshTokenCookie = new Cookie("refreshToken", userInfoResponseDto.getRefreshToken());
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true); // 배포환경에서만 true
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry()); // 만료일자까지 남은 시간
-
-        response.addCookie(refreshTokenCookie);
+        String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
+                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=" + (isLocal ? "Lax" : "None"),
+                userInfoResponseDto.getRefreshToken(), userInfoResponseDto.getRefreshSecondsUntilExpiry()
+        );
+        response.setHeader("Set-Cookie", cookieValue);
 
         // 응답 바디에 포함할 정보만 따로 구성
         Map<String, Object> data = new HashMap<>();
