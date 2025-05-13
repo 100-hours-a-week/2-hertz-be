@@ -40,7 +40,7 @@ public class AuthController {
         String newRefreshToken = result.getValue();
 
         String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "Lax" : "None; Secure;"),
+                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "None;" : "None; Secure;"),
                 newRefreshToken, 1209600
         );
         response.setHeader("Set-Cookie", cookieValue);
