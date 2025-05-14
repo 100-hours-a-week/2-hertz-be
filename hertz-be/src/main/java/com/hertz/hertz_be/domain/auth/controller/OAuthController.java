@@ -51,7 +51,7 @@ public class OAuthController {
                     .httpOnly(true)
                     .sameSite("None");
 
-            if (isLocal) {
+            if (!isLocal) {
                 cookieBuilder
                         .secure(true)
                         .domain(".hertz-tuning.com");
