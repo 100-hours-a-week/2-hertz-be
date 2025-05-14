@@ -46,12 +46,12 @@ public class AuthController {
                 .maxAge(1209600)
                 .path("/")
                 .httpOnly(true)
-                .sameSite("None")
-                .domain("dev.hertz-tuning.com");
+                .sameSite("None");
 
         if (isLocal) {
             cookieBuilder
-                    .secure(true);// Dev과 Prod 환경의 클라이언트 도메인
+                    .secure(true)
+                    .domain(".hertz-tuning.com");
         }
 
         ResponseCookie responseCookie = cookieBuilder.build();
