@@ -8,6 +8,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,28 +28,43 @@ public class UserController {
      * @param userInfoRequestDto
      * @author daisy.lee
      */
+
     @PostMapping("/users")
-    public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(@RequestBody UserInfoRequestDto userInfoRequestDto,
-                                                                       HttpServletResponse response) {
+    public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
+            @RequestBody UserInfoRequestDto userInfoRequestDto,
+            HttpServletResponse response) {
+
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
-        String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "None;" : "None; Secure;"),
-                userInfoResponseDto.getRefreshToken(), userInfoResponseDto.getRefreshSecondsUntilExpiry()
-        );
-        response.setHeader("Set-Cookie", cookieValue);
+        // ✅ ResponseCookie 방식으로 쿠키 설정
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                .from("refreshToken", userInfoResponseDto.getRefreshToken())
+                .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
+                .path("/")
+                .httpOnly(true)
+                .sameSite("None");
 
-        // 응답 바디에 포함할 정보만 따로 구성
+        if (!isLocal) {
+            cookieBuilder
+                    .secure(true)
+                    .domain("dev.hertz-tuning.com"); // 운영 도메인 지정
+        }
+
+        ResponseCookie responseCookie = cookieBuilder.build();
+        response.setHeader("Set-Cookie", responseCookie.toString());
+
+        // ✅ 응답 바디 구성
         Map<String, Object> data = new HashMap<>();
         data.put("userId", userInfoResponseDto.getUserId());
         data.put("accessToken", userInfoResponseDto.getAccessToken());
 
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.PROFILE_SAVED_SUCCESSFULLY,
+                new ResponseDto<>(
+                        ResponseCode.PROFILE_SAVED_SUCCESSFULLY,
                         "개인정보가 정상적으로 저장되었습니다.",
-                        data)
+                        data
+                )
         );
-
     }
 
     /**

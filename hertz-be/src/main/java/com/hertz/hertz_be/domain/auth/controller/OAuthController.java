@@ -10,6 +10,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,11 +41,23 @@ public class OAuthController {
         OAuthLoginResult result = oAuthService.oauthLogin(provider, request);
 
         if (result.isRegistered()) {
-            String cookieValue = String.format(
-                    "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "None;" : "None; Secure;"),
-                    result.getRefreshToken(), 1209600
-            );
-            response.setHeader("Set-Cookie", cookieValue);
+            String newRefreshToken = result.getRefreshToken();
+
+            ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from("refreshToken", newRefreshToken)
+                    .maxAge(1209600)
+                    .path("/")
+                    .httpOnly(true)
+                    .sameSite("None");
+
+            // isLocal 여부에 따라 Secure, Domain 조건 분기
+            if (!isLocal) {
+                cookieBuilder
+                        .secure(true)
+                        .domain("dev.hertz-tuning.com"); // 운영용 도메인 설정
+            }
+
+            ResponseCookie responseCookie = cookieBuilder.build();
+            response.setHeader("Set-Cookie", responseCookie.toString());
 
             OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,11 +40,21 @@ public class AuthController {
         ReissueAccessTokenResponseDTO accessTokenResponse = result.getKey();
         String newRefreshToken = result.getValue();
 
-        String cookieValue = String.format( // Todo: 나중에 util 클래스로 분리
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; SameSite=" + (isLocal ? "None;" : "None; Secure;"),
-                newRefreshToken, 1209600
-        );
-        response.setHeader("Set-Cookie", cookieValue);
+        ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+                .maxAge(1209600)
+                .path("/")
+                .domain("dev.hertz-tuning.com")   // 클라이언트 도메인 지정
+                .httpOnly(true)
+                .sameSite("None")
+                .secure(true)
+                .build();
+
+        response.setHeader("Set-Cookie", responseCookie.toString());
+
+        // ResponseCookie responseCookie
+        // dev.example.com
+        // Domain: .dev.example.com
+        // localhost (DNS 설정 파일을 바꾸는거죠) -> {local}.dev.example.com
 
         return ResponseEntity.ok(
                 new ResponseDto<>(ResponseCode.ACCESS_TOKEN_REISSUED, "Access Token이 재발급되었습니다.", accessTokenResponse)
