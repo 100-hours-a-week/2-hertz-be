@@ -44,7 +44,7 @@ public class AuthController {
         ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                 .maxAge(1209600)
                 .path("/")
-                .domain("dev.hertz-tuning.com")   // 클라이언트 도메인 지정
+                .domain(".hertz-tuning.com")   // 클라이언트 도메인 지정
                 .httpOnly(true)
                 .sameSite("None")
                 .secure(true)
