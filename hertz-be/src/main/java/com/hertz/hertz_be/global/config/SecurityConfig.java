@@ -62,7 +62,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 backendUrl,      // 테스트용 추가
                 "https://hertz-tuning.com",
-                "https://dev.hertz-tuning.com/"
+                "https://dev.hertz-tuning.com"
         ));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
