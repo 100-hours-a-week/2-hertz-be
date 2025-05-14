@@ -40,16 +40,21 @@ public class AuthController {
         ReissueAccessTokenResponseDTO accessTokenResponse = result.getKey();
         String newRefreshToken = result.getValue();
 
-        //ResponseCookie 설정 (환경에 따라 분기)
-        ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+        // 환경에 따라 domain, secure 조건 분기
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                .from("refreshToken", newRefreshToken)
                 .maxAge(1209600)
                 .path("/")
-                .domain(".hertz-tuning.com")   // 클라이언트 도메인 지정
                 .httpOnly(true)
-                .sameSite("None")
-                .secure(true)
-                .build();
+                .sameSite("None");
 
+        if (!isLocal) {
+            cookieBuilder
+                    .secure(true)
+                    .domain(".hertz-tuning.com"); //모든 서브도메인에서 공유 가능
+        }
+
+        ResponseCookie responseCookie = cookieBuilder.build();
         response.setHeader("Set-Cookie", responseCookie.toString());
 
         return ResponseEntity.ok(

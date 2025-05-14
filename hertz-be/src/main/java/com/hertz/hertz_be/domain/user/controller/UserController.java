@@ -37,17 +37,21 @@ public class UserController {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
-        ResponseCookie responseCookie;
-
-        responseCookie = ResponseCookie.from("refreshToken", userInfoResponseDto.getRefreshToken())
+        // 환경에 따라 secure/domain 설정 분기
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                .from("refreshToken", userInfoResponseDto.getRefreshToken())
                 .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
                 .path("/")
-                .domain(".hertz-tuning.com")
                 .httpOnly(true)
-                .sameSite("None")
-                .secure(true)
-                .build();
+                .sameSite("None");
 
+        if (!isLocal) {
+            cookieBuilder
+                    .secure(true)
+                    .domain(".hertz-tuning.com"); // 모든 서브도메인에서 사용 가능
+        }
+
+        ResponseCookie responseCookie = cookieBuilder.build();
         response.setHeader("Set-Cookie", responseCookie.toString());
 
         // ✅ 응답 바디 구성
