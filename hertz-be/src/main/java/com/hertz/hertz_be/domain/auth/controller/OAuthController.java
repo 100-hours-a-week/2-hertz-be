@@ -49,7 +49,6 @@ public class OAuthController {
                     .path("/")
                     .domain(".hertz-tuning.com")  // ✅ isLocal일 경우 domain 생략
                     .httpOnly(true)
-                    .secure(true)
                     .secure(!isLocal)                               // ✅ isLocal=false면 secure 활성화
                     .build();
 

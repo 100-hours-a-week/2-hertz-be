@@ -46,8 +46,7 @@ public class AuthController {
                 .path("/")
                 .domain(".hertz-tuning.com")  // ✅ isLocal일 경우 domain 생략
                 .httpOnly(true)
-                .sameSite("None")
-                .secure(true)                              // ✅ isLocal=false면 secure 활성화
+                .secure(!isLocal) // ✅ isLocal=false면 secure 활성화
                 .build();
 
         response.setHeader("Set-Cookie", responseCookie.toString());
