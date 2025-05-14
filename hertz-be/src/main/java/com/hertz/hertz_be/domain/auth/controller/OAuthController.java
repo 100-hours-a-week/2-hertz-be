@@ -47,7 +47,7 @@ public class OAuthController {
             ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                     .maxAge(1209600)
                     .path("/")
-                    .domain(isLocal ? null : ".hertz-tuning.com")  // ✅ isLocal일 경우 domain 생략
+                    .domain(".hertz-tuning.com")  // ✅ isLocal일 경우 domain 생략
                     .httpOnly(true)
                     .sameSite("None")
                     .secure(!isLocal)                               // ✅ isLocal=false면 secure 활성화
