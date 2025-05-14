@@ -1,8 +1,8 @@
 package com.hertz.hertz_be.domain.auth.controller;
 
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
-import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.Cookie;
@@ -40,32 +40,32 @@ public class AuthController {
         ReissueAccessTokenResponseDTO accessTokenResponse = result.getKey();
         String newRefreshToken = result.getValue();
 
-        ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+        //ResponseCookie 설정 (환경에 따라 분기)
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                .from("refreshToken", newRefreshToken)
                 .maxAge(1209600)
                 .path("/")
-                .domain("dev.hertz-tuning.com")   // 클라이언트 도메인 지정
                 .httpOnly(true)
-                .sameSite("None")
-                .secure(true)
-                .build();
+                .sameSite("None");
 
+        if (!isLocal) {
+            cookieBuilder
+                    .secure(true)
+                    .domain(".hertz-tuning.com"); // Dev과 Prod 환경의 클라이언트 도메인
+        }
+
+        ResponseCookie responseCookie = cookieBuilder.build();
         response.setHeader("Set-Cookie", responseCookie.toString());
-
-        // ResponseCookie responseCookie
-        // dev.example.com
-        // Domain: .dev.example.com
-        // localhost (DNS 설정 파일을 바꾸는거죠) -> {local}.dev.example.com
 
         return ResponseEntity.ok(
                 new ResponseDto<>(ResponseCode.ACCESS_TOKEN_REISSUED, "Access Token이 재발급되었습니다.", accessTokenResponse)
         );
     }
 
-
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
         if (request.getCookies() == null) return null;
         for (Cookie cookie : request.getCookies()) {
-            if (cookie.getName().equals("refreshToken")) {
+            if ("refreshToken".equals(cookie.getName())) {
                 return cookie.getValue();
             }
         }

@@ -19,8 +19,10 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class UserController {
+
     @Value("${is.local}")
     private boolean isLocal;
+
     private final UserService userService;
 
     /**
@@ -28,7 +30,6 @@ public class UserController {
      * @param userInfoRequestDto
      * @author daisy.lee
      */
-
     @PostMapping("/users")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
             @RequestBody UserInfoRequestDto userInfoRequestDto,
@@ -36,7 +37,7 @@ public class UserController {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
-        // ✅ ResponseCookie 방식으로 쿠키 설정
+        //ResponseCookie 설정 (환경에 따라 분기)
         ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
                 .from("refreshToken", userInfoResponseDto.getRefreshToken())
                 .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
@@ -47,7 +48,7 @@ public class UserController {
         if (!isLocal) {
             cookieBuilder
                     .secure(true)
-                    .domain("dev.hertz-tuning.com"); // 운영 도메인 지정
+                    .domain(".hertz-tuning.com"); // Dev과 Prod 환경의 클라이언트 도메인
         }
 
         ResponseCookie responseCookie = cookieBuilder.build();
@@ -79,6 +80,4 @@ public class UserController {
                 new ResponseDto<>(ResponseCode.NICKNAME_CREATED, "닉네임이 성공적으로 생성되었습니다.", data)
         );
     }
-
 }
-

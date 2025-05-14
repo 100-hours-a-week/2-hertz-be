@@ -43,15 +43,21 @@ public class OAuthController {
         if (result.isRegistered()) {
             String newRefreshToken = result.getRefreshToken();
 
-            ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+            //ResponseCookie 설정 (환경에 따라 분기)
+            ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                    .from("refreshToken", newRefreshToken)
                     .maxAge(1209600)
                     .path("/")
-                    .domain("dev.hertz-tuning.com")   // 클라이언트 도메인 지정
                     .httpOnly(true)
-                    .sameSite("None")
-                    .secure(true)
-                    .build();
+                    .sameSite("None");
 
+            if (!isLocal) {
+                cookieBuilder
+                        .secure(true)
+                        .domain(".hertz-tuning.com"); // Dev과 Prod 환경의 클라이언트 도메인
+            }
+
+            ResponseCookie responseCookie = cookieBuilder.build();
             response.setHeader("Set-Cookie", responseCookie.toString());
 
             OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
