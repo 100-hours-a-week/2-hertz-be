@@ -44,6 +44,7 @@ public class UserController {
                 .path("/")
                 .domain(isLocal ? null : ".hertz-tuning.com")
                 .httpOnly(true)
+                .sameSite("None")
                 .secure(!isLocal)   // isLocal=false면 secure 활성화
                 .build();
 
