@@ -50,12 +50,8 @@ public class OAuthController {
                     .path("/")
                     .httpOnly(true)
                     .domain("dev.hertz-tuning.com")
-                    .sameSite("None");
-
-            if (!isLocal) {
-                cookieBuilder
-                        .secure(true);
-            }
+                    .sameSite("None")
+                    .secure(true);
 
             ResponseCookie responseCookie = cookieBuilder.build();
             response.setHeader("Set-Cookie", responseCookie.toString());
