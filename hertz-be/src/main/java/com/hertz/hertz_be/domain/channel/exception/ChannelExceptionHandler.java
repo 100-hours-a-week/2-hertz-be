@@ -1,7 +1,5 @@
 package com.hertz.hertz_be.domain.channel.exception;
 
-import com.hertz.hertz_be.domain.auth.exception.BaseAuthException;
-import com.hertz.hertz_be.domain.auth.exception.RateLimitException;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +36,26 @@ public class ChannelExceptionHandler {
         String code = ((BaseChannelException) ex).getCode();
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler({
+            UserNotFoundException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> notFoundException(RuntimeException ex) {
+        String code = ((BaseChannelException) ex).getCode();
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler({
+            ForbiddenChannelException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> forbiddenException(RuntimeException ex) {
+        String code = ((BaseChannelException) ex).getCode();
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
                 .body(new ResponseDto<>(code, ex.getMessage(), null));
     }
 }

@@ -6,6 +6,7 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -20,7 +21,11 @@ public interface ChannelRoomRepository extends JpaRepository<ChannelRoom, Long> 
             u.nickname AS partnerNickname,
             sm.message AS lastMessage,
             sm.send_at AS lastMessageTime,
-            sm.is_read AS isRead,
+            CASE
+                WHEN sm.sender_user_id = :userId THEN 'true'
+                WHEN sm.sender_user_id != :userId AND sm.is_read = true THEN 'true'
+                ELSE 'false'
+            END AS isRead,
             CASE
                 WHEN sr.receiver_matching_status = 'MATCHED' AND sr.sender_matching_status = 'MATCHED'
                 THEN 'MATCHING'
@@ -53,6 +58,9 @@ public interface ChannelRoomRepository extends JpaRepository<ChannelRoom, Long> 
             Pageable pageable
     );
 
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE SignalMessage sm SET sm.isRead = true WHERE sm.signalRoom.id = :roomId")
+    int markAllMessagesAsReadByRoomId(@Param("roomId") Long roomId);
 
 // Todo: 추후 웹소켓 도입 시 쿼리 변경 필요 (v2)
 

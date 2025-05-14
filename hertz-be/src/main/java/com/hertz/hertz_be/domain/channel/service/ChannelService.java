@@ -69,16 +69,11 @@ public class ChannelService {
     @Transactional
     public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
         User sender = userRepository.findById(senderUserId)
-                .orElseThrow(InternalServerErrorException::new);
+                .orElseThrow(UserNotFoundException::new);
 
         User receiver = userRepository.findById(dto.getReceiverUserId())
                 .orElseThrow(UserWithdrawnException::new);
 
-        // user_pair_signal 컬럼 누락으로 인한 수정 진행
-//        boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(sender, receiver);
-//        if (alreadyExists) {
-//            throw new AlreadyInConversationException();
-//        }
 
         String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
         Optional<SignalRoom> existingRoom = signalRoomRepository.findByUserPairSignal(userPairSignal);
@@ -117,7 +112,7 @@ public class ChannelService {
 
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(InternalServerErrorException::new);
+                .orElseThrow(UserNotFoundException::new);
     }
 
 
@@ -216,7 +211,7 @@ public class ChannelService {
             Long matchedId = Long.valueOf(matchedUserId);
 
             User matchedUser = userRepository.findById(matchedId)
-                    .orElseThrow(InternalServerErrorException::new);
+                    .orElseThrow(UserWithdrawnException::new);
 
             boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
                     || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
@@ -303,7 +298,7 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public boolean hasNewMessages(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(InternalServerErrorException::new);
+                .orElseThrow(UserNotFoundException::new);
 
         List<SignalRoom> allRooms = Stream.concat(
                 user.getSentSignalRooms().stream(),
@@ -330,18 +325,20 @@ public class ChannelService {
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ChannelRoomResponseDto getChannelRoomMessages(Long roomId, Long userId, int page, int size) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(ChannelNotFoundException::new);
 
         if (!room.isParticipant(userId)) {
-            throw new UnauthorizedAccessException();
+            throw new ForbiddenChannelException();
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
+
+        channelRoomRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
@@ -362,7 +359,7 @@ public class ChannelService {
                 .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
         if (!room.isParticipant(userId)) {
-            throw new UnauthorizedAccessException();
+            throw new ForbiddenChannelException();
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();
