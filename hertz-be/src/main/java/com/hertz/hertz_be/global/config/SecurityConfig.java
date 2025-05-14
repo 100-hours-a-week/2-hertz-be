@@ -60,7 +60,6 @@ public class SecurityConfig {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                backendUrl,      // 테스트용 추가
                 "https://hertz-tuning.com",
                 "https://dev.hertz-tuning.com"
         ));
