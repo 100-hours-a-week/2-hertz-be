@@ -44,10 +44,10 @@ public class AuthController {
         ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                 .maxAge(1209600)
                 .path("/")
-                .domain(".hertz-tuning.com")   // 클라이언트 도메인 지정
+                .domain(isLocal ? null : ".hertz-tuning.com")  // ✅ isLocal일 경우 domain 생략
                 .httpOnly(true)
                 .sameSite("None")
-                .secure(true)
+                .secure(!isLocal)                               // ✅ isLocal=false면 secure 활성화
                 .build();
 
         response.setHeader("Set-Cookie", responseCookie.toString());
