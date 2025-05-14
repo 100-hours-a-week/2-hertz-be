@@ -54,7 +54,7 @@ public class OAuthController {
             if (!isLocal) {
                 cookieBuilder
                         .secure(true)
-                        .domain(".hertz-tuning.com"); // Dev과 Prod 환경의 클라이언트 도메인
+                        .domain("dev.hertz-tuning.com"); // Dev과 Prod 환경의 클라이언트 도메인
             }
 
             ResponseCookie responseCookie = cookieBuilder.build();
