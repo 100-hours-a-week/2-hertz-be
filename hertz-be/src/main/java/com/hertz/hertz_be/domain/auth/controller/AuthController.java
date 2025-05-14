@@ -49,7 +49,7 @@ public class AuthController {
                 .sameSite("None")
                 .domain("dev.hertz-tuning.com");
 
-        if (!isLocal) {
+        if (isLocal) {
             cookieBuilder
                     .secure(true);// Dev과 Prod 환경의 클라이언트 도메인
         }
