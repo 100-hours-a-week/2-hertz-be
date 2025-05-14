@@ -44,16 +44,15 @@ public class OAuthController {
             String newRefreshToken = result.getRefreshToken();
 
             //ResponseCookie 설정 (환경에 따라 분기)
-            ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
-                    .from("refreshToken", newRefreshToken)
+            ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                     .maxAge(1209600)
                     .path("/")
+                    .domain("dev.hertz-tuning.com")   // 클라이언트 도메인 지정
                     .httpOnly(true)
-                    .domain("dev.hertz-tuning.com")
                     .sameSite("None")
-                    .secure(true);
+                    .secure(true)
+                    .build();
 
-            ResponseCookie responseCookie = cookieBuilder.build();
             response.setHeader("Set-Cookie", responseCookie.toString());
 
             OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
