@@ -43,12 +43,12 @@ public class UserController {
                 .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
                 .path("/")
                 .httpOnly(true)
-                .domain(".hertz-tuning.com")
                 .sameSite("None");
 
         if (!isLocal) {
             cookieBuilder
-                    .secure(true);
+                    .secure(true)
+                    .domain("dev.hertz-tuning.com");
         }
 
         ResponseCookie responseCookie = cookieBuilder.build();
