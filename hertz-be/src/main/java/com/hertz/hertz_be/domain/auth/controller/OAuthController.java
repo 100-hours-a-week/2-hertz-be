@@ -43,21 +43,16 @@ public class OAuthController {
         if (result.isRegistered()) {
             String newRefreshToken = result.getRefreshToken();
 
-            // ✅ 환경에 따라 domain, secure 조건 분기
-            ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
-                    .from("refreshToken", newRefreshToken)
+            //ResponseCookie 설정
+            ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                     .maxAge(1209600)
                     .path("/")
+                    .domain(isLocal ? null : ".hertz-tuning.com")  // isLocal일 경우 domain 생략
                     .httpOnly(true)
-                    .sameSite("None");
+                    .sameSite("None")
+                    .secure(!isLocal)                               // isLocal=false면 secure 활성화
+                    .build();
 
-            if (!isLocal) {
-                cookieBuilder
-                        .secure(true)
-                        .domain(".hertz-tuning.com"); // ✅ 모든 서브도메인에서 공유 가능
-            }
-
-            ResponseCookie responseCookie = cookieBuilder.build();
             response.setHeader("Set-Cookie", responseCookie.toString());
 
             OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
