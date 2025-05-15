@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.user.service;
 
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
+import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -25,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserOauthRepository userOauthRepository;
     private final OAuthRedisRepository oauthRedisRepository;
+    private final RefreshTokenRepository refreshTokenService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
@@ -83,10 +85,13 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        refreshTokenService.saveRefreshToken(user.getId(), refreshToken, 1209600L);
+
         return UserInfoResponseDto.builder()
                 .userId(savedUser.getId())
                 .accessToken(jwtTokenProvider.createAccessToken(savedUser.getId()))
-                .refreshToken(refreshTokenValue)
+                .refreshToken(refreshToken)
                 .refreshSecondsUntilExpiry(maxAge)
                 .build();
 
