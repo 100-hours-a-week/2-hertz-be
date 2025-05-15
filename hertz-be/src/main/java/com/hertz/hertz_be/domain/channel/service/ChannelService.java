@@ -8,6 +8,7 @@ import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.exception.*;
 import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import com.hertz.hertz_be.domain.channel.repository.projection.RoomWithLastSenderProjection;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -313,7 +314,7 @@ public class ChannelService {
     // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = channelRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
         if (result.isEmpty()) {
             return null;
         }
@@ -338,7 +339,15 @@ public class ChannelService {
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
-        channelRoomRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
+        Optional<RoomWithLastSenderProjection> result = signalMessageRepository.findRoomsWithLastSender(roomId);
+
+        // 마지막 메세지를 보낸 사람이
+        if(result.isPresent()){
+            RoomWithLastSenderProjection lastSender = result.get();
+            if (!Objects.equals(lastSender.getLastSenderId(), userId)) { // 내가 아닐 경우
+                signalMessageRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
+            }
+        }
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
