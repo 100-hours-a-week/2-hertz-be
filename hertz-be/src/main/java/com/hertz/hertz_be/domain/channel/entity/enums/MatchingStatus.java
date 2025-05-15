@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MatchingStatus {
     SIGNAL("시그널"),
-    MATCHING_ACCEPT("매칭 수락"),
-    MATCHING_REFUSE("매칭 거절");
+    MATCHED("매칭 수락"),
+    UNMATCHED("매칭 거절");
 
     private final String label;
 }
