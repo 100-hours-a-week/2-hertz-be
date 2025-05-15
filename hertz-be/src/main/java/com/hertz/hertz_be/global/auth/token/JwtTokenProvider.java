@@ -14,6 +14,8 @@ import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
+    @Value("${jwt.at.expiration-minutes}")
+    private long accessTokenExpirationMinutes;
 
     @Value("${jwt.secret}")
     private String secretKeyBase64;
@@ -28,7 +30,7 @@ public class JwtTokenProvider {
 
     public String createAccessToken(Long userId) {
         Date now = new Date();
-        Date expiryDate = Date.from(Instant.now().plus(30, ChronoUnit.MINUTES));
+        Date expiryDate = Date.from(Instant.now().plus(accessTokenExpirationMinutes, ChronoUnit.MINUTES));
 
         return Jwts.builder()
                 .setSubject(userId.toString())
