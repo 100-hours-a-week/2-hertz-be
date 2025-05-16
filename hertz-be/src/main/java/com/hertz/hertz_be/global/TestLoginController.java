@@ -3,6 +3,7 @@ package com.hertz.hertz_be.global;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class TestLoginController {
+
+    @Value("${max.age.seconds}")
+    private long maxAgeSeconds;
 
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenService;
@@ -32,12 +36,12 @@ public class TestLoginController {
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
         // Redis에 Refresh Token 저장
-        refreshTokenService.saveRefreshToken(userId, refreshToken, 1209600L); // 14일 (초 단위)
+        refreshTokenService.saveRefreshToken(userId, refreshToken, maxAgeSeconds); // 14일 (초 단위)
 
         // Set-Cookie 수동 설정 (SameSite=None + Secure + HttpOnly)
         String cookieValue = String.format(
                 "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=None",
-                refreshToken, 1209600
+                refreshToken, maxAgeSeconds
         );
         response.setHeader("Set-Cookie", cookieValue);
 
