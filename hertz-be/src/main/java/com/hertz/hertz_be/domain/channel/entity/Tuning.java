@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.Entity;
@@ -39,5 +40,6 @@ public class Tuning {
     private LocalDateTime created_at;
 
     @OneToMany(mappedBy = "tuning", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<TuningResult> tuningResults = new ArrayList<>();
 }
