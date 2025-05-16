@@ -110,18 +110,20 @@ public class ChannelService {
         return min + "_" + max;
     }
 
-    private User getUserById(Long userId) {
+    public User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
     }
 
+    public boolean hasSelectedInterests(User user) {
+        return userInterestsRepository.existsByUser(user);
+    }
 
     @Transactional
     public TuningResponseDTO getTunedUser(Long userId) {
         User requester = getUserById(userId);
 
-        boolean isUserChooseInterests = userInterestsRepository.existsByUser(requester);
-        if (!isUserChooseInterests){
+        if (!hasSelectedInterests(requester)) {
             throw new InterestsNotSelectedException();
         }
 

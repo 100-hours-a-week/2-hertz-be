@@ -5,11 +5,13 @@ import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResponseDTO;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthSignupResponseDTO;
 import com.hertz.hertz_be.domain.auth.service.OAuthService;
+import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class OAuthController {
 
     private final OAuthService oAuthService;
+    private final ChannelService channelService;
 
     @Value("${is.local}")
     private boolean isLocal;
@@ -55,6 +58,13 @@ public class OAuthController {
             response.setHeader("Set-Cookie", responseCookie.toString());
 
             OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
+
+            boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.getUserId()));
+            if (!hasSelectedInterests) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "사용자가 아직 취향 선택을 완료하지 않았습니다.", dto));
+            }
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));
 
         } else {
