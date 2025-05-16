@@ -118,7 +118,7 @@ public class InterestsService {
             }
 
             case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> { // 500
-                throw new AiServerErrorException();
+                throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
             }
 
             default -> {
@@ -190,7 +190,7 @@ public class InterestsService {
                 .block();
 
         if (responseMap == null || !responseMap.containsKey("code")) {
-            throw new AiServerErrorException();
+            throw new AiServerErrorException(ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR);
         }
         return responseMap;
     }

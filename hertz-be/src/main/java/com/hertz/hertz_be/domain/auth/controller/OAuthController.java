@@ -50,6 +50,7 @@ public class OAuthController {
             ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
                     .maxAge(1209600)
                     .path("/")
+                    .sameSite("None")
                     .domain(isLocal ? null : ".hertz-tuning.com")  // isLocal일 경우 domain 생략
                     .httpOnly(true)
                     .secure(!isLocal)                               // isLocal=false면 secure 활성화
@@ -62,7 +63,7 @@ public class OAuthController {
             boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.getUserId()));
             if (!hasSelectedInterests) {
                 return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
+                        .status(HttpStatus.OK) // Todo. 300번대로 리팩토링 필요
                         .body(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "사용자가 아직 취향 선택을 완료하지 않았습니다.", dto));
             }
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));

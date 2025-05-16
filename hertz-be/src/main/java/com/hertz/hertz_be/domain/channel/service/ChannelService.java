@@ -8,13 +8,16 @@ import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
 import com.hertz.hertz_be.domain.channel.exception.*;
 import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import com.hertz.hertz_be.domain.channel.repository.projection.RoomWithLastSenderProjection;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
+import com.hertz.hertz_be.global.exception.AiServerNotFoundException;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -158,20 +161,27 @@ public class ChannelService {
         String code = (String) responseMap.get("code");
 
         switch (code) {
-            case "TUNING_SUCCESS_BUT_NO_MATCH" -> {
+            case ResponseCode.TUNING_SUCCESS_BUT_NO_MATCH -> {
                 return false;
             }
-            case "TUNING_BAD_REQUEST", "TUNING_NOT_FOUND_USER", "TUNING_INTERNAL_SERVER_ERROR" ->
-                    throw new AiServerErrorException();
-            case "TUNING_SUCCESS" -> {
+            case ResponseCode.TUNING_BAD_REQUEST -> {
+                throw new AiServerBadRequestException();
+            }
+            case ResponseCode.TUNING_NOT_FOUND_USER -> {
+                throw new AiServerNotFoundException();
+            }
+            case ResponseCode.TUNING_INTERNAL_SERVER_ERROR -> {
+                throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
+            }
+            case ResponseCode.TUNING_SUCCESS -> {
                 Object dataObj = responseMap.get("data");
                 if (!(dataObj instanceof Map data)) {
-                    throw new AiServerErrorException();
+                    throw new AiServerErrorException(ResponseCode.TUNING_NOT_FOUND_DATA);
                 }
 
                 List<Integer> userIdList = (List<Integer>) data.get("userIdList");
                 if (userIdList == null || userIdList.isEmpty()) {
-                    throw new AiServerErrorException();
+                    throw new AiServerErrorException(ResponseCode.TUNING_NOT_FOUND_LIST);
                 }
 
                 saveTuningResults(userIdList, tuning);
@@ -191,7 +201,7 @@ public class ChannelService {
                 .block();
 
         if (responseMap == null || !responseMap.containsKey("code")) {
-            throw new AiServerErrorException();
+            throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
         }
         return responseMap;
     }
@@ -315,7 +325,7 @@ public class ChannelService {
     // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = channelRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
         if (result.isEmpty()) {
             return null;
         }
@@ -340,7 +350,15 @@ public class ChannelService {
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
-        channelRoomRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
+        Optional<RoomWithLastSenderProjection> result = signalMessageRepository.findRoomsWithLastSender(roomId);
+
+        // 마지막 메세지를 보낸 사람이
+        if(result.isPresent()){
+            RoomWithLastSenderProjection lastSender = result.get();
+            if (!Objects.equals(lastSender.getLastSenderId(), userId)) { // 내가 아닐 경우
+                signalMessageRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
+            }
+        }
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);

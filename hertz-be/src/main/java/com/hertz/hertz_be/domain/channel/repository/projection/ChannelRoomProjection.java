@@ -4,10 +4,10 @@ import java.time.LocalDateTime;
 
 public interface ChannelRoomProjection {
     Long getChannelRoomId();
-    String getPartnerNickname();
-    String getPartnerProfileImage();
+    Boolean getIsRead();
     String getLastMessage();
     LocalDateTime getLastMessageTime();
-    Boolean getIsRead();
     String getRelationType();
+    String getPartnerNickname();
+    String getPartnerProfileImage();
 }

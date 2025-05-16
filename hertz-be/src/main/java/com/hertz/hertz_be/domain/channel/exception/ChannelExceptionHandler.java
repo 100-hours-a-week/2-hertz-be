@@ -29,7 +29,6 @@ public class ChannelExceptionHandler {
     }
 
     @ExceptionHandler({
-            InterestsNotSelectedException.class,
             CannotSendSignalToSelfException.class
     })
     public ResponseEntity<ResponseDto<Void>> badRequestException(RuntimeException ex) {
@@ -56,6 +55,17 @@ public class ChannelExceptionHandler {
         String code = ((BaseChannelException) ex).getCode();
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
+                .body(new ResponseDto<>(code, ex.getMessage(), null));
+    }
+
+    // Todo. 300번대로 리팩토링 필요
+    @ExceptionHandler({
+            InterestsNotSelectedException.class
+    })
+    public ResponseEntity<ResponseDto<Void>> ok(RuntimeException ex) {
+        String code = ((BaseChannelException) ex).getCode();
+        return ResponseEntity
+                .status(HttpStatus.OK)
                 .body(new ResponseDto<>(code, ex.getMessage(), null));
     }
 }

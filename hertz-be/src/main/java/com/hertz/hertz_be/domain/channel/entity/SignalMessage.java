@@ -8,11 +8,16 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "signal_message")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(
+        name = "signal_message",
+        indexes = {
+                @Index(name = "idx_signal_message_room_sendat", columnList = "signal_room_id, send_at DESC")
+        }
+)
 public class SignalMessage {
 
     @Id
