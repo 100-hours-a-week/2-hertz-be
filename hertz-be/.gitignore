@@ -37,3 +37,6 @@ out/
 .vscode/
 
 *.env
+
+### Shenandoah GC logs ###
+logs/*
