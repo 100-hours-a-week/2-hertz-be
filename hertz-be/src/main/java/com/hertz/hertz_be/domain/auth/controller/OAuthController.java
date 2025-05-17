@@ -8,6 +8,8 @@ import com.hertz.hertz_be.domain.auth.service.OAuthService;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Tag(name = "OAuth 관련 API")
 public class OAuthController {
 
     private final OAuthService oAuthService;
@@ -28,6 +31,7 @@ public class OAuthController {
     private boolean isLocal;
 
     @GetMapping("/v1/oauth/{provider}/redirection")
+    @Operation(summary = "소셜 로그인 리디렉션 API")
     public ResponseEntity<Void> getOAuthRedirectUrl(@PathVariable String provider) {
         String url = oAuthService.getRedirectUrl(provider);
         return ResponseEntity.status(302)
@@ -36,6 +40,7 @@ public class OAuthController {
     }
 
     @PostMapping("/v1/oauth/{provider}")
+    @Operation(summary = "소셜 로그인 API")
     public ResponseEntity<?> oauthLogin(
             @PathVariable String provider,
             @RequestBody OAuthLoginRequestDTO request,

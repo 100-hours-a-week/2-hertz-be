@@ -5,7 +5,9 @@ import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +23,7 @@ import java.util.Map;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "JWT")
+@Tag(name = "Auth 관련 API")
 public class AuthController {
 
     private final AuthService authTokenService;
@@ -29,6 +32,7 @@ public class AuthController {
     private boolean isLocal;
 
     @PostMapping("/v1/auth/token")
+    @Operation(summary = "Access Token 재발급 API")
     public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDTO>> reissueAccessToken(
             HttpServletRequest request,
             HttpServletResponse response) {

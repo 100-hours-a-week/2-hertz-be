@@ -2,6 +2,7 @@ package com.hertz.hertz_be.global;
 
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class TestLoginController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "사용자 Id로 AT를 반환하는 API", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
     public ResponseEntity<?> login(@RequestBody TestLoginRequestDTO request,
                                    HttpServletResponse response) {
         Long userId = request.getUserId();  // 클라이언트가 userId를 보냈다고 가정
@@ -47,6 +49,7 @@ public class TestLoginController {
     }
 
     @GetMapping("/ping")
+    @Operation(summary = "서버 헬스체크를 위한 API")
     public ResponseEntity<String> ping() {
         return ResponseEntity.ok("pong");
     }
