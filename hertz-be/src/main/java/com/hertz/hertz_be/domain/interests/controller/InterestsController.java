@@ -8,6 +8,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,8 +39,8 @@ public class InterestsController {
                                                                             @AuthenticationPrincipal Long userId) throws Exception {
         interestsService.saveUserInterests(userInterestsRequestDto, userId);
 
-        return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.INTERESTS_SAVED_SUCCESSFULLY, "개인정보가 정상적으로 저장되었습니다.", null)
-        );
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ResponseDto<>(ResponseCode.INTERESTS_SAVED_SUCCESSFULLY, "사용자의 취향이 정상적으로 저장되었습니다.", null));
     }
 }
