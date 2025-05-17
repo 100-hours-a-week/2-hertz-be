@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,7 +23,13 @@ public class SwaggerConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT");
 
+        // HTTPS 서버 주소 명시 (Swagger가 HTTP로 요청하는 문제 방지)
+        Server server = new Server()
+                .url("https://dev.hertz-tuning.com")
+                .description("Dev 서버");
+
         return new OpenAPI()
+                .addServersItem(server)
                 .components(new Components().addSecuritySchemes(jwt, securityScheme))
                 .info(apiInfo());
     }
@@ -34,4 +41,3 @@ public class SwaggerConfig {
                 .version("1.0.0");
     }
 }
-
