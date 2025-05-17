@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.global;
+package com.hertz.hertz_be.domain.auth.dto.request;
 
 
 public class TestLoginRequestDTO {
