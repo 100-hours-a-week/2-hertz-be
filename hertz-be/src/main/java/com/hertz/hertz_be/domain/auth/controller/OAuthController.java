@@ -62,7 +62,7 @@ public class OAuthController {
 
             boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.getUserId()));
             if (!hasSelectedInterests) {
-                return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "로그인에 성공했습니다.", dto));
+                return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "사용자가 아직 취향 선택을 완료하지 않았습니다.", dto));
             }
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));
 
