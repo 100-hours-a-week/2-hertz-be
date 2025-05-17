@@ -38,6 +38,9 @@ public class OAuthService {
     @Value("${oauth.kakao.redirect-uri}")
     private String redirectUri;
 
+    @Value("${max.age.seconds}")
+    private long maxAgeSeconds;
+
     public String getRedirectUrl(String provider) {
         if ("kakao".equalsIgnoreCase(provider)) {
             String state = UUID.randomUUID().toString();
@@ -81,7 +84,7 @@ public class OAuthService {
             String accessToken = jwtTokenProvider.createAccessToken(userId);
 
             String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-            refreshTokenService.saveRefreshToken(userId, refreshToken, 1209600L);
+            refreshTokenService.saveRefreshToken(userId, refreshToken, maxAgeSeconds);
 
             return OAuthLoginResult.registered(userId, accessToken, refreshToken);
         }

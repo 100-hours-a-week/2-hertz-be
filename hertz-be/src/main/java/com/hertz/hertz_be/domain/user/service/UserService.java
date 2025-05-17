@@ -34,6 +34,8 @@ public class UserService {
     @Value("${external.api.nickname-url}")
     private String NICKNAME_API_URL;
 
+    @Value("${max.age.seconds}")
+    private long maxAgeSeconds;
 
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
@@ -86,7 +88,7 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        refreshTokenService.saveRefreshToken(user.getId(), refreshToken, 1209600L);
+        refreshTokenService.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
 
         return UserInfoResponseDto.builder()
                 .userId(savedUser.getId())
