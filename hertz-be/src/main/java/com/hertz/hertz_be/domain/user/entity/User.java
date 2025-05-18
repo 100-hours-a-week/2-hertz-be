@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
@@ -81,14 +82,18 @@ public class User {
     private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "senderUser")
+    @Builder.Default
     private List<SignalRoom> sentSignalRooms = new ArrayList<>();
 
     @OneToMany(mappedBy = "receiverUser")
+    @Builder.Default
     private List<SignalRoom> receivedSignalRooms = new ArrayList<>();
 
     @OneToMany(mappedBy = "senderUser")
+    @Builder.Default
     private List<SignalMessage> sendMessages = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
+    @Builder.Default
     private List<Tuning> recommendListByCategory = new ArrayList<>();
 }

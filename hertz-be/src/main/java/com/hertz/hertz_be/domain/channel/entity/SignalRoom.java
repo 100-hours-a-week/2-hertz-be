@@ -51,6 +51,7 @@ public class SignalRoom {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "signalRoom")
+    @Builder.Default
     private List<SignalMessage> messages = new ArrayList<>();
 
     /**

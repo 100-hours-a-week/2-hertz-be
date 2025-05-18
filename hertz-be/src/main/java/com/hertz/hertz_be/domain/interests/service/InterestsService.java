@@ -1,5 +1,8 @@
 package com.hertz.hertz_be.domain.interests.service;
 
+import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.interests.dto.request.UserAiInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.entity.InterestsCategory;
@@ -24,6 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +39,7 @@ public class InterestsService {
     private final UserInterestsRepository userInterestsRepository;
     private final InterestsCategoryRepository interestsCategoryRepository;
     private final InterestsCategoryItemRepository interestsCategoryItemRepository;
+    private final TuningRepository tuningRepository;
     private final UserRepository userRepository;
     private final WebClient webClient;
 
@@ -42,12 +47,14 @@ public class InterestsService {
     public InterestsService(UserRepository userRepository,
                             InterestsCategoryRepository interestsCategoryRepository,
                             InterestsCategoryItemRepository interestsCategoryItemRepository,
+                            TuningRepository tuningRepository,
                             UserInterestsRepository userInterestsRepository,
                             @Value("${ai.server.ip}") String aiServerIp) {
         this.userInterestsRepository = userInterestsRepository;
         this.interestsCategoryRepository = interestsCategoryRepository;
         this.interestsCategoryItemRepository = interestsCategoryItemRepository;
         this.userRepository = userRepository;
+        this.tuningRepository = tuningRepository;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
 
@@ -67,8 +74,11 @@ public class InterestsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
 
+        // 같은 도메인(조직)에 속한 모든 유저의 캐싱된 튜닝 리스트 초기화
+        resetCachingTuningResult(user);
+
         requestAiBody.put("userId", user.getId());
-        requestAiBody.put("emailDomain", user.getEmail().split("@")[1]);
+        requestAiBody.put("emailDomain", extractDomainFromEmail(user.getEmail()));
         requestAiBody.put("gender", user.getGender());
         requestAiBody.put("ageGroup", user.getAgeGroup());
 
@@ -217,6 +227,29 @@ public class InterestsService {
                     throw new InvalidInterestsInputException();
                 }
             }
+        }
+    }
+
+    public void resetCachingTuningResult(User user) {
+        List<User> users = findUsersByEmailDomain(user);
+        for (User oneUser : users) {
+            clearTuningResultsOfUser(oneUser);
+        }
+    }
+
+    private List<User> findUsersByEmailDomain(User user) {
+        String emailDomain = extractDomainFromEmail(user.getEmail());
+        return userRepository.findAllByEmailDomain(emailDomain);
+    }
+
+    private String extractDomainFromEmail(String email) {
+        return email.split("@")[1];
+    }
+
+    private void clearTuningResultsOfUser(User user) {
+        List<Tuning> tunings = user.getRecommendListByCategory();
+        for (Tuning tuning : tunings) {
+            tuning.getTuningResults().clear();
         }
     }
 }

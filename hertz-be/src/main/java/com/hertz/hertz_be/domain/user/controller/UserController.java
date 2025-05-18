@@ -5,6 +5,8 @@ import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@Tag(name = "사용자 관련 API")
 public class UserController {
 
     @Value("${is.local}")
@@ -31,6 +34,7 @@ public class UserController {
      * @author daisy.lee
      */
     @PostMapping("/users")
+    @Operation(summary = "개인정보 등록 API")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
             @RequestBody UserInfoRequestDto userInfoRequestDto,
             HttpServletResponse response) {
@@ -69,6 +73,7 @@ public class UserController {
      * @author daisy.lee
      */
     @GetMapping("/nickname")
+    @Operation(summary = "랜덤 닉네임 반환 API")
     public ResponseEntity<ResponseDto<Map<String, String>>> generateNickname() {
         String nickname = userService.fetchRandomNickname();
         Map<String, String> data = Map.of("nickname", nickname);
