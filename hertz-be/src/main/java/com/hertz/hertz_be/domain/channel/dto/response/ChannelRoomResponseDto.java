@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.channel.dto.response;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.global.common.AESUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,11 +46,18 @@ public class ChannelRoomResponseDto {
         private String messageContents;
         private String messageSendAt;
 
-        public static MessageDto from(SignalMessage msg) {
+        public static MessageDto fromProjectionWithDecrypt(SignalMessage msg, AESUtil aesUtil) {
+            String decryptedMessage;
+            try {
+                decryptedMessage = aesUtil.decrypt(msg.getMessage());
+            } catch (Exception e) {
+                decryptedMessage = "메세지를 표시할 수 없습니다.";
+            }
+
             return new MessageDto(
                     msg.getId(),
                     msg.getSenderUser().getId(),
-                    msg.getMessage(),
+                    decryptedMessage,
                     msg.getSendAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
             );
         }
