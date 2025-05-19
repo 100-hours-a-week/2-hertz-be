@@ -14,6 +14,7 @@ import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.AESUtil;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
@@ -49,6 +50,7 @@ public class ChannelService {
     private final SignalMessageRepository signalMessageRepository;
     private final ChannelRoomRepository channelRoomRepository;
     private final WebClient webClient;
+    private final AESUtil aesUtil;
 
     @Autowired
     public ChannelService(UserRepository userRepository,
@@ -58,6 +60,7 @@ public class ChannelService {
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
                           ChannelRoomRepository channelRoomRepository,
+                          AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
         this.tuningRepository = tuningRepository;
@@ -66,6 +69,7 @@ public class ChannelService {
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
         this.channelRoomRepository = channelRoomRepository;
+        this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
 
@@ -96,10 +100,12 @@ public class ChannelService {
                 .build();
         signalRoomRepository.save(signalRoom);
 
+        String encryptMessage = aesUtil.encrypt(dto.getMessage());
+
         SignalMessage signalMessage = SignalMessage.builder()
                 .signalRoom(signalRoom)
                 .senderUser(sender)
-                .message(dto.getMessage())
+                .message(encryptMessage)
                 .isRead(false)
                 .build();
         signalMessageRepository.save(signalMessage);
@@ -331,7 +337,7 @@ public class ChannelService {
         }
 
         List<ChannelSummaryDto> list = result.getContent().stream()
-                .map(ChannelSummaryDto::fromProjection)
+                .map(p -> ChannelSummaryDto.fromProjectionWithDecrypt(p, aesUtil))
                 .toList();
 
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
@@ -364,7 +370,7 @@ public class ChannelService {
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
         List<ChannelRoomResponseDto.MessageDto> messages = messagePage.getContent().stream()
-                .map(ChannelRoomResponseDto.MessageDto::from)
+                .map(msg -> ChannelRoomResponseDto.MessageDto.fromProjectionWithDecrypt(msg, aesUtil))
                 .toList();
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
@@ -386,11 +392,13 @@ public class ChannelService {
         userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다."));
 
+        String encryptMessage = aesUtil.encrypt(response.getMessage());
+
         // 메시지 저장
         SignalMessage signalMessage = SignalMessage.builder()
                 .signalRoom(room)
                 .senderUser(user)
-                .message(response.getMessage())
+                .message(encryptMessage)
                 .build();
 
         signalMessageRepository.save(signalMessage);

@@ -36,6 +36,9 @@ public class AuthController {
     @Value("${is.local}")
     private boolean isLocal;
 
+    @Value("${max.age.seconds}")
+    private long maxAgeSeconds;
+
     @PostMapping("/v1/auth/token")
     @Operation(summary = "Access Token 재발급 API")
     public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDTO>> reissueAccessToken(
@@ -53,7 +56,7 @@ public class AuthController {
 
         //ResponseCookie 설정 (환경에 따라 분기)
         ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
-                .maxAge(1209600)
+                .maxAge(maxAgeSeconds)
                 .path("/")
                 .sameSite("None")
                 .domain(isLocal ? null : ".hertz-tuning.com")  // isLocal일 경우 domain 생략
