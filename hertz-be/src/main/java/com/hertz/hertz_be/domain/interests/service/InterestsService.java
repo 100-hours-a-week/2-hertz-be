@@ -1,6 +1,10 @@
 package com.hertz.hertz_be.domain.interests.service;
 
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
+<<<<<<< HEAD
+=======
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+>>>>>>> 1346ce91453a52a9eb8076ff561a62bec11397a3
 import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.interests.dto.request.UserAiInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
@@ -27,7 +31,14 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+<<<<<<< HEAD
 import java.util.*;
+=======
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+>>>>>>> 1346ce91453a52a9eb8076ff561a62bec11397a3
 
 @Service
 @RequiredArgsConstructor
@@ -69,6 +80,10 @@ public class InterestsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
 
+<<<<<<< HEAD
+=======
+        // 같은 도메인(조직)에 속한 모든 유저의 캐싱된 튜닝 리스트 초기화
+>>>>>>> 1346ce91453a52a9eb8076ff561a62bec11397a3
         resetCachingTuningResult(user);
 
         requestAiBody.put("userId", user.getId());
@@ -102,12 +117,39 @@ public class InterestsService {
             case ResponseCode.EMBEDDING_REGISTER_SUCCESS -> {
                 return;
             }
+<<<<<<< HEAD
             case ResponseCode.EMBEDDING_REGISTER_BAD_REQUEST -> throw new RegisterBadRequestException(code);
             case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> throw new DuplicateIdException();
             case ResponseCode.BAD_REQUEST_VALIDATION_ERROR -> throw new InvalidException();
             case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> throw new SimilarityUpdateFailedException();
             case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
             default -> throw new RegisterBadRequestException(code);
+=======
+
+            case ResponseCode.EMBEDDING_REGISTER_BAD_REQUEST -> { // 400
+                throw new RegisterBadRequestException(code);
+            }
+
+            case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> { // 409
+                throw new DuplicateIdException();
+            }
+
+            case ResponseCode.BAD_REQUEST_VALIDATION_ERROR -> { // 422
+                throw new InvalidException();
+            }
+
+            case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> { // 500
+                throw new SimilarityUpdateFailedException();
+            }
+
+            case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> { // 500
+                throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
+            }
+
+            default -> {
+                throw new RegisterBadRequestException(code);
+            }
+>>>>>>> 1346ce91453a52a9eb8076ff561a62bec11397a3
         }
     }
 
@@ -227,4 +269,8 @@ public class InterestsService {
             tuning.getTuningResults().clear();
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1346ce91453a52a9eb8076ff561a62bec11397a3
