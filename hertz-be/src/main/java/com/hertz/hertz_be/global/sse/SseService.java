@@ -17,6 +17,12 @@ public class SseService {
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(Long userId) {
+        // 기존 연결 제거 (덮어쓰기 방식)
+        if (emitters.containsKey(userId)) {
+            emitters.get(userId).complete();
+            emitters.remove(userId);
+        }
+
         SseEmitter emitter = new SseEmitter(TIMEOUT);
 
         emitters.put(userId, emitter);
