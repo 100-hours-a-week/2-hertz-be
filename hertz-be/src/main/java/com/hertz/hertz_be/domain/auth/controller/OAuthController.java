@@ -30,11 +30,14 @@ public class OAuthController {
     @Value("${is.local}")
     private boolean isLocal;
 
+    @Value("${max.age.seconds}")
+    private long maxAgeSeconds;
+
     @GetMapping("/v1/oauth/{provider}/redirection")
     @Operation(summary = "소셜 로그인 리디렉션 API")
     public ResponseEntity<Void> getOAuthRedirectUrl(@PathVariable String provider) {
         String url = oAuthService.getRedirectUrl(provider);
-        return ResponseEntity.status(302)
+        return ResponseEntity.status(HttpStatus.FOUND)
                 .header("Location", url)
                 .build();
     }
@@ -53,7 +56,7 @@ public class OAuthController {
 
             //ResponseCookie 설정 (환경에 따라 분기)
             ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
-                    .maxAge(1209600)
+                    .maxAge(maxAgeSeconds)
                     .path("/")
                     .sameSite("None")
                     .domain(isLocal ? null : ".hertz-tuning.com")  // isLocal일 경우 domain 생략

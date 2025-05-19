@@ -1,0 +1,315 @@
+name: CI/CD Backend (SSH)
+
+on:
+  pull_request:
+    types: [closed] # PR이 닫혔을 때 (병합 포함)
+    branches:
+      - main # main 브랜치로 Merge 시 -> PROD 환경에 배포
+      - develop # develop 브랜치로 Merge 시 -> DEV 환경에 배포
+
+  # ✅ 수동 `실행 트리거 추가
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "배포 환경 선택"
+        required: true
+        default: "DEV"
+        type: choice
+        options:
+          - DEV
+          - PROD
+
+jobs:
+  backend-cd:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    outputs:
+      deploy_status: ${{ steps.set-result.outputs.status }}
+      target_branch: ${{ steps.set-result.outputs.branch }}
+    steps:
+      # # ✅ act 테스트용 필요 패키지 설치 (명령어: act workflow_dispatch -W .github/workflows/cicd-backend.yml -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest)
+      # - name: Install required tools
+      #   run: |
+      #     apt-get update && apt-get install -y awscli curl jq
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set environment variables from SSM
+        id: ssm
+        run: |
+          load_param() {
+            VALUE=$(aws ssm get-parameter --name "$1" --with-decryption --query "Parameter.Value" --output text)
+            echo "::add-mask::$VALUE"
+            echo "$2=$VALUE" >> $GITHUB_ENV
+          }
+
+          load_secret_to_file() {
+            VALUE=$(aws ssm get-parameter --name "$1" --with-decryption --output json | jq -r .Parameter.Value)
+
+            # 멀티라인 마스킹 처리
+            echo "$VALUE" | while IFS= read -r line; do
+              echo "::add-mask::$line"
+            done
+
+            echo "$VALUE" > "$2"
+          }
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.env }}" == "PROD" ]]; then
+              echo "BRANCH=main" >> $GITHUB_ENV
+            else
+              echo "BRANCH=develop" >> $GITHUB_ENV
+            fi
+          else
+            echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "ENV=PROD" >> $GITHUB_ENV
+            load_param "/global/gcp/PROD_GCP_HOST" HOST
+            load_param "/global/gcp/PROD_GCP_INSTANCE" INSTANCE
+            load_param "/global/gcp/PROD_GCP_PROJECT_ID" PROJECT_ID
+            load_secret_to_file "/global/gcp/PROD_GCP_SA_KEY" gcp-sa-key.json
+          else
+            echo "ENV=DEV" >> $GITHUB_ENV
+            load_param "/global/gcp/DEV_GCP_HOST" HOST
+            load_param "/global/gcp/DEV_GCP_INSTANCE" INSTANCE
+            load_param "/global/gcp/DEV_GCP_PROJECT_ID" PROJECT_ID
+            load_secret_to_file "/global/gcp/DEV_GCP_SA_KEY" gcp-sa-key.json
+          fi
+
+          load_param "/global/gcp/GCP_ZONE" ZONE
+
+          echo "SA_KEY<<EOF" >> $GITHUB_ENV
+          cat gcp-sa-key.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+
+          load_param "/global/gcp/SSH_USERNAME" SSH_USERNAME
+          load_secret_to_file "/global/gcp/SSH_PRIVATE_KEY" id_rsa
+          chmod 600 id_rsa
+          echo "SSH_KEY_PATH=id_rsa" >> $GITHUB_ENV
+          echo "COMMIT_HASH=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Read GCP SA key JSON
+        id: read_sa_key
+        run: |
+          echo "SA_KEY<<EOF" >> $GITHUB_ENV
+          cat gcp-sa-key.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: "${{ env.SA_KEY }}"
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Boot target instance (start/resume with conditional wait)
+        run: |
+          echo "⚡ 인스턴스 상태 확인 중: $INSTANCE (zone: $ZONE)"
+          STATUS=$(gcloud compute instances describe "$INSTANCE" --zone="$ZONE" --format='get(status)')
+          echo "🔎 현재 상태: $STATUS"
+
+          if [[ "$STATUS" == "SUSPENDED" ]]; then
+            echo "🔄 'resume' 명령 실행"
+            gcloud compute instances resume "$INSTANCE" --zone="$ZONE"
+            sleep 30
+          elif [[ "$STATUS" == "TERMINATED" ]]; then
+            echo "🔄 'start' 명령 실행"
+            gcloud compute instances start "$INSTANCE" --zone="$ZONE"
+            sleep 30
+          else
+            echo "✅ 이미 실행 중"
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ env.SSH_USERNAME }}
+          key: ${{ env.SSH_KEY_PATH }}
+          script: |
+            cd /home/deploy
+            chmod +x be_deploy.sh
+            ./be_deploy.sh
+
+      - name: Wait for Spring Boot to start
+        run: sleep 15
+
+      - name: Health check with retries
+        id: set-result
+        run: |
+          echo "🔍 헬스체크 시작"
+          if [[ "${{ env.BRANCH }}" == "main" ]]; then
+            CHECK_URL="https://hertz-tuning.com/api/ping"
+          else
+            CHECK_URL="http://${{ env.HOST }}:8080/api/ping"
+          fi
+
+          for i in {1..5}; do
+            echo "⏱️ 시도 $i: $CHECK_URL"
+            if curl -sf "$CHECK_URL"; then
+              echo "✅ 헬스체크 성공"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              echo "::error::헬스체크 시도 $i 실패"
+              sleep 15
+            fi
+          done
+
+          echo "::error::❌ 3회 헬스체크 실패"
+          echo "status=failure" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Send failure notification
+        if: failure() || steps.set-result.outputs.status == 'failure'
+        run: |
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"❌ [BE 배포 실패] **${{ env.ENV }}** Backend 서버 (브랜치: \`${{ env.BRANCH }}\`)\\n🔖 Commit: ${{ env.COMMIT_HASH }}\\n⚠️ [워크플로우 로그 보기]($WORKFLOW_URL)\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+      - name: Send success notification
+        if: steps.set-result.outputs.status == 'success'
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"🚀 [BE 배포 완료] **${{ env.ENV }}** Backend 서버 (브랜치: \`${{ env.BRANCH }}\`)\\n🔖 Commit: ${{ env.COMMIT_HASH }}\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+  backend-rollback:
+    needs: backend-cd
+    if: needs.backend-cd.outputs.deploy_status == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      # # ✅ act 테스트용 필요 패키지 설치
+      # - name: Install required tools
+      #   run: |
+      #     apt-get update && apt-get install -y awscli curl jq
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION}}
+
+      - name: Set environment variables from SSM
+        run: |
+          load_param() {
+            VALUE=$(aws ssm get-parameter --name "$1" --with-decryption --query "Parameter.Value" --output text)
+            echo "::add-mask::$VALUE"
+            echo "$2=$VALUE" >> $GITHUB_ENV
+          }
+
+          load_secret_to_file() {
+            VALUE=$(aws ssm get-parameter --name "$1" --with-decryption --output json | jq -r .Parameter.Value)
+
+            # 멀티라인 마스킹 처리
+            echo "$VALUE" | while IFS= read -r line; do
+              echo "::add-mask::$line"
+            done
+
+            echo "$VALUE" > "$2"
+          }
+
+          BRANCH="${{ github.ref_name }}"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "ENV=PROD" >> $GITHUB_ENV
+            load_param "/global/gcp/PROD_GCP_HOST" HOST
+            load_secret_to_file "/global/gcp/PROD_GCP_SA_KEY" gcp-sa-key.json
+          else
+            echo "ENV=DEV" >> $GITHUB_ENV
+            load_param "/global/gcp/DEV_GCP_HOST" HOST
+            load_secret_to_file "/global/gcp/DEV_GCP_SA_KEY" gcp-sa-key.json
+          fi
+
+          echo "SA_KEY<<EOF" >> $GITHUB_ENV
+          cat gcp-sa-key.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          load_param "/global/gcp/SSH_USERNAME" SSH_USERNAME
+          load_secret_to_file "/global/gcp/SSH_PRIVATE_KEY" id_rsa
+          chmod 600 id_rsa
+          echo "SSH_KEY_PATH=id_rsa" >> $GITHUB_ENV
+          echo "COMMIT_HASH=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Read GCP SA key JSON
+        id: read_sa_key
+        run: |
+          echo "SA_KEY<<EOF" >> $GITHUB_ENV
+          cat gcp-sa-key.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: "${{ env.SA_KEY }}"
+
+      - name: Send rollback start notification
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"🔄 [BE 롤백 시작] \`${{ env.ENV }}\` 환경에서 롤백을 실행합니다.\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+      - name: SSH into server and rollback
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.HOST }}
+          username: ${{ env.SSH_USERNAME }}
+          key: ${{ env.SSH_KEY_PATH }}
+          script: |
+            cd /home/deploy
+            ./be_deploy.sh --rollback || exit 1
+
+      - name: Health check with retries
+        run: |
+          echo "(Rollback) 🔍 헬스체크 시작: 최대 5회 시도합니다."
+
+          if [[ "$ENV" == "PROD" ]]; then
+            CHECK_URL="https://hertz-tuning.com/api/ping"
+          else
+            CHECK_URL="http://${HOST}:8080/api/ping"
+          fi
+
+          for i in {1..5}; do
+            echo "⏱️ 시도 $i: $CHECK_URL"
+            if curl -sf "$CHECK_URL"; then
+              echo "(Rollback) ✅ 헬스체크 성공 🎉"
+              exit 0
+            else
+              echo "::error::헬스체크 시도 $i 실패"
+              sleep 15
+            fi
+          done
+
+          echo "::error::(Rollback) ❌ 5회 헬스체크 실패 - 서버가 정상 기동되지 않음"
+          exit 1
+
+      - name: Send success notification
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"✅ [BE 롤백 완료] \`${{ env.ENV }}\` 환경\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"❌ [BE 롤백 실패] \`${{ env.ENV }}\` 환경\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
