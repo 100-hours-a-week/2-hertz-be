@@ -2,6 +2,7 @@ package com.hertz.hertz_be.global.sse;
 
 import com.hertz.hertz_be.global.common.ResponseDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -45,6 +46,21 @@ public class SseService {
         ));
 
         return emitter;
+    }
+
+    @Scheduled(fixedRate = 15000)
+    public void sendPeriodicPings() {
+        emitters.forEach((userId, emitter) -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("ping")
+                        .data(new ResponseDto<>("PING", "keep-alive", null)));
+            } catch (IOException e) {
+                log.warn("주기적 Ping 실패: userId={}", userId);
+                emitter.complete();
+                emitters.remove(userId);
+            }
+        });
     }
 
     public void sendToClient(Long userId, String eventName, Object data) {
