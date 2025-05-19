@@ -47,7 +47,7 @@ public class UserController {
                 .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
                 .path("/")
                 .sameSite("None")
-                .domain(isLocal ? null : ".hertz-tuning.com")
+                .domain(isLocal ? ".hertz-tuning.com" : null)
                 .httpOnly(true)
                 .secure(!isLocal)   // isLocal=false면 secure 활성화
                 .build();
