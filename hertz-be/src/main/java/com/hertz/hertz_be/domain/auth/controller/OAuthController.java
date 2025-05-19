@@ -59,7 +59,7 @@ public class OAuthController {
                     .maxAge(maxAgeSeconds)
                     .path("/")
                     .sameSite("None")
-                    .domain(isLocal ? null : ".hertz-tuning.com")  // isLocal일 경우 domain 생략
+                    .domain(isLocal ? ".hertz-tuning.com" : null)  // isLocal일 경우 domain 생략
                     .httpOnly(true)
                     .secure(!isLocal)                               // isLocal=false면 secure 활성화
                     .build();
