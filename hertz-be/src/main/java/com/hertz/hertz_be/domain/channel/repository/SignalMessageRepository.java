@@ -18,6 +18,14 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
     boolean existsBySignalRoomInAndSenderUserNotAndIsReadFalse(List<SignalRoom> signalRooms, User senderUser);
     Page<SignalMessage> findBySignalRoom_Id(Long roomId, Pageable pageable);
 
+    @Query("""
+        SELECT m.senderUser.id, COUNT(m)
+        FROM SignalMessage m
+        WHERE m.signalRoom.id = :roomId
+        GROUP BY m.senderUser.id
+    """)
+    List<Object[]> countMessagesBySenderInRoom(@Param("roomId") Long roomId);
+
     @Query(value = """
     SELECT
         sm.sender_user_id AS lastSenderId
