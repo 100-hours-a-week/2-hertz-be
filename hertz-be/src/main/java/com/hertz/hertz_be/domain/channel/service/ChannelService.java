@@ -231,6 +231,10 @@ public class ChannelService {
             User matchedUser = userRepository.findById(matchedId)
                     .orElseThrow(UserWithdrawnException::new);
 
+            if (!hasSelectedInterests(matchedUser)) {
+                continue;
+            }
+
             boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
                     || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
 
