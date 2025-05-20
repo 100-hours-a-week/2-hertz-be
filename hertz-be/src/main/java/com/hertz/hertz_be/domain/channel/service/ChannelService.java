@@ -14,7 +14,7 @@ import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.AESUtil;
+import com.hertz.hertz_be.global.util.AESUtil;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
@@ -48,7 +48,7 @@ public class ChannelService {
     private final UserInterestsRepository userInterestsRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
-    private final ChannelRoomRepository channelRoomRepository;
+    private final AsyncChannelService asyncChannelService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
@@ -59,7 +59,8 @@ public class ChannelService {
                           UserInterestsRepository userInterestsRepository,
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
-                          ChannelRoomRepository channelRoomRepository,
+                          AsyncChannelService asyncChannelService,
+                          SseChannelService matchingStatusScheduler,
                           AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
@@ -68,7 +69,7 @@ public class ChannelService {
         this.userInterestsRepository = userInterestsRepository;
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
-        this.channelRoomRepository = channelRoomRepository;
+        this.asyncChannelService = asyncChannelService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
@@ -402,5 +403,7 @@ public class ChannelService {
                 .build();
 
         signalMessageRepository.save(signalMessage);
+
+        asyncChannelService.notifyIfExactlyOneMessageEach(room);
     }
 }
