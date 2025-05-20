@@ -59,16 +59,8 @@ jobs:
             echo "$VALUE" > "$2"
           }
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ "${{ github.event.inputs.env }}" == "PROD" ]]; then
-              echo "BRANCH=main" >> $GITHUB_ENV
-            else
-              echo "BRANCH=develop" >> $GITHUB_ENV
-            fi
-          else
-            echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
-          fi
-
+          BRANCH="${{ github.ref_name }}"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           if [[ "$BRANCH" == "main" ]]; then
             echo "ENV=PROD" >> $GITHUB_ENV
             load_param "/global/gcp/PROD_GCP_HOST" HOST
@@ -224,7 +216,6 @@ jobs:
 
           BRANCH="${{ github.ref_name }}"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-
           if [[ "$BRANCH" == "main" ]]; then
             echo "ENV=PROD" >> $GITHUB_ENV
             load_param "/global/gcp/PROD_GCP_HOST" HOST
