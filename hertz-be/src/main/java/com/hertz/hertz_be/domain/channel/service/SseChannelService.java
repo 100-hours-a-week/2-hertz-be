@@ -39,8 +39,8 @@ public class SseChannelService {
 
             LocalDateTime matchedAt = LocalDateTime.now();
 
-            sendSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt);
-            sendSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt);
+            sendMatchingConvertedSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt);
+            sendMatchingConvertedSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt);
 
             scheduledMap.remove(channelRoomId);
         };
@@ -55,7 +55,7 @@ public class SseChannelService {
             SignalRoom room, Long userId, LocalDateTime matchedAt
     ) {
         if (Objects.equals(userId, room.getReceiverUser().getId())) {
-            sendSse(
+            sendMatchingConvertedSse(
                     room.getReceiverUser().getId(),
                     room.getSenderUser().getId(),
                     room.getSenderUser().getNickname(),
@@ -63,7 +63,7 @@ public class SseChannelService {
                     matchedAt
             );
         } else {
-            sendSse(
+            sendMatchingConvertedSse(
                     room.getSenderUser().getId(),
                     room.getReceiverUser().getId(),
                     room.getReceiverUser().getNickname(),
@@ -73,7 +73,7 @@ public class SseChannelService {
         }
     }
 
-    private void sendSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
+    private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
         MatchingConvertedResponseDto dto = MatchingConvertedResponseDto.builder()
                 .channelRoomId(roomId)
                 .matchedAt(matchedAt)

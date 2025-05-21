@@ -23,7 +23,7 @@ public class AsyncChannelService {
     private final SseChannelService sseChannelService;
 
     @Async
-    public void notifyIfExactlyOneMessageEach(SignalRoom room) {
+    public void notifyMatchingConverted(SignalRoom room) {
         if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
             return;
         }
@@ -49,7 +49,7 @@ public class AsyncChannelService {
     }
 
     @Async
-    public void notifyIfReceiverFirstMessageIs24hAgo(SignalRoom room, Long userId) {
+    public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
         if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
             return;
         }
