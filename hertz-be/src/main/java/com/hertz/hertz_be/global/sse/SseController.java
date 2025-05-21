@@ -16,9 +16,6 @@ public class SseController {
 
     @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(@AuthenticationPrincipal Long userId) {
-        if (userId == null) {
-            throw new AccessDeniedException("SSE 요청은 인증된 사용자만 가능합니다.");
-        }
         return sseService.subscribe(userId);
     }
 }

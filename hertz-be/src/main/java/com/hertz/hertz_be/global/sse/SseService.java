@@ -1,6 +1,9 @@
 package com.hertz.hertz_be.global.sse;
 
+import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -12,8 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SseService {
-
+    private final UserRepository userRepository;
     // 무제한 유지
     private static final Long TIMEOUT = 0L;
 
@@ -21,6 +25,9 @@ public class SseService {
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
         // 기존 연결 제거
         if (emitters.containsKey(userId)) {
             emitters.get(userId).complete();
