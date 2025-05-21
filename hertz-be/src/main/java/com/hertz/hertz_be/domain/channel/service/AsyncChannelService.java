@@ -24,7 +24,7 @@ public class AsyncChannelService {
 
     @Async
     public void notifyIfExactlyOneMessageEach(SignalRoom room) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.SIGNAL && room.getSenderMatchingStatus() == MatchingStatus.SIGNAL) {
+        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
             return;
         }
 
@@ -50,7 +50,7 @@ public class AsyncChannelService {
 
     @Async
     public void notifyIfReceiverFirstMessageIs24hAgo(SignalRoom room, Long userId) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.SIGNAL && room.getSenderMatchingStatus() == MatchingStatus.SIGNAL) {
+        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
             return;
         }
 
