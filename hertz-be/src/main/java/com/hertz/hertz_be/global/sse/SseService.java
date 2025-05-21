@@ -37,8 +37,9 @@ public class SseService {
         SseEmitter emitter = new SseEmitter(TIMEOUT);
         emitters.put(userId, emitter);
 
+        // 프론트에서 eventSource.close()를 호출하면 실행됨
         emitter.onCompletion(() -> {
-            log.info("✅ SSE 연결 완료: userId={}", userId);
+            log.info("✅ SSE 연결 종료: userId={}", userId);
             emitters.remove(userId);
         });
 
