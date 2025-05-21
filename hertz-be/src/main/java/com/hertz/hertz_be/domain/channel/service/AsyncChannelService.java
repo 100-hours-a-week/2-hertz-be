@@ -22,26 +22,25 @@ public class AsyncChannelService {
     public void notifyIfExactlyOneMessageEach(SignalRoom room) {
         if (room.getReceiverMatchingStatus() == MatchingStatus.SIGNAL && room.getSenderMatchingStatus() == MatchingStatus.SIGNAL) {
             return;
-        } else {
-            List<Object[]> counts = signalMessageRepository.countMessagesBySenderInRoom(room.getId());
+        }
 
-            if (counts.size() != 2) return;
+        List<Object[]> counts = signalMessageRepository.countMessagesBySenderInRoom(room.getId());
 
-            Long receiverId = room.getReceiverUser().getId();
+        Map<Long, Long> countMap = counts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
 
-            Map<Long, Long> countMap = counts.stream()
-                    .collect(Collectors.toMap(
-                            row -> (Long) row[0],
-                            row -> (Long) row[1]
-                    ));
+        Long receiverId = room.getReceiverUser().getId();
+        Long receiverMessageCount = countMap.getOrDefault(receiverId, 0L);
 
-            if (countMap.getOrDefault(receiverId, 0L) == 1) {
-                sseChannelService.notifyMatchingConverted(
-                        room.getId(),
-                        room.getSenderUser().getId(), room.getSenderUser().getNickname(),
-                        room.getReceiverUser().getId(), room.getReceiverUser().getNickname()
-                );
-            }
+        if (receiverMessageCount == 1) { // Todo: 나중에 v2 배포할 때, "if (receiverMessageCount >= 1)" 로 일시적으로 수정
+            sseChannelService.notifyMatchingConverted(
+                    room.getId(),
+                    room.getSenderUser().getId(), room.getSenderUser().getNickname(),
+                    room.getReceiverUser().getId(), room.getReceiverUser().getNickname()
+            );
         }
     }
 }
