@@ -109,4 +109,5 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     WHERE sr.id = :roomId
 """)
     String findMatchResultByUser(@Param("userId") Long userId, @Param("roomId") Long roomId);
+
 }
