@@ -19,6 +19,8 @@ import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -56,9 +58,11 @@ public class InterestsService {
     }
 
     private final Map<String, Object> requestAiBody = new HashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(InterestsService.class);
 
     @Transactional
     public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) throws Exception {
+        log.debug("🔥 [saveUserInterests] 취향 저장 시작 - userId: {}", userId);
         Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
         Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
         Map<String, String> requestAiKeywordsBody = new HashMap<>();
@@ -67,22 +71,30 @@ public class InterestsService {
         validateUserInterestsInput(keywordsMap, interestsMap);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST));
+                .orElseThrow(() -> {
+                    log.error("❌ [saveUserInterests] 유저 없음 - userId: {}", userId);
+                    return new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST);
+                });
+        log.debug("✅ [saveUserInterests] 유저 조회 완료 - email: {}", user.getEmail());
 
+        log.debug("🔄 [saveUserInterests] 캐싱 튜닝 결과 초기화");
         resetCachingTuningResult(user);
 
         requestAiBody.put("userId", user.getId());
         requestAiBody.put("emailDomain", extractDomainFromEmail(user.getEmail()));
         requestAiBody.put("gender", user.getGender());
         requestAiBody.put("ageGroup", user.getAgeGroup());
+        log.debug("🧠 [saveUserInterests] AI 요청 바디 생성: {}", requestAiBody);
 
         try {
             keywordsMap.forEach((categoryName, itemName) -> {
+                log.debug("📌 [saveUserInterests] 키워드 저장 - 카테고리: {}, 아이템: {}", categoryName, itemName);
                 saveSingleUserInterest(user, InterestsCategoryType.KEYWORD, categoryName, itemName);
                 requestAiKeywordsBody.put(categoryName, itemName);
             });
 
             interestsMap.forEach((categoryName, itemNames) -> {
+                log.debug("📌 [saveUserInterests] 관심사 저장 시작 - 카테고리: {}, 아이템 수: {}", categoryName, itemNames.size());
                 if (itemNames == null) {
                     throw new UserException("관심사 항목에 null 값이 있습니다", ResponseCode.BAD_REQUEST);
                 }
@@ -92,10 +104,13 @@ public class InterestsService {
                 });
             });
         } catch (Exception e) {
+            log.error("❌ [saveUserInterests] 취향 저장 중 예외 발생", e);
             throw new UserException("취향 등록 처리에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
         }
 
+        log.debug("🚀 [saveUserInterests] AI 서버에 요청 시작");
         Map<String, Object> responseMap = saveInterestsToAiServer(requestAiKeywordsBody, requestAiInterestsBody);
+        log.debug("📥 [saveUserInterests] AI 응답: {}", responseMap);
         String code = (String) responseMap.get("code");
 
         switch (code) {
@@ -112,24 +127,32 @@ public class InterestsService {
     }
 
     private void saveSingleUserInterest(User user, InterestsCategoryType categoryType, String categoryName, String itemName) {
+
         try {
+            log.debug("🔎 [saveSingleUserInterest] 저장 시도 - userId: {}, type: {}, category: {}, item: {}", user.getId(), categoryType, categoryName, itemName);
             InterestsCategory category = interestsCategoryRepository.findByCategoryTypeAndName(categoryType, categoryName)
                     .orElseGet(() -> {
                         try {
+                            log.debug("🔎 [saveSingleUserInterest - Category] 저장 요청");
                             return interestsCategoryRepository.save(
                                     InterestsCategory.builder()
                                             .categoryType(categoryType)
                                             .name(categoryName)
                                             .build());
+
                         } catch (DataIntegrityViolationException e) {
                             return interestsCategoryRepository.findByCategoryTypeAndName(categoryType, categoryName)
-                                    .orElseThrow(() -> new RuntimeException("카테고리 중복 저장 실패"));
+                                    .orElseThrow(() -> {
+                                        log.error("❌ [saveSingleUserInterest] 저장 중 예외 발생", e);
+                                        return new RuntimeException("카테고리 중복 저장 실패");
+                                    });
                         }
                     });
-
+            log.debug("✅ [saveSingleUserInterest - Category] 저장 완료 - userId : {}", user.getId());
             InterestsCategoryItem categoryItem = interestsCategoryItemRepository.findByCategoryAndName(category, itemName)
                     .orElseGet(() -> {
                         try {
+                            log.debug("🔎 [saveSingleUserInterest - CategoryItem] 저장 요청");
                             return interestsCategoryItemRepository.save(
                                     InterestsCategoryItem.builder()
                                             .category(category)
@@ -137,17 +160,23 @@ public class InterestsService {
                                             .build());
                         } catch (DataIntegrityViolationException e) {
                             return interestsCategoryItemRepository.findByCategoryAndName(category, itemName)
-                                    .orElseThrow(() -> new RuntimeException("아이템 중복 저장 실패"));
+                                    .orElseThrow(() -> {
+                                        log.error("❌ [saveSingleUserInterest - CategoryItem] 저장 중 예외 발생", e);
+                                        return new RuntimeException("아이템 중복 저장 실패");
+                                    });
                         }
                     });
 
+            log.debug("✅ [saveSingleUserInterest - CategoryItem] 저장 완료 - userId : {}", user.getId());
             if (!userInterestsRepository.existsByUserAndCategoryItem(user, categoryItem)) {
                 userInterestsRepository.save(UserInterests.builder()
                         .user(user)
                         .categoryItem(categoryItem)
                         .build());
             }
+            log.debug("✅ [saveSingleUserInterest - CategoryItem] 저장 완료 - categoryItemId: {}", categoryItem.getId());
         } catch (Exception e) {
+            log.error("❌ [saveSingleUserInterest] 저장 실패 - category: {}, item: {}", categoryName, itemName, e);
             throw new UserException("단일 취향 아이템 저장에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
         }
     }

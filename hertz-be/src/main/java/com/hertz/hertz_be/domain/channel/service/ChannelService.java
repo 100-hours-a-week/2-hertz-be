@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.*;
 import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
@@ -232,6 +233,10 @@ public class ChannelService {
             User matchedUser = userRepository.findById(matchedId)
                     .orElseThrow(UserWithdrawnException::new);
 
+            if (!hasSelectedInterests(matchedUser)) {
+                continue;
+            }
+
             boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
                     || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
 
@@ -354,6 +359,7 @@ public class ChannelService {
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();
+        // Todo: AI 쪽 DB에만 사용자 남아있는 경우 410 발생하며 모든 사용자 서비스 사용 불가능한 부분 리팩토링 필요
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
@@ -405,5 +411,25 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         asyncChannelService.notifyIfExactlyOneMessageEach(room);
+    }
+
+    @Transactional
+    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDTO response, MatchingStatus matchingStatus) {
+        SignalRoom room = signalRoomRepository.findById(response.getChannelRoomId())
+                .orElseThrow(ChannelNotFoundException::new);
+
+        int updatedSender = signalRoomRepository.updateSenderMatchingStatus(room.getId(), userId, matchingStatus);
+        int updatedReceiver = signalRoomRepository.updateReceiverMatchingStatus(room.getId(), userId, matchingStatus);
+
+        if (updatedSender == 0 && updatedReceiver == 0) {
+            throw new ForbiddenChannelException();
+        }
+
+        // 매칭 수락/거절 후 현재 관계
+        if(matchingStatus == MatchingStatus.MATCHED) {
+            return signalRoomRepository.findMatchResultByUser(userId, room.getId());
+        } else {
+            return ResponseCode.MATCH_REJECTION_SUCCESS;
+        }
     }
 }

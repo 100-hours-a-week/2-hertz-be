@@ -1,10 +1,12 @@
 package com.hertz.hertz_be.domain.channel.controller;
 
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
@@ -103,5 +105,46 @@ public class ChannelController {
                 .status(HttpStatus.CREATED)
                 .body(new ResponseDto<>(ResponseCode.MESSAGE_CREATED, "메세지가 성공적으로 전송되었습니다.", null)
         );
+    }
+
+
+    @PostMapping("/v2/matching/acceptances")
+    @Operation(summary = "채널방 매칭 수락 API")
+    public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(@AuthenticationPrincipal Long userId,
+                                                                                     @RequestBody SignalMatchingRequestDTO response) {
+
+        String matchingResult = channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.MATCHED);
+
+        return switch (matchingResult) {
+            case ResponseCode.MATCH_FAILED -> ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(new ResponseDto<>(ResponseCode.MATCH_FAILED, "상대방이 매칭을 거절했습니다.", null));
+            case ResponseCode.MATCH_SUCCESS -> ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(new ResponseDto<>(ResponseCode.MATCH_SUCCESS, "매칭이 성사되었습니다.", null));
+            case ResponseCode.MATCH_PENDING -> ResponseEntity
+                    .status(HttpStatus.ACCEPTED)
+                    .body(new ResponseDto<>(ResponseCode.MATCH_PENDING, "상대방의 응답을 기다리는 중입니다.", null));
+            case ResponseCode.USER_DEACTIVATED -> ResponseEntity
+                    .status(HttpStatus.GONE)
+                    .body(new ResponseDto<>(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다.", null));
+            default -> ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, "알 수 없는 오류입니다.", null));
+        };
+    }
+
+
+    @PostMapping("/v2/matching/rejections")
+    @Operation(summary = "채널방 매칭 거절 API")
+    public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> channelMatchingReject(@AuthenticationPrincipal Long userId,
+                                                                                     @RequestBody SignalMatchingRequestDTO response) {
+
+        return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(new ResponseDto<>(
+                            channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.UNMATCHED)
+                            , "매칭 거절이 완료되었습니다."
+                            , null));
     }
 }
