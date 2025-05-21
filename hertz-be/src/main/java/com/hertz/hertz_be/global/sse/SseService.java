@@ -14,10 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class SseService {
 
-    private static final Long TIMEOUT = 60 * 1000L;
+    // 무제한 유지
+    private static final Long TIMEOUT = 0L;
+
+    // userId -> emitter 매핑
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(Long userId) {
+        // 기존 연결 제거
         if (emitters.containsKey(userId)) {
             emitters.get(userId).complete();
             emitters.remove(userId);
@@ -27,22 +31,24 @@ public class SseService {
         emitters.put(userId, emitter);
 
         emitter.onCompletion(() -> {
-            log.info("SSE 연결 완료: userId={}", userId);
+            log.info("✅ SSE 연결 완료: userId={}", userId);
             emitters.remove(userId);
         });
 
         emitter.onTimeout(() -> {
-            log.info("SSE 타임아웃: userId={}", userId);
+            log.info("⌛ SSE 타임아웃 발생: userId={}", userId);
             emitter.complete();
             emitters.remove(userId);
         });
 
-        // ping 시 null → "ping" 문자열로 전송
+        // 최초 연결 시 ping 전송
         sendToClient(userId, SseEventName.PING.getValue(), "ping");
+        log.warn("첫 ping: userId={}", userId);
 
         return emitter;
     }
 
+    // 15초마다 ping 전송 -> 헬스체크 역할
     @Scheduled(fixedRate = 15000)
     public void sendPeriodicPings() {
         emitters.forEach((userId, emitter) -> {
@@ -50,8 +56,9 @@ public class SseService {
                 emitter.send(SseEmitter.event()
                         .name(SseEventName.PING.getValue())
                         .data("ping"));
+                //log.warn("중간 ping: userId={}", userId);
             } catch (IOException e) {
-                log.warn("주기적 Ping 실패: userId={}", userId);
+                log.warn("⚠️ Ping 전송 실패: userId={}, 연결 종료", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
@@ -66,7 +73,7 @@ public class SseService {
                         .name(eventName)
                         .data(data));
             } catch (IOException e) {
-                log.warn("SSE 전송 실패, emitter 제거: userId={}", userId);
+                log.warn("🚫 이벤트 전송 실패, 연결 종료: userId={}", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
