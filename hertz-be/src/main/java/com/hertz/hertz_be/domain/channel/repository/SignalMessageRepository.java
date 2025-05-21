@@ -18,6 +18,13 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
     boolean existsBySignalRoomInAndSenderUserNotAndIsReadFalse(List<SignalRoom> signalRooms, User senderUser);
     Page<SignalMessage> findBySignalRoom_Id(Long roomId, Pageable pageable);
 
+    @Query("SELECT m FROM SignalMessage m WHERE m.signalRoom.id = :roomId AND m.senderUser.id = :userId ORDER BY m.sendAt ASC")
+    List<SignalMessage> findBySignalRoomIdAndSenderUserIdOrderBySendAtAsc(
+            @Param("roomId") Long roomId,
+            @Param("userId") Long userId
+    );
+
+    // 특정 SignalRoom에서 특정 사용자가 보낸 메시지들을 sendAt 기준 오름차순으로 모두 조회
     @Query("""
         SELECT m.senderUser.id, COUNT(m)
         FROM SignalMessage m

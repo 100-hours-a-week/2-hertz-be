@@ -1,16 +1,20 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AsyncChannelService {
@@ -43,4 +47,33 @@ public class AsyncChannelService {
             );
         }
     }
+
+    @Async
+    public void notifyIfReceiverFirstMessageIs24hAgo(SignalRoom room, Long userId) {
+        if (room.getReceiverMatchingStatus() == MatchingStatus.SIGNAL && room.getSenderMatchingStatus() == MatchingStatus.SIGNAL) {
+            return;
+        }
+
+        Long roomId = room.getId();
+
+        Long receiverId = room.getReceiverUser().getId();
+
+        List<SignalMessage> messages = signalMessageRepository
+                .findBySignalRoomIdAndSenderUserIdOrderBySendAtAsc(roomId, receiverId);
+
+        if (messages.isEmpty()) return;
+
+        SignalMessage firstMessage = messages.get(0);
+        LocalDateTime sentTime = firstMessage.getSendAt();
+
+        if (sentTime.plusHours(24).isBefore(LocalDateTime.now())) {
+            log.info("[조건 충족] receiverUser의 첫 메시지 기준 24시간 경과: roomId={}", roomId);
+            LocalDateTime matchedAt = sentTime.plusHours(24);
+
+            sseChannelService.notifyMatchingConvertedInChannelRoom(
+                    room, userId, matchedAt
+            );
+        }
+    }
+
 }

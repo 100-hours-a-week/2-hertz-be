@@ -373,6 +373,8 @@ public class ChannelService {
             }
         }
 
+        asyncChannelService.notifyIfReceiverFirstMessageIs24hAgo(room, userId); // 비동기 실행
+
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
