@@ -35,20 +35,20 @@ public class SseChannelService {
         }
 
         Runnable task = () -> {
-            log.info("[매칭 전환 알림] 24시간 경과 → SSE 전송 시작");
+            log.info("[매칭 전환 알림] 2분 경과 → SSE 전송 시작"); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
 
             LocalDateTime matchedAt = LocalDateTime.now();
 
-            sendMatchingConvertedSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt);
-            sendMatchingConvertedSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt);
+            sendMatchingConvertedSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION );
+            sendMatchingConvertedSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION);
 
             scheduledMap.remove(channelRoomId);
         };
 
-        ScheduledFuture<?> future = scheduler.schedule(task, 24, TimeUnit.HOURS);
+        ScheduledFuture<?> future = scheduler.schedule(task, 2, TimeUnit.MINUTES); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
         scheduledMap.put(channelRoomId, future);
 
-        log.info("[매칭 전환 예약] {} ↔ {} 에 대해 24시간 후 SSE 예약 완료", senderId, receiverId);
+        log.info("[매칭 전환 예약] {} ↔ {} 에 대해 2분 후 SSE 예약 완료", senderId, receiverId); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
     }
 
     public void notifyMatchingConvertedInChannelRoom(
@@ -60,7 +60,7 @@ public class SseChannelService {
                     room.getSenderUser().getId(),
                     room.getSenderUser().getNickname(),
                     room.getId(),
-                    matchedAt
+                    matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM
             );
         } else {
             sendMatchingConvertedSse(
@@ -68,12 +68,12 @@ public class SseChannelService {
                     room.getReceiverUser().getId(),
                     room.getReceiverUser().getNickname(),
                     room.getId(),
-                    matchedAt
+                    matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM
             );
         }
     }
 
-    private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
+    private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt, SseEventName sseEventName) {
         MatchingConvertedResponseDto dto = MatchingConvertedResponseDto.builder()
                 .channelRoomId(roomId)
                 .matchedAt(matchedAt)
@@ -81,7 +81,7 @@ public class SseChannelService {
                 .partnerNickname(partnerNickname)
                 .build();
 
-        sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION.getValue(), dto);
+        sseService.sendToClient(targetUserId, sseEventName.getValue(), dto);
         log.info("[매칭 전환 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
     }
 }
