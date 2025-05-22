@@ -50,23 +50,23 @@ public class SseService {
         });
 
         // 최초 연결 시 ping 전송
-        sendToClient(userId, SseEventName.PING.getValue(), "ping");
-        log.warn("첫 ping: userId={}", userId);
+        sendToClient(userId, SseEventName.PING.getValue(), "connect success");
+        log.warn("connect success: userId={}", userId);
 
         return emitter;
     }
 
-    // 15초마다 ping 전송 -> 헬스체크 역할
+    // 15초마다 heartbeat 전송 -> 헬스체크 역할
     @Scheduled(fixedRate = 15000)
     public void sendPeriodicPings() {
         emitters.forEach((userId, emitter) -> {
             try {
                 emitter.send(SseEmitter.event()
-                        .name(SseEventName.PING.getValue())
-                        .data("ping"));
-                //log.warn("중간 ping: userId={}", userId);
+                        .name(SseEventName.HEARTBEAT.getValue())
+                        .data("heartbeat"));
+                //log.warn("heartbeat: userId={}", userId);
             } catch (IOException e) {
-                log.warn("⚠️ Ping 전송 실패: userId={}, 연결 종료", userId);
+                log.warn("⚠️ heartbeat 전송 실패: userId={}, 연결 종료", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
