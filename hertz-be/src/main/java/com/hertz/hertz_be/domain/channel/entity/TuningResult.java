@@ -33,4 +33,8 @@ public class TuningResult {
 
     @Column(nullable = false)
     private int lineup;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }
