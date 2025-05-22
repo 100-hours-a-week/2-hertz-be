@@ -65,50 +65,55 @@ public class InterestsService {
 
     @Transactional
     public void saveUserInterests(UserInterestsRequestDto userInterestsRequestDto, Long userId) throws Exception {
-        log.debug("🔥 [saveUserInterests] 취향 저장 시작 - userId: {}", userId);
-        Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
-        Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
-        validateUserInterestsInput(keywordsMap, interestsMap);
+        retryTemplate.execute(retryContext -> {
+            log.debug("🔥 [saveUserInterests] 취향 저장 시작 - userId: {}", userId);
+            Map<String, String> keywordsMap = userInterestsRequestDto.getKeywords().toMap();
+            Map<String, List<String>> interestsMap = userInterestsRequestDto.getInterests().toMap();
+            validateUserInterestsInput(keywordsMap, interestsMap);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("❌ [saveUserInterests] 유저 없음 - userId: {}", userId);
-                    return new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST);
-                });
-        log.debug("✅ [saveUserInterests] 유저 조회 완료 - email: {}", user.getEmail());
-      
-        resetCachingTuningResult(user);
-        log.debug("🔄 [saveUserInterests] 캐싱 튜닝 결과 초기화");
-
-        Map<String, Object> aiRequestBody = buildRequestAiBody(user);
-        Map<String, String> aiKeywords = new HashMap<>();
-        Map<String, String[]> aiInterests = new HashMap<>();
-
-        try {
-            saveKeywordInterests(user, keywordsMap, aiKeywords);
-            saveInterestItems(user, interestsMap, aiInterests);
-        } catch (Exception e) {
-            log.error("❌ [saveUserInterests] 취향 저장 중 예외 발생", e);
-            throw new UserException("취향 등록 처리에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
-        }
-
-
-        // 트랜잭션 커밋 이후 실행
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    retryTemplate.execute(context -> {
-                        log.debug("🚀 [saveUserInterests - TransactionSynchronizationManager] AI 서버에 요청 시작");
-                        Map<String, Object> responseMap = saveInterestsToAiServer(aiRequestBody, aiKeywords, aiInterests);
-                        log.debug("📥 [saveUserInterests - TransactionSynchronizationManager] AI 응답: {}", responseMap);
-                        return null;
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        log.error("❌ [saveUserInterests] 유저 없음 - userId: {}", userId);
+                        return new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST);
                     });
-                } catch (Exception e) {
-                    log.error("❌ AI 서버 호출 실패", e);
-                }
+            log.debug("✅ [saveUserInterests] 유저 조회 완료 - email: {}", user.getEmail());
+
+            resetCachingTuningResult(user);
+            log.debug("🔄 [saveUserInterests] 캐싱 튜닝 결과 초기화");
+
+            Map<String, Object> aiRequestBody = buildRequestAiBody(user);
+            Map<String, String> aiKeywords = new HashMap<>();
+            Map<String, String[]> aiInterests = new HashMap<>();
+
+            try {
+                saveKeywordInterests(user, keywordsMap, aiKeywords);
+                saveInterestItems(user, interestsMap, aiInterests);
+            } catch (Exception e) {
+                log.error("❌ [saveUserInterests] 취향 저장 중 예외 발생", e);
+                throw new UserException("취향 등록 처리에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
             }
+
+
+            // 트랜잭션 커밋 이후 실행
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        retryTemplate.execute(context -> {
+                            log.debug("🚀 [saveUserInterests - TransactionSynchronizationManager] AI 서버에 요청 시작");
+                            Map<String, Object> responseMap = saveInterestsToAiServer(aiRequestBody, aiKeywords, aiInterests);
+                            log.debug("📥 [saveUserInterests - TransactionSynchronizationManager] AI 응답: {}", responseMap);
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        log.error("❌ AI 서버 호출 실패", e);
+                    }
+                }
+            });
+
+            return null;
         });
+
     }
 
     private Map<String, Object> buildRequestAiBody(User user) {
@@ -240,7 +245,7 @@ public class InterestsService {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode json = mapper.readTree(body);
                 String code = json.has("code") ? json.get("code").asText() : null;
-
+              
                 return switch (code) {
                     case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> {
                         log.warn("⚠️ 이미 등록된 유저. userId: {}", userId);
