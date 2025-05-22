@@ -1,7 +1,9 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedResponseDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.sse.SseService;
 import lombok.RequiredArgsConstructor;
@@ -39,8 +41,8 @@ public class SseChannelService {
 
             LocalDateTime matchedAt = LocalDateTime.now();
 
-            sendMatchingConvertedSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION );
-            sendMatchingConvertedSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION);
+            sendMatchingConvertedSse(senderId, receiverId, receiverNickname, channelRoomId, matchedAt);
+            sendMatchingConvertedSse(receiverId, senderId, senderNickname, channelRoomId, matchedAt);
 
             scheduledMap.remove(channelRoomId);
         };
@@ -52,28 +54,22 @@ public class SseChannelService {
     }
 
     public void notifyMatchingConvertedInChannelRoom(
-            SignalRoom room, Long userId, LocalDateTime matchedAt
+            SignalRoom room, Long userId
     ) {
         if (Objects.equals(userId, room.getReceiverUser().getId())) {
-            sendMatchingConvertedSse(
-                    room.getReceiverUser().getId(),
-                    room.getSenderUser().getId(),
-                    room.getSenderUser().getNickname(),
-                    room.getId(),
-                    matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM
-            );
+            if(room.getReceiverMatchingStatus() == MatchingStatus.MATCHED) {
+                sendMatchingConvertedInChannelRoom(room.getReceiverUser().getId(),room.getId(),true);
+            }
+            sendMatchingConvertedInChannelRoom( room.getReceiverUser().getId(),room.getId(),false);
         } else {
-            sendMatchingConvertedSse(
-                    room.getSenderUser().getId(),
-                    room.getReceiverUser().getId(),
-                    room.getReceiverUser().getNickname(),
-                    room.getId(),
-                    matchedAt, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM
-            );
+            if(room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
+                sendMatchingConvertedInChannelRoom(room.getSenderUser().getId(), room.getId(),true);
+            }
+            sendMatchingConvertedInChannelRoom(room.getSenderUser().getId(),room.getId(),false);
         }
     }
 
-    private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt, SseEventName sseEventName) {
+    private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
         MatchingConvertedResponseDto dto = MatchingConvertedResponseDto.builder()
                 .channelRoomId(roomId)
                 .matchedAt(matchedAt)
@@ -81,7 +77,17 @@ public class SseChannelService {
                 .partnerNickname(partnerNickname)
                 .build();
 
-        sseService.sendToClient(targetUserId, sseEventName.getValue(), dto);
-        log.info("[매칭 전환 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
+        sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION.getValue(), dto);
+        log.info("[페이지 상관 없이 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
+    }
+
+    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded) {
+        MatchingConvertedInChannelRoomResponseDTO dto = MatchingConvertedInChannelRoomResponseDTO.builder()
+                .channelRoomId(roomId)
+                .hasResponded(hasResponded)
+                .build();
+
+        sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
+        log.info("[채팅방 안에서 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
     }
 }

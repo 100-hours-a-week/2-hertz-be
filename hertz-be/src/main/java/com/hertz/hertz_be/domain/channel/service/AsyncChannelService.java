@@ -68,10 +68,9 @@ public class AsyncChannelService {
 
         if (sentTime.plusMinutes(2).isBefore(LocalDateTime.now())) { // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
             log.info("[조건 충족] receiverUser의 첫 메시지 기준 2분 경과: roomId={}", roomId); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
-            LocalDateTime matchedAt = sentTime.plusMinutes(2); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
 
             sseChannelService.notifyMatchingConvertedInChannelRoom(
-                    room, userId, matchedAt
+                    room, userId
             );
         }
     }
