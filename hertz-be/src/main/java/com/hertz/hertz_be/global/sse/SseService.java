@@ -39,12 +39,12 @@ public class SseService {
 
         // 프론트에서 eventSource.close()를 호출하면 실행됨
         emitter.onCompletion(() -> {
-            log.info("✅ SSE 연결 종료: userId={}", userId);
+            log.info("SSE 연결 종료: userId={}", userId);
             emitters.remove(userId);
         });
 
         emitter.onTimeout(() -> {
-            log.info("⌛ SSE 타임아웃 발생: userId={}", userId);
+            log.info("SSE 타임아웃 발생: userId={}", userId);
             emitter.complete();
             emitters.remove(userId);
         });
@@ -66,7 +66,7 @@ public class SseService {
                         .data("heartbeat"));
                 //log.warn("heartbeat: userId={}", userId);
             } catch (IOException e) {
-                log.warn("⚠️ heartbeat 전송 실패: userId={}, 연결 종료", userId);
+                log.warn("heartbeat 전송 실패: userId={}, 연결 종료", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
@@ -81,7 +81,7 @@ public class SseService {
                         .name(eventName)
                         .data(data));
             } catch (IOException e) {
-                log.warn("🚫 이벤트 전송 실패, 연결 종료: userId={}", userId);
+                log.warn("이벤트 전송 실패, 연결 종료: userId={}", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
