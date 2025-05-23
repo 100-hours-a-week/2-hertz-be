@@ -56,20 +56,22 @@ public class SseChannelService {
         log.info("[매칭 전환 예약] {} ↔ {} 에 대해 {}분 후 SSE 예약 완료", senderId, receiverId,matchingConvertDelayMinutes);
     }
 
-    public void notifyMatchingConvertedInChannelRoom(
-            SignalRoom room, Long userId
-    ) {
+    public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
+        Long targetUserId;
+        MatchingStatus status;
+
         if (Objects.equals(userId, room.getReceiverUser().getId())) {
-            if(room.getReceiverMatchingStatus() == MatchingStatus.MATCHED) {
-                sendMatchingConvertedInChannelRoom(room.getReceiverUser().getId(),room.getId(),true);
-            }
-            sendMatchingConvertedInChannelRoom( room.getReceiverUser().getId(),room.getId(),false);
+            targetUserId = room.getReceiverUser().getId();
+            status = room.getReceiverMatchingStatus();
         } else {
-            if(room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
-                sendMatchingConvertedInChannelRoom(room.getSenderUser().getId(), room.getId(),true);
-            }
-            sendMatchingConvertedInChannelRoom(room.getSenderUser().getId(),room.getId(),false);
+            targetUserId = room.getSenderUser().getId();
+            status = room.getSenderMatchingStatus();
         }
+
+        if (status == MatchingStatus.MATCHED) {
+            sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), true);
+        }
+        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), false);
     }
 
     private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
