@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.domain.channel.dto.response;
 
-import com.hertz.hertz_be.global.common.AESUtil;
+import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
