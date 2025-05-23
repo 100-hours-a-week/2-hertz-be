@@ -1,10 +1,10 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.dto.object.UserMessageCountDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
-import com.hertz.hertz_be.domain.channel.dto.object.UserMessageCountDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -39,8 +39,8 @@ public class AsyncChannelService {
 
         Map<Long, Long> countMap = counts.stream()
                 .collect(Collectors.toMap(
-                        UserMessageCountDto::userId,
-                        UserMessageCountDto::messageCount
+                        UserMessageCountDto::getUserId,
+                        UserMessageCountDto::getMessageCount
                 ));
 
         if (shouldNotifyMatchingConverted(room, countMap)) {

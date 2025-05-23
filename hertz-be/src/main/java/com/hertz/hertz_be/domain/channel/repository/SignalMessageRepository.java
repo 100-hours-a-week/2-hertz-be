@@ -27,8 +27,8 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
 
     // 특정 SignalRoom에서 특정 사용자가 보낸 메시지들을 sendAt 기준 오름차순으로 모두 조회
     @Query("""
-    SELECT new com.hertz.hertz_be.domain.channel.dto.UserMessageCountDto(
-        m.senderUser.id, COUNT(m)
+    SELECT new com.hertz.hertz_be.domain.channel.dto.object.UserMessageCountDto(
+    m.senderUser.id, COUNT(m)
     )
     FROM SignalMessage m
     WHERE m.signalRoom.id = :roomId
