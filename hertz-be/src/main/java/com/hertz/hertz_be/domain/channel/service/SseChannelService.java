@@ -8,6 +8,7 @@ import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.sse.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,8 @@ import java.util.concurrent.*;
 @Service
 @RequiredArgsConstructor
 public class SseChannelService {
+    @Value("${matching.convert.delay-minutes}")
+    private long matchingConvertDelayMinutes;
 
     private final SseService sseService;
 
@@ -37,7 +40,7 @@ public class SseChannelService {
         }
 
         Runnable task = () -> {
-            log.info("[매칭 전환 알림] 2분 경과 → SSE 전송 시작"); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
+            log.info("[매칭 전환 알림] {}분 경과 → SSE 전송 시작",matchingConvertDelayMinutes);
 
             LocalDateTime matchedAt = LocalDateTime.now();
 
@@ -47,10 +50,10 @@ public class SseChannelService {
             scheduledMap.remove(channelRoomId);
         };
 
-        ScheduledFuture<?> future = scheduler.schedule(task, 2, TimeUnit.MINUTES); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
+        ScheduledFuture<?> future = scheduler.schedule(task, matchingConvertDelayMinutes, TimeUnit.MINUTES);
         scheduledMap.put(channelRoomId, future);
 
-        log.info("[매칭 전환 예약] {} ↔ {} 에 대해 2분 후 SSE 예약 완료", senderId, receiverId); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
+        log.info("[매칭 전환 예약] {} ↔ {} 에 대해 {}분 후 SSE 예약 완료", senderId, receiverId,matchingConvertDelayMinutes);
     }
 
     public void notifyMatchingConvertedInChannelRoom(

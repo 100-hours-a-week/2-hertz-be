@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,6 +20,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AsyncChannelService {
+    @Value("${matching.convert.delay-minutes}")
+    private long matchingConvertDelayMinutes;
+
     private final long ONE_MESSAGE = 1L;
 
     private final SignalMessageRepository signalMessageRepository;
@@ -72,13 +76,9 @@ public class AsyncChannelService {
         SignalMessage firstMessage = messages.get(0);
         LocalDateTime sentTime = firstMessage.getSendAt();
 
-        if (sentTime.plusMinutes(2).isBefore(LocalDateTime.now())) { // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
-            log.info("[조건 충족] receiverUser의 첫 메시지 기준 2분 경과: roomId={}", roomId); // Todo: 프론트 연동 끝나면 24시간으로 돌려놓기
-
-            sseChannelService.notifyMatchingConvertedInChannelRoom(
-                    room, userId
-            );
+        if (sentTime.plusMinutes(matchingConvertDelayMinutes).isBefore(LocalDateTime.now())) {
+            log.info("[조건 충족] receiverUser의 첫 메시지로부터 {}분 경과: roomId={}", matchingConvertDelayMinutes, roomId);
+            sseChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
         }
     }
-
 }
