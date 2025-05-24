@@ -413,6 +413,7 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         asyncChannelService.notifyMatchingConverted(room);
+        asyncChannelService.updatePartnerChannelList(signalMessage, partnerId);
     }
 
     @Transactional
