@@ -89,8 +89,8 @@ public class AsyncChannelService {
 
     @Async
     @Transactional
-    public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
-        // signalMessage만 detach
+    public void sendMessageNotificationToPartner(SignalMessage signalMessage, Long partnerId) {
+        // signalMessage 비영속 상태로 만들기
         entityManager.detach(signalMessage);
 
         // DB에서 signalMessage의 최신 상태 조회
