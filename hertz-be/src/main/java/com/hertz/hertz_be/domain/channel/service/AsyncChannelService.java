@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -87,10 +88,12 @@ public class AsyncChannelService {
     }
 
     @Async
+    @Transactional
     public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
         entityManager.detach(signalMessage);
         if (signalMessage.getIsRead() == false) {
             sseChannelService.updatePartnerChannelList(signalMessage, partnerId);
+            sseChannelService.updatePartnerNavbar(partnerId);
         }
     }
 }

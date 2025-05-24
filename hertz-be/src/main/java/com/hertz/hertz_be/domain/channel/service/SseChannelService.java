@@ -6,6 +6,8 @@ import com.hertz.hertz_be.domain.channel.dto.response.sse.UpdateChannelListRespo
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
+import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
+import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
@@ -20,9 +22,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -33,6 +38,7 @@ public class SseChannelService {
 
     private final SseService sseService;
     private final UserRepository userRepository;
+    private final SignalMessageRepository signalMessageRepository;
     private final AESUtil aesUtil;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -123,5 +129,25 @@ public class SseChannelService {
                 .build();
 
         sseService.sendToClient(partnerId, SseEventName.CHAT_ROOM_UPDATE.getValue(), dto);
+    }
+
+    public void updatePartnerNavbar(Long userId) {
+        User user = userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        List<SignalRoom> allRooms = Stream.concat(
+                user.getSentSignalRooms().stream(),
+                user.getReceivedSignalRooms().stream()
+        ).collect(Collectors.toList());
+
+        boolean isThereNewMessage = signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
+
+        if (isThereNewMessage) {
+            sseService.sendToClient(userId, SseEventName.NAV_NEW_MESSAGE.getValue(), "");
+            log.info("[네비게이션 바에서 새 메세지 알림 전송] userId={}", userId);
+        } else {
+            sseService.sendToClient(userId, SseEventName.NAV_NO_ANY_NEW_MESSAGE.getValue(), "");
+            log.info("[네비게이션 바에서 새 메세지 없음 알림 전송] userId={}", userId);
+        }
     }
 }
