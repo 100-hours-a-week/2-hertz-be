@@ -129,6 +129,7 @@ public class SseChannelService {
                 .build();
 
         sseService.sendToClient(partnerId, SseEventName.CHAT_ROOM_UPDATE.getValue(), dto);
+        log.info("[채널 목록 페이지에서 새 메세지에 대한 정보 알림 전송] userId={}, roomId={}", partnerId, signalMessage.getSignalRoom().getId());
     }
 
     public void updatePartnerNavbar(Long userId) {
