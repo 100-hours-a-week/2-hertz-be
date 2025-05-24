@@ -111,7 +111,7 @@ public class ChannelController {
     @PostMapping("/v2/matching/acceptances")
     @Operation(summary = "채널방 매칭 수락 API")
     public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(@AuthenticationPrincipal Long userId,
-                                                                                     @RequestBody SignalMatchingRequestDTO response) {
+                                                                   @RequestBody SignalMatchingRequestDTO response) {
 
         String matchingResult = channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.MATCHED);
 
@@ -146,5 +146,18 @@ public class ChannelController {
                             channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.UNMATCHED)
                             , "매칭 거절이 완료되었습니다."
                             , null));
+    }
+
+    @DeleteMapping("/v2/channel-rooms/{channelRoomId}")
+    @Operation(summary = "채널방 나가기 API")
+    public ResponseEntity<ResponseDto<Void>> leaveChannelRoom(@PathVariable Long channelRoomId,
+                                                                                     @AuthenticationPrincipal Long userId) {
+
+        channelService.leaveChannelRoom(channelRoomId, userId);
+
+        return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(new ResponseDto<>(ResponseCode.MESSAGE_CREATED, "채널방에서 정상적으로 나갔습니다.", null)
+                );
     }
 }
