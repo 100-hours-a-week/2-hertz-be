@@ -90,10 +90,15 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
+        // signalMessage만 detach
         entityManager.detach(signalMessage);
-        if (signalMessage.getIsRead() == false) {
-            sseChannelService.updatePartnerChannelList(signalMessage, partnerId);
-            sseChannelService.updatePartnerNavbar(partnerId);
+
+        // DB에서 signalMessage의 최신 상태 조회
+        SignalMessage freshSignalMessage = entityManager.find(SignalMessage.class, signalMessage.getId());
+
+        if (!freshSignalMessage.getIsRead()) {
+            sseChannelService.updatePartnerChannelList(freshSignalMessage, partnerId);
         }
+        sseChannelService.updatePartnerNavbar(partnerId);
     }
 }
