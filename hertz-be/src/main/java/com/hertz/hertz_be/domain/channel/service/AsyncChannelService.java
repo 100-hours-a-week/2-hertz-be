@@ -5,6 +5,8 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -22,8 +24,10 @@ import java.util.stream.Collectors;
 public class AsyncChannelService {
     @Value("${matching.convert.delay-minutes}")
     private long matchingConvertDelayMinutes;
-
     private final long ONE_MESSAGE = 1L;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final SignalMessageRepository signalMessageRepository;
     private final SseChannelService sseChannelService;
@@ -79,6 +83,14 @@ public class AsyncChannelService {
         if (sentTime.plusMinutes(matchingConvertDelayMinutes).isBefore(LocalDateTime.now())) {
             log.info("[조건 충족] receiverUser의 첫 메시지로부터 {}분 경과: roomId={}", matchingConvertDelayMinutes, roomId);
             sseChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
+        }
+    }
+
+    @Async
+    public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
+        entityManager.detach(signalMessage);
+        if (signalMessage.getIsRead() == false) {
+            sseChannelService.updatePartnerChannelList(signalMessage, partnerId);
         }
     }
 }
