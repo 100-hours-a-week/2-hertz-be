@@ -21,6 +21,8 @@ import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import com.hertz.hertz_be.global.exception.AiServerNotFoundException;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
@@ -42,6 +46,9 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class ChannelService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final UserRepository userRepository;
     private final TuningRepository tuningRepository;
@@ -382,6 +389,15 @@ public class ChannelService {
                 .map(msg -> ChannelRoomResponseDto.MessageDto.fromProjectionWithDecrypt(msg, aesUtil))
                 .toList();
 
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.updateNavbarMessageNotification(userId);
+            }
+        });
+
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
     }
 
@@ -412,8 +428,15 @@ public class ChannelService {
 
         signalMessageRepository.save(signalMessage);
 
-        asyncChannelService.notifyMatchingConverted(room);
-        asyncChannelService.sendMessageNotificationToPartner(signalMessage, partnerId);
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingConverted(room);
+                asyncChannelService.sendMessageNotificationToPartner(signalMessage, partnerId);
+            }
+        });
     }
 
     @Transactional
