@@ -49,7 +49,7 @@ public class ChannelService {
     private final UserInterestsRepository userInterestsRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
-    private final ChannelRoomRepository channelRoomRepository;
+    private final ChannelJoinRepository channelJoinRepository;
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
@@ -60,7 +60,7 @@ public class ChannelService {
                           UserInterestsRepository userInterestsRepository,
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
-                          ChannelRoomRepository channelRoomRepository,
+                          ChannelJoinRepository channelJoinRepository,
                           AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
@@ -69,7 +69,7 @@ public class ChannelService {
         this.userInterestsRepository = userInterestsRepository;
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
-        this.channelRoomRepository = channelRoomRepository;
+        this.channelJoinRepository = channelJoinRepository;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
@@ -429,4 +429,14 @@ public class ChannelService {
             return ResponseCode.MATCH_REJECTION_SUCCESS;
         }
     }
+
+    @Transactional
+    public void leaveChannelRoom(Long channelRoomId, Long userId) {
+        ChannelJoin channelJoin = channelJoinRepository.findByChannelRoomIdAndUserId(channelRoomId, userId)
+                .orElseThrow(ChannelNotFoundException::new);
+
+        channelJoinRepository.delete(channelJoin);
+    }
+
+
 }
