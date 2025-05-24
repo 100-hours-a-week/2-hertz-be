@@ -10,7 +10,8 @@ public enum SseEventName {
     SIGNAL_MATCHING_CONVERSION("signal-matching-conversion"),
     SIGNAL_MATCHING_CONVERSION_IN_ROOM("signal-matching-conversion-in-room"),
     HEARTBEAT("heartbeat"),
-    PING("ping");
+    PING("ping"),
+    CHAT_ROOM_UPDATE("chat-room-update");
 
     private final String value;
 }
