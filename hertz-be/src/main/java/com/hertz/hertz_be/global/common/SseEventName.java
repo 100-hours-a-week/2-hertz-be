@@ -11,7 +11,9 @@ public enum SseEventName {
     SIGNAL_MATCHING_CONVERSION_IN_ROOM("signal-matching-conversion-in-room"),
     HEARTBEAT("heartbeat"),
     PING("ping"),
-    CHAT_ROOM_UPDATE("chat-room-update");
+    CHAT_ROOM_UPDATE("chat-room-update"),
+    NAV_NEW_MESSAGE("nav-new-message"),
+    NAV_NO_ANY_NEW_MESSAGE("nav-no-any-new-message");
 
     private final String value;
 }
