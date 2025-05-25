@@ -5,6 +5,7 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -90,9 +91,15 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void sendMessageNotificationToPartner(SignalMessage signalMessage, Long partnerId) {
-        if (!signalMessage.getIsRead()) {
-            sseChannelService.updatePartnerChannelList(signalMessage, partnerId);
+        // signalMessage는 detached 상태 → DB에서 최신 상태 조회
+        SignalMessage latestMessageForm = signalMessageRepository.findById(signalMessage.getId())
+                .orElseThrow(InternalServerErrorException::new);
+
+        if (!latestMessageForm.getIsRead()) {
+            sseChannelService.updatePartnerChannelList(latestMessageForm, partnerId);
+            sseChannelService.notifyNewMessage(latestMessageForm, partnerId);
         }
+
         sseChannelService.updatePartnerNavbar(partnerId);
     }
 
