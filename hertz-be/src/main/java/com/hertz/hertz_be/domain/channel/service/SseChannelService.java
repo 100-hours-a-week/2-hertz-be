@@ -159,6 +159,7 @@ public class SseChannelService {
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerId(signalMessage.getSenderUser().getId())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
+                .message(decryptedMessage)
                 .build();
 
         sseService.sendToClient(partnerId, SseEventName.NEW_MESSAGE_RECEPTION.getValue(), dto);
@@ -172,6 +173,7 @@ public class SseChannelService {
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerId(signalMessage.getSenderUser().getId())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
+                .message(decryptedMessage)
                 .build();
 
         sseService.sendToClient(partnerId, SseEventName.NEW_SIGNAL_RECEPTION.getValue(), dto);

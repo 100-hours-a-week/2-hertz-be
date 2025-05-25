@@ -10,4 +10,5 @@ public class NotifyNewMessageResponseDTO {
     private Long channelRoomId;
     private Long partnerId;
     private String partnerNickname;
+    private String message;
 }
