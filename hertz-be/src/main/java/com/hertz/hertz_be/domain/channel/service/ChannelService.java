@@ -119,6 +119,15 @@ public class ChannelService {
                 .build();
         signalMessageRepository.save(signalMessage);
 
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.sendSinalNotificationToPartner(signalMessage, receiver.getId());
+            }
+        });
+
         return new SendSignalResponseDTO(signalRoom.getId());
     }
 

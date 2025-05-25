@@ -163,4 +163,17 @@ public class SseChannelService {
 
         sseService.sendToClient(partnerId, SseEventName.NEW_MESSAGE_RECEPTION.getValue(), dto);
     }
+
+    public void notifyNewSignal(SignalMessage signalMessage, Long partnerId) {
+
+        String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
+
+        NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
+                .channelRoomId(signalMessage.getSignalRoom().getId())
+                .partnerId(signalMessage.getSenderUser().getId())
+                .partnerNickname(signalMessage.getSenderUser().getNickname())
+                .build();
+
+        sseService.sendToClient(partnerId, SseEventName.NEW_SIGNAL_RECEPTION.getValue(), dto);
+    }
 }

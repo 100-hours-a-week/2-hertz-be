@@ -105,6 +105,21 @@ public class AsyncChannelService {
 
     @Async
     @Transactional
+    public void sendSinalNotificationToPartner(SignalMessage signalMessage, Long partnerId) {
+        // signalMessage는 detached 상태 → DB에서 최신 상태 조회
+        SignalMessage latestMessageForm = signalMessageRepository.findById(signalMessage.getId())
+                .orElseThrow(InternalServerErrorException::new);
+
+        if (!latestMessageForm.getIsRead()) {
+            sseChannelService.updatePartnerChannelList(latestMessageForm, partnerId);
+            sseChannelService.notifyNewSignal(latestMessageForm, partnerId);
+        }
+
+        sseChannelService.updatePartnerNavbar(partnerId);
+    }
+
+    @Async
+    @Transactional
     public void updateNavbarMessageNotification(Long userId) {
         sseChannelService.updatePartnerNavbar(userId);
     }
