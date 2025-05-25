@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.channel.service;
 
 import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.NotifyNewMessageResponseDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.sse.UpdateChannelListResponseDTO;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
@@ -113,15 +114,13 @@ public class SseChannelService {
     }
 
     public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
-        User user = userRepository.findById(partnerId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
         UpdateChannelListResponseDTO dto = UpdateChannelListResponseDTO.builder()
                 .channelRoomId(signalMessage.getSignalRoom().getId())
-                .partnerProfileImage(user.getProfileImageUrl())
-                .partnerNickname(user.getNickname())
+                .partnerProfileImage(signalMessage.getSenderUser().getProfileImageUrl())
+                .partnerNickname(signalMessage.getSenderUser().getNickname())
                 .lastMessage(decryptedMessage)
                 .lastMessageTime(signalMessage.getSendAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .isRead(signalMessage.getIsRead())
@@ -150,5 +149,18 @@ public class SseChannelService {
             sseService.sendToClient(userId, SseEventName.NAV_NO_ANY_NEW_MESSAGE.getValue(), "");
             log.info("[네비게이션 바에서 새 메세지 없음 알림 전송] userId={}", userId);
         }
+    }
+
+    public void notifyNewMessage(SignalMessage signalMessage, Long partnerId) {
+
+        String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
+
+        NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
+                .channelRoomId(signalMessage.getSignalRoom().getId())
+                .partnerId(signalMessage.getSenderUser().getId())
+                .partnerNickname(signalMessage.getSenderUser().getNickname())
+                .build();
+
+        sseService.sendToClient(partnerId, SseEventName.NEW_MESSAGE_RECEPTION.getValue(), dto);
     }
 }
