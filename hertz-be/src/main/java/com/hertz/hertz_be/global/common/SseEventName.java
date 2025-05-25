@@ -13,7 +13,9 @@ public enum SseEventName {
     PING("ping"),
     CHAT_ROOM_UPDATE("chat-room-update"),
     NAV_NEW_MESSAGE("nav-new-message"),
-    NAV_NO_ANY_NEW_MESSAGE("nav-no-any-new-message");
+    NAV_NO_ANY_NEW_MESSAGE("nav-no-any-new-message"),
+    NEW_MESSAGE_RECEPTION("new-message-reception"),
+    NEW_SIGNAL_RECEPTION("new-signal-reception");
 
     private final String value;
 }
