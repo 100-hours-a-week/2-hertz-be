@@ -152,21 +152,14 @@ public class SseChannelService {
     }
 
     public void notifyNewMessage(SignalMessage signalMessage, Long partnerId) {
-
-        String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
-
-        NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
-                .channelRoomId(signalMessage.getSignalRoom().getId())
-                .partnerId(signalMessage.getSenderUser().getId())
-                .partnerNickname(signalMessage.getSenderUser().getNickname())
-                .message(decryptedMessage)
-                .build();
-
-        sseService.sendToClient(partnerId, SseEventName.NEW_MESSAGE_RECEPTION.getValue(), dto);
+        sendNewSignalOrMessageEvent(signalMessage, partnerId, SseEventName.NEW_MESSAGE_RECEPTION);
     }
 
     public void notifyNewSignal(SignalMessage signalMessage, Long partnerId) {
+        sendNewSignalOrMessageEvent(signalMessage, partnerId, SseEventName.NEW_SIGNAL_RECEPTION);
+    }
 
+    private void sendNewSignalOrMessageEvent(SignalMessage signalMessage, Long partnerId, SseEventName eventName) {
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
         NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
@@ -176,6 +169,8 @@ public class SseChannelService {
                 .message(decryptedMessage)
                 .build();
 
-        sseService.sendToClient(partnerId, SseEventName.NEW_SIGNAL_RECEPTION.getValue(), dto);
+        sseService.sendToClient(partnerId, eventName.getValue(), dto);
+        log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
     }
+
 }

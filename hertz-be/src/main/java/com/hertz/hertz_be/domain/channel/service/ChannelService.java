@@ -124,7 +124,7 @@ public class ChannelService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
             @Override
             public void afterCommit() {
-                asyncChannelService.sendSinalNotificationToPartner(signalMessage, receiver.getId());
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiver.getId(), true);
             }
         });
 
@@ -443,7 +443,7 @@ public class ChannelService {
             @Override
             public void afterCommit() {
                 asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendMessageNotificationToPartner(signalMessage, partnerId);
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
             }
         });
     }
