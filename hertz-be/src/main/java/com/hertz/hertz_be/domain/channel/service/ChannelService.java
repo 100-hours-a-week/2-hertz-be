@@ -12,6 +12,7 @@ import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjec
 import com.hertz.hertz_be.domain.channel.repository.projection.RoomWithLastSenderProjection;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
+import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
@@ -50,6 +51,8 @@ public class ChannelService {
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final ChannelRoomRepository channelRoomRepository;
+
+    private final InterestsService interestsService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
@@ -61,6 +64,7 @@ public class ChannelService {
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
                           ChannelRoomRepository channelRoomRepository,
+                          InterestsService interestsService,
                           AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
@@ -70,6 +74,7 @@ public class ChannelService {
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
         this.channelRoomRepository = channelRoomRepository;
+        this.interestsService = interestsService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
@@ -252,11 +257,11 @@ public class ChannelService {
     }
 
     private TuningResponseDTO buildTuningResponseDTO(Long requesterId, User target) {
-        Map<String, String> keywords = getUserKeywords(target.getId());
+        Map<String, String> keywords = interestsService.getUserKeywords(target.getId());
 
-        Map<String, List<String>> requesterInterests = getUserInterests(requesterId);
-        Map<String, List<String>> targetInterests = getUserInterests(target.getId());
-        Map<String, List<String>> sameInterests = extractSameInterests(requesterInterests, targetInterests);
+        Map<String, List<String>> requesterInterests = interestsService.getUserInterests(requesterId);
+        Map<String, List<String>> targetInterests = interestsService.getUserInterests(target.getId());
+        Map<String, List<String>> sameInterests = interestsService.extractSameInterests(requesterInterests, targetInterests);
 
         return new TuningResponseDTO(
                 target.getId(),
@@ -270,53 +275,7 @@ public class ChannelService {
     }
 
 
-    public Map<String, String> getUserKeywords(Long userId) {
-        Map<String, String> keywords = userInterestsRepository.findByUserId(userId).stream()
-                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.KEYWORD)
-                .collect(
-                        LinkedHashMap::new,
-                        (map, ui) -> map.put(ui.getCategoryItem().getCategory().getName(), ui.getCategoryItem().getName()),
-                        LinkedHashMap::putAll
-                );
 
-        return keywords;
-    }
-
-    public Map<String, List<String>> getUserInterests(Long userId) {
-        Map<String, List<String>> interestsMap = new LinkedHashMap<>();
-
-        userInterestsRepository.findByUserId(userId).stream()
-                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.INTEREST)
-                .forEach(ui -> {
-                    String categoryName = ui.getCategoryItem().getCategory().getName();
-                    String itemName = ui.getCategoryItem().getName();
-                    interestsMap.computeIfAbsent(categoryName, k -> new ArrayList<>()).add(itemName);
-                });
-
-        return interestsMap;
-    }
-
-    public Map<String, List<String>> extractSameInterests(Map<String, List<String>> interests1, Map<String, List<String>> interests2) {
-        Map<String, List<String>> sameInterests = new LinkedHashMap<>();
-
-        for (String category : interests1.keySet()) {
-            List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
-            List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
-
-            // 교집합 추출
-            Set<String> common = new HashSet<>(list1);
-            common.retainAll(list2);
-
-            // 값이 있으면 1개만 반환, 없으면 빈 리스트
-            if (!common.isEmpty()) {
-                sameInterests.put(category, List.of(common.iterator().next()));
-            } else {
-                sameInterests.put(category, Collections.emptyList());
-            }
-        }
-
-        return sameInterests;
-    }
 
     @Transactional(readOnly = true)
     public boolean hasNewMessages(Long userId) {
