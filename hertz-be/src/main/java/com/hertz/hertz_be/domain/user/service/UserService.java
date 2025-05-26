@@ -1,9 +1,15 @@
 package com.hertz.hertz_be.domain.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
+import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
+import com.hertz.hertz_be.domain.user.dto.response.InterestsDTO;
+import com.hertz.hertz_be.domain.user.dto.response.KeywordsDTO;
 import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
+import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
@@ -19,14 +25,18 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final UserOauthRepository userOauthRepository;
+    private final UserInterestsRepository userInterestsRepository;
     private final OAuthRedisRepository oauthRedisRepository;
-    private final RefreshTokenRepository refreshTokenService;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    private final InterestsService interestsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
@@ -88,7 +98,7 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        refreshTokenService.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
+        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
 
         return UserInfoResponseDto.builder()
                 .userId(savedUser.getId())
@@ -126,6 +136,52 @@ public class UserService {
             return response.getBody().trim();
         }
         throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 응답 실패");
+    }
+
+    public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
+        User targetUser = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다."));
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        Map<String, String> keywordsMap = interestsService.getUserKeywords(targetUser.getId());
+        Map<String, List<String>> currentUserInterestsMap = interestsService.getUserInterests(userId);
+
+        KeywordsDTO keywordsDto = objectMapper.convertValue(keywordsMap, KeywordsDTO.class);
+        InterestsDTO currentUserDto = objectMapper.convertValue(currentUserInterestsMap, InterestsDTO.class);
+
+
+        if(Objects.equals(targetUser.getId(), userId)) { // 마이페이지 조회
+            return new UserProfileDTO(
+                    targetUser.getProfileImageUrl(),
+                    targetUser.getNickname(),
+                    targetUser.getGender(),
+                    targetUser.getOneLineIntroduction(),
+                    "ME",
+                    keywordsDto,
+                    currentUserDto,
+                    null
+            );
+        } else { // 상대방 페이지 조회
+            String relationType = userRepository.findRelationTypeBetweenUsers(userId, targetUser.getId());
+
+            Map<String, List<String>> targetInterestsMap = interestsService.getUserInterests(targetUser.getId());
+            Map<String, List<String>> sameInterestsMap = interestsService.extractSameInterests(targetInterestsMap, currentUserInterestsMap);
+            InterestsDTO sameInterestsDto = objectMapper.convertValue(sameInterestsMap, InterestsDTO.class);
+
+            return new UserProfileDTO(
+                    targetUser.getProfileImageUrl(),
+                    targetUser.getNickname(),
+                    targetUser.getGender(),
+                    targetUser.getOneLineIntroduction(),
+                    relationType,
+                    keywordsDto,
+                    currentUserDto,
+                    sameInterestsDto
+            );
+        }
+
+
     }
 }
 
