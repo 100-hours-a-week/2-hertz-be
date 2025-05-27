@@ -56,4 +56,6 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
     @Modifying(clearAutomatically = true)
     @Query("UPDATE SignalMessage sm SET sm.isRead = true WHERE sm.signalRoom.id = :roomId")
     int markAllMessagesAsReadByRoomId(@Param("roomId") Long roomId);
+
+    void deleteAllBySignalRoom(SignalRoom signalRoom);
 }
