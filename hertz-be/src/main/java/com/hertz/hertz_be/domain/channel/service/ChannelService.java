@@ -1,11 +1,11 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.*;
 import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDto;
 import com.hertz.hertz_be.domain.channel.exception.*;
 import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
@@ -85,7 +85,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
+    public SendSignalResponseDto sendSignal(Long senderUserId, SendSignalRequestDto dto) {
         User sender = userRepository.findById(senderUserId)
                 .orElseThrow(UserNotFoundException::new);
 
@@ -135,7 +135,7 @@ public class ChannelService {
             }
         });
 
-        return new SendSignalResponseDTO(signalRoom.getId());
+        return new SendSignalResponseDto(signalRoom.getId());
     }
 
     public static String generateUserPairSignal(Long userId1, Long userId2) {
@@ -154,7 +154,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public TuningResponseDTO getTunedUser(Long userId) {
+    public TuningResponseDto getTunedUser(Long userId) {
         User requester = getUserById(userId);
 
         if (!hasSelectedInterests(requester)) {
@@ -275,14 +275,14 @@ public class ChannelService {
         }
     }
 
-    private TuningResponseDTO buildTuningResponseDTO(Long requesterId, User target) {
+    private TuningResponseDto buildTuningResponseDTO(Long requesterId, User target) {
         Map<String, String> keywords = getUserKeywords(target.getId());
 
         Map<String, List<String>> requesterInterests = getUserInterests(requesterId);
         Map<String, List<String>> targetInterests = getUserInterests(target.getId());
         Map<String, List<String>> sameInterests = extractSameInterests(requesterInterests, targetInterests);
 
-        return new TuningResponseDTO(
+        return new TuningResponseDto(
                 target.getId(),
                 target.getProfileImageUrl(),
                 target.getNickname(),
@@ -418,7 +418,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDTO response) {
+    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDto response) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(ChannelNotFoundException::new);
 
@@ -456,7 +456,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDTO response, MatchingStatus matchingStatus) {
+    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDto response, MatchingStatus matchingStatus) {
         SignalRoom room = signalRoomRepository.findById(response.getChannelRoomId())
                 .orElseThrow(ChannelNotFoundException::new);
 

@@ -1,9 +1,9 @@
 package com.hertz.hertz_be.domain.auth.controller;
 
-import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDTO;
-import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResponseDTO;
+import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDto;
+import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResponseDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
-import com.hertz.hertz_be.domain.auth.dto.response.OAuthSignupResponseDTO;
+import com.hertz.hertz_be.domain.auth.dto.response.OAuthSignupResponseDto;
 import com.hertz.hertz_be.domain.auth.service.OAuthService;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -46,7 +46,7 @@ public class OAuthController {
     @Operation(summary = "소셜 로그인 API")
     public ResponseEntity<?> oauthLogin(
             @PathVariable String provider,
-            @RequestBody OAuthLoginRequestDTO request,
+            @RequestBody OAuthLoginRequestDto request,
             HttpServletResponse response
     ) {
         OAuthLoginResult result = oAuthService.oauthLogin(provider, request);
@@ -66,7 +66,7 @@ public class OAuthController {
 
             response.setHeader("Set-Cookie", responseCookie.toString());
 
-            OAuthLoginResponseDTO dto = new OAuthLoginResponseDTO(result.getUserId(), result.getAccessToken());
+            OAuthLoginResponseDto dto = new OAuthLoginResponseDto(result.getUserId(), result.getAccessToken());
 
             boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.getUserId()));
             if (!hasSelectedInterests) {
@@ -75,7 +75,7 @@ public class OAuthController {
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));
 
         } else {
-            OAuthSignupResponseDTO dto = new OAuthSignupResponseDTO(result.getProviderId());
+            OAuthSignupResponseDto dto = new OAuthSignupResponseDto(result.getProviderId());
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_NOT_REGISTERED, "신규 회원입니다.", dto));
         }
     }

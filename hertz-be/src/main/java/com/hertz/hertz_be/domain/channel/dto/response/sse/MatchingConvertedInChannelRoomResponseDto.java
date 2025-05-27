@@ -6,11 +6,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class MatchingResultResponseDTO {
-    private Long partnerId;
-    private String partnerProfileImage;
-    private String partnerNickname;
+@AllArgsConstructor
+@NoArgsConstructor
+public class MatchingConvertedInChannelRoomResponseDto {
+    private Long channelRoomId;
+    private boolean hasResponded;
 }

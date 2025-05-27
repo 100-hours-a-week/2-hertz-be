@@ -1,13 +1,12 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.NotifyNewMessageResponseDTO;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.UpdateChannelListResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.NewMessageResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
@@ -104,7 +103,7 @@ public class SseChannelService {
     }
 
     private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded) {
-        MatchingConvertedInChannelRoomResponseDTO dto = MatchingConvertedInChannelRoomResponseDTO.builder()
+        MatchingConvertedInChannelRoomResponseDto dto = MatchingConvertedInChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .hasResponded(hasResponded)
                 .build();
@@ -117,7 +116,7 @@ public class SseChannelService {
 
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
-        UpdateChannelListResponseDTO dto = UpdateChannelListResponseDTO.builder()
+        ChannelListResponseDto dto = ChannelListResponseDto.builder()
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerProfileImage(signalMessage.getSenderUser().getProfileImageUrl())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
@@ -162,7 +161,7 @@ public class SseChannelService {
     private void sendNewSignalOrMessageEvent(SignalMessage signalMessage, Long partnerId, SseEventName eventName) {
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
-        NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
+        NewMessageResponseDto dto = NewMessageResponseDto.builder()
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerId(signalMessage.getSenderUser().getId())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())

@@ -6,7 +6,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NotifyNewMessageResponseDTO {
+public class NewMessageResponseDto {
     private Long channelRoomId;
     private Long partnerId;
     private String partnerNickname;

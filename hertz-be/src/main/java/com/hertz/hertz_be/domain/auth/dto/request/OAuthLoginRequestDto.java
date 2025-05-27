@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OAuthLoginRequestDTO {
+public class OAuthLoginRequestDto {
     @NotBlank
     private String code;
 

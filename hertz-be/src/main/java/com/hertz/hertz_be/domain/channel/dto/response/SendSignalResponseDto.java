@@ -5,6 +5,6 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class SendSignalResponseDTO {
+public class SendSignalResponseDto {
     private Long channelRoomId;
 }

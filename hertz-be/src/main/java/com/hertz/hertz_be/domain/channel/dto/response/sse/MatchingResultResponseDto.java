@@ -5,13 +5,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class MatchingConvertedInChannelRoomResponseDTO {
-    private Long channelRoomId;
-    private boolean hasResponded;
+@AllArgsConstructor
+@Builder
+public class MatchingResultResponseDto {
+    private Long partnerId;
+    private String partnerProfileImage;
+    private String partnerNickname;
 }
