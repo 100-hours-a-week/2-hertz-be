@@ -9,7 +9,7 @@ import java.util.Map;
 
 @Getter
 @AllArgsConstructor
-public class TuningResponseDTO {
+public class TuningResponseDto {
     private Long userId;
     private String profileImage;
     private String nickname;

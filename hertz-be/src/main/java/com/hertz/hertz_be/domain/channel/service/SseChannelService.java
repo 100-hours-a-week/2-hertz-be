@@ -1,13 +1,9 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDTO;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.NotifyNewMessageResponseDTO;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.UpdateChannelListResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.*;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
@@ -104,7 +100,7 @@ public class SseChannelService {
     }
 
     private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded) {
-        MatchingConvertedInChannelRoomResponseDTO dto = MatchingConvertedInChannelRoomResponseDTO.builder()
+        MatchingConvertedInChannelRoomResponseDto dto = MatchingConvertedInChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .hasResponded(hasResponded)
                 .build();
@@ -117,7 +113,7 @@ public class SseChannelService {
 
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
-        UpdateChannelListResponseDTO dto = UpdateChannelListResponseDTO.builder()
+        ChannelListResponseDto dto = ChannelListResponseDto.builder()
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerProfileImage(signalMessage.getSenderUser().getProfileImageUrl())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
@@ -162,7 +158,7 @@ public class SseChannelService {
     private void sendNewSignalOrMessageEvent(SignalMessage signalMessage, Long partnerId, SseEventName eventName) {
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
-        NotifyNewMessageResponseDTO dto = NotifyNewMessageResponseDTO.builder()
+        NewMessageResponseDto dto = NewMessageResponseDto.builder()
                 .channelRoomId(signalMessage.getSignalRoom().getId())
                 .partnerId(signalMessage.getSenderUser().getId())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
@@ -171,6 +167,28 @@ public class SseChannelService {
 
         sseService.sendToClient(partnerId, eventName.getValue(), dto);
         log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
+    }
+
+    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
+        User partner = room.getPartnerUser(userId);
+        if (matchingStatus == MatchingStatus.MATCHED) {
+            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_SUCCESS);
+            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", userId);
+        }
+        else {
+            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_REJECTION);
+            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", userId);
+        }
+    }
+
+    private void sendMatchingResultSse(User partner, Long userId, SseEventName sseEventName) {
+        MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
+                .partnerId(partner.getId())
+                .partnerNickname(partner.getNickname())
+                .partnerProfileImage(partner.getProfileImageUrl())
+                .build();
+
+        sseService.sendToClient(userId, sseEventName.getValue(), dto);
     }
 
 }

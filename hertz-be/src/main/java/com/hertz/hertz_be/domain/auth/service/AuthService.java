@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.domain.auth.service;
 
-import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
+import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
@@ -21,7 +21,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenService;
 
-    public Map.Entry<ReissueAccessTokenResponseDTO, String> reissueAccessToken(String refreshToken) {
+    public Map.Entry<ReissueAccessTokenResponseDto, String> reissueAccessToken(String refreshToken) {
         try {
             Long userId = jwtTokenProvider.getUserIdFromRefreshToken(refreshToken);
             String storedToken = refreshTokenService.getRefreshToken(userId);
@@ -37,7 +37,7 @@ public class AuthService {
             refreshTokenService.saveRefreshToken(userId, newRefreshToken, expiration);
 
             return new AbstractMap.SimpleEntry<>(
-                    new ReissueAccessTokenResponseDTO(newAccessToken),
+                    new ReissueAccessTokenResponseDto(newAccessToken),
                     newRefreshToken
             );
         } catch (JwtException e) {

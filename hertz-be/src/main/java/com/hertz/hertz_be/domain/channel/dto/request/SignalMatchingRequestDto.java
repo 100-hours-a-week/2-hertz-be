@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 
 @Getter
-public class SignalMatchingRequestDTO {
+public class SignalMatchingRequestDto {
 
     @NotBlank
     private Long channelRoomId;

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateChannelListResponseDTO {
+public class ChannelListResponseDto {
     private Long channelRoomId;
     private String partnerProfileImage;
     private String partnerNickname;

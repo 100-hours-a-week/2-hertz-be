@@ -8,7 +8,7 @@ import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AsyncChannelService {
     @Value("${matching.convert.delay-minutes}")
     private long matchingConvertDelayMinutes;
@@ -111,5 +112,11 @@ public class AsyncChannelService {
     @Transactional
     public void updateNavbarMessageNotification(Long userId) {
         sseChannelService.updatePartnerNavbar(userId);
+    }
+
+    @Async
+    @Transactional
+    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
+        sseChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
     }
 }

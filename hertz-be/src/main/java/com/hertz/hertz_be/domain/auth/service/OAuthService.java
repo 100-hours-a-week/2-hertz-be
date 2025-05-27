@@ -1,7 +1,7 @@
 package com.hertz.hertz_be.domain.auth.service;
 
 import com.hertz.hertz_be.domain.auth.client.KakaoOAuthClient;
-import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDTO;
+import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
 import com.hertz.hertz_be.domain.auth.exception.OAuthStateInvalidException;
 import com.hertz.hertz_be.domain.auth.exception.ProviderInvalidException;
@@ -55,7 +55,7 @@ public class OAuthService {
         throw new ProviderInvalidException();
     }
 
-    public OAuthLoginResult oauthLogin(String provider, OAuthLoginRequestDTO request) {
+    public OAuthLoginResult oauthLogin(String provider, OAuthLoginRequestDto request) {
         if (!"kakao".equalsIgnoreCase(provider)) {
             throw new ProviderInvalidException();
         }

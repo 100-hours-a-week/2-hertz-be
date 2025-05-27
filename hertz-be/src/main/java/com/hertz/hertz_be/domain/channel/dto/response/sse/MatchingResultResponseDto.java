@@ -5,17 +5,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class MatchingConvertedResponseDto {
-
-    private Long channelRoomId;
-    private LocalDateTime matchedAt;
+@AllArgsConstructor
+@Builder
+public class MatchingResultResponseDto {
     private Long partnerId;
+    private String partnerProfileImage;
     private String partnerNickname;
-
 }

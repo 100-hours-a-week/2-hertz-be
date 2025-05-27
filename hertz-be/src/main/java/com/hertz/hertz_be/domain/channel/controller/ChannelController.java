@@ -1,11 +1,11 @@
 package com.hertz.hertz_be.domain.channel.controller;
 
-import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
-import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDto;
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.ChannelRoomResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDTO;
-import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDTO;
+import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDto;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -31,9 +31,9 @@ public class ChannelController {
 
     @PostMapping("/v1/tuning/signal")
     @Operation(summary = "시그널 보내기 API")
-    public ResponseEntity<ResponseDto<SendSignalResponseDTO>> sendSignal(@RequestBody @Valid SendSignalRequestDTO requestDTO,
+    public ResponseEntity<ResponseDto<SendSignalResponseDto>> sendSignal(@RequestBody @Valid SendSignalRequestDto requestDTO,
                                                                          @AuthenticationPrincipal Long userId) {
-        SendSignalResponseDTO response = channelService.sendSignal(userId, requestDTO);
+        SendSignalResponseDto response = channelService.sendSignal(userId, requestDTO);
         return ResponseEntity.status(201).body(
                 new ResponseDto<>(ResponseCode.SIGNAL_ROOM_CREATED, "시그널 룸이 성공적으로 생성되었습니다.", response)
         );
@@ -42,8 +42,8 @@ public class ChannelController {
 
     @GetMapping("/v1/tuning")
     @Operation(summary = "튜닝된 상대 반환 API")
-    public ResponseEntity<ResponseDto<TuningResponseDTO>> getTunedUser(@AuthenticationPrincipal Long userId) {
-        TuningResponseDTO response = channelService.getTunedUser(userId);
+    public ResponseEntity<ResponseDto<TuningResponseDto>> getTunedUser(@AuthenticationPrincipal Long userId) {
+        TuningResponseDto response = channelService.getTunedUser(userId);
         if (response == null) {
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.NO_TUNING_CANDIDATE, "추천 가능한 상대가 현재 없습니다.", null));
         }
@@ -98,7 +98,7 @@ public class ChannelController {
     @Operation(summary = "채널방 메세지 전송 API")
     public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> sendChannelMessage(@PathVariable Long channelRoomId,
                                                                                   @AuthenticationPrincipal Long userId,
-                                                                                  @RequestBody SendSignalRequestDTO response) {
+                                                                                  @RequestBody SendSignalRequestDto response) {
 
         channelService.sendChannelMessage(channelRoomId, userId, response);
         return ResponseEntity
@@ -111,7 +111,7 @@ public class ChannelController {
     @PostMapping("/v2/matching/acceptances")
     @Operation(summary = "채널방 매칭 수락 API")
     public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(@AuthenticationPrincipal Long userId,
-                                                                                     @RequestBody SignalMatchingRequestDTO response) {
+                                                                                     @RequestBody SignalMatchingRequestDto response) {
 
         String matchingResult = channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.MATCHED);
 
@@ -138,7 +138,7 @@ public class ChannelController {
     @PostMapping("/v2/matching/rejections")
     @Operation(summary = "채널방 매칭 거절 API")
     public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> channelMatchingReject(@AuthenticationPrincipal Long userId,
-                                                                                     @RequestBody SignalMatchingRequestDTO response) {
+                                                                                     @RequestBody SignalMatchingRequestDto response) {
 
         return ResponseEntity
                     .status(HttpStatus.OK)
