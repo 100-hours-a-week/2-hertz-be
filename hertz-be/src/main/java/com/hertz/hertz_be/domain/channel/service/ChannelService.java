@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
 import com.hertz.hertz_be.domain.channel.dto.response.*;
 import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
@@ -14,12 +15,14 @@ import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.AESUtil;
+import com.hertz.hertz_be.global.util.AESUtil;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import com.hertz.hertz_be.global.exception.AiServerNotFoundException;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
@@ -42,13 +47,16 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ChannelService {
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final UserRepository userRepository;
     private final TuningRepository tuningRepository;
     private final TuningResultRepository tuningResultRepository;
     private final UserInterestsRepository userInterestsRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
-    private final ChannelRoomRepository channelRoomRepository;
+    private final AsyncChannelService asyncChannelService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
@@ -59,7 +67,8 @@ public class ChannelService {
                           UserInterestsRepository userInterestsRepository,
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
-                          ChannelRoomRepository channelRoomRepository,
+                          AsyncChannelService asyncChannelService,
+                          SseChannelService matchingStatusScheduler,
                           AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
@@ -68,7 +77,7 @@ public class ChannelService {
         this.userInterestsRepository = userInterestsRepository;
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
-        this.channelRoomRepository = channelRoomRepository;
+        this.asyncChannelService = asyncChannelService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
@@ -109,6 +118,15 @@ public class ChannelService {
                 .isRead(false)
                 .build();
         signalMessageRepository.save(signalMessage);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiver.getId(), true);
+            }
+        });
 
         return new SendSignalResponseDTO(signalRoom.getId());
     }
@@ -230,6 +248,10 @@ public class ChannelService {
 
             User matchedUser = userRepository.findById(matchedId)
                     .orElseThrow(UserWithdrawnException::new);
+
+            if (!hasSelectedInterests(matchedUser)) {
+                continue;
+            }
 
             boolean alreadyExists = signalRoomRepository.existsBySenderUserAndReceiverUser(requester, matchedUser)
                     || signalRoomRepository.existsBySenderUserAndReceiverUser(matchedUser, requester);
@@ -353,6 +375,7 @@ public class ChannelService {
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();
+        // Todo: AI 쪽 DB에만 사용자 남아있는 경우 410 발생하며 모든 사용자 서비스 사용 불가능한 부분 리팩토링 필요
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
@@ -366,12 +389,23 @@ public class ChannelService {
             }
         }
 
+        asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId); // 비동기 실행
+
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
         List<ChannelRoomResponseDto.MessageDto> messages = messagePage.getContent().stream()
                 .map(msg -> ChannelRoomResponseDto.MessageDto.fromProjectionWithDecrypt(msg, aesUtil))
                 .toList();
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.updateNavbarMessageNotification(userId);
+            }
+        });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
     }
@@ -402,5 +436,35 @@ public class ChannelService {
                 .build();
 
         signalMessageRepository.save(signalMessage);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingConverted(room);
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
+            }
+        });
+    }
+
+    @Transactional
+    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDTO response, MatchingStatus matchingStatus) {
+        SignalRoom room = signalRoomRepository.findById(response.getChannelRoomId())
+                .orElseThrow(ChannelNotFoundException::new);
+
+        int updatedSender = signalRoomRepository.updateSenderMatchingStatus(room.getId(), userId, matchingStatus);
+        int updatedReceiver = signalRoomRepository.updateReceiverMatchingStatus(room.getId(), userId, matchingStatus);
+
+        if (updatedSender == 0 && updatedReceiver == 0) {
+            throw new ForbiddenChannelException();
+        }
+
+        // 매칭 수락/거절 후 현재 관계
+        if(matchingStatus == MatchingStatus.MATCHED) {
+            return signalRoomRepository.findMatchResultByUser(userId, room.getId());
+        } else {
+            return ResponseCode.MATCH_REJECTION_SUCCESS;
+        }
     }
 }

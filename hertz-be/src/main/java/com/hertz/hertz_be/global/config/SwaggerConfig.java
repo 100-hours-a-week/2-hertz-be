@@ -6,32 +6,31 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SwaggerConfig {
 
+    @Value("${swagger.server-url}") // 환경에 따라 다르게 주입됨
+    private String swaggerServerUrl;
+
     @Bean
     public OpenAPI openAPI() {
         String jwt = "JWT";
 
-        // 각 controller의 API에서 명시적으로 선언해야 JWT AT 입력 가능
         SecurityScheme securityScheme = new SecurityScheme()
                 .name(jwt)
                 .type(SecurityScheme.Type.HTTP)
                 .scheme("bearer")
                 .bearerFormat("JWT");
 
-        // HTTPS 서버 주소 명시 (Swagger가 HTTP로 요청하는 문제 방지)
-        Server server = new Server()
-                .url("https://dev.hertz-tuning.com")
-                .description("Dev 서버");
-
         return new OpenAPI()
-                .addServersItem(server)
+                .addServersItem(new Server().url(swaggerServerUrl).description("API 서버")) // 동적 서버 주소
                 .components(new Components().addSecuritySchemes(jwt, securityScheme))
-                .info(apiInfo());
+                .info(apiInfo())
+                .addSecurityItem(new SecurityRequirement().addList(jwt));
     }
 
     private Info apiInfo() {

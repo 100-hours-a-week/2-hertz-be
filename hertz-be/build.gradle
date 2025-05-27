@@ -32,6 +32,7 @@ dependencies {
 	implementation 'com.giffing.bucket4j.spring.boot.starter:bucket4j-spring-boot-starter:0.9.0'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+	implementation 'org.springframework.retry:spring-retry'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

@@ -53,6 +53,12 @@ public class ResponseCode {
     public static final String NO_CHANNEL_ROOM = "NO_CHANNEL_ROOM";
     public static final String MESSAGE_CREATED = "MESSAGE_CREATED";
 
+    // 매칭 관련 응답
+    public static final String MATCH_SUCCESS = "MATCH_SUCCESS";
+    public static final String MATCH_FAILED = "MATCH_FAILED";
+    public static final String MATCH_PENDING = "MATCH_PENDING";
+    public static final String MATCH_REJECTION_SUCCESS = "MATCH_REJECTION_SUCCESS";
+
 
     /* AI Response */
     public static final String EMBEDDING_REGISTER_SUCCESS = "EMBEDDING_REGISTER_SUCCESS";

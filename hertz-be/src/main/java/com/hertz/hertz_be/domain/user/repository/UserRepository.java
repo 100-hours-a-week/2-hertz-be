@@ -19,4 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.email LIKE %:domain AND u.deletedAt IS NULL")
     List<User> findAllByEmailDomain(@Param("domain") String domain);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.sentSignalRooms WHERE u.id = :userId")
+    Optional<User> findByIdWithSentSignalRooms(@Param("userId") Long userId);
 }

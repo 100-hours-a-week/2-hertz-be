@@ -1,12 +1,15 @@
 package com.hertz.hertz_be.domain.channel.repository;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.user.entity.User;
 import io.lettuce.core.dynamic.annotation.Param;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
@@ -59,5 +62,52 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
             @Param("userId") Long userId,
             Pageable pageable
     );
+
+    @Modifying
+    @Transactional
+    @Query("""
+        UPDATE SignalRoom sr
+        SET sr.senderMatchingStatus = :status
+        WHERE sr.id = :roomId AND (sr.senderUser.id = :userId)
+    """)
+    int updateSenderMatchingStatus(@Param("roomId") Long roomId,
+                                   @Param("userId") Long userId,
+                                   @Param("status") MatchingStatus status);
+
+    @Modifying
+    @Transactional
+    @Query("""
+        UPDATE SignalRoom sr
+        SET sr.receiverMatchingStatus = :status
+        WHERE sr.id = :roomId AND (sr.receiverUser.id = :userId)
+    """)
+    int updateReceiverMatchingStatus(@Param("roomId") Long roomId,
+                                     @Param("userId") Long userId,
+                                     @Param("status") MatchingStatus status);
+
+
+    @Query("""
+    SELECT 
+        CASE
+            WHEN (u.deletedAt IS NOT NULL) THEN 'USER_DEACTIVATED'
+            WHEN (:userId = sr.senderUser.id AND sr.senderMatchingStatus = 'UNMATCHED')
+              OR (:userId = sr.receiverUser.id AND sr.receiverMatchingStatus = 'UNMATCHED')
+              THEN 'MATCH_FAILED'
+            WHEN (sr.senderMatchingStatus = 'MATCHED' AND sr.receiverMatchingStatus = 'MATCHED')
+              THEN 'MATCH_SUCCESS'
+            WHEN (:userId = sr.senderUser.id AND sr.senderMatchingStatus = 'MATCHED' AND sr.receiverMatchingStatus = 'SIGNAL')
+              OR (:userId = sr.receiverUser.id AND sr.receiverMatchingStatus = 'MATCHED' AND sr.senderMatchingStatus = 'SIGNAL')
+              THEN 'MATCH_PENDING'
+            ELSE 'MATCH_FAILED'
+        END
+    FROM SignalRoom sr
+    JOIN User u ON 
+        CASE 
+            WHEN sr.senderUser.id = :userId THEN sr.receiverUser.id
+            ELSE sr.senderUser.id
+        END = u.id
+    WHERE sr.id = :roomId
+""")
+    String findMatchResultByUser(@Param("userId") Long userId, @Param("roomId") Long roomId);
 
 }

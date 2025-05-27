@@ -39,13 +39,13 @@ public class GlobalExceptionHandler {
                 .body(new ResponseDto<>(ResponseCode.NOT_FOUND, "존재하지 않는 API입니다.", null));
     }
 
-    // 비즈니스 로직에서 잡지못한 모든 예외 검증
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ResponseDto<Void>> handleException(Exception ex) {
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, "내부 서버에서 오류가 발생했습니다.", null));
-    }
+//    // 비즈니스 로직에서 잡지못한 모든 예외 검증
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<ResponseDto<Void>> handleException(Exception ex) {
+//        return ResponseEntity
+//                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, "내부 서버에서 오류가 발생했습니다.", null));
+//    }
 
     // 비즈니스 로직에서의 서버 문제 검증
     @ExceptionHandler(InternalServerErrorException.class)

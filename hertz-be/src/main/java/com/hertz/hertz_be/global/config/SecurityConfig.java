@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.global.config;
 
 import com.hertz.hertz_be.global.auth.filter.JwtAuthenticationFilter;
+import com.hertz.hertz_be.global.auth.filter.SseAuthenticationFilter;
 import com.hertz.hertz_be.global.auth.handler.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SseAuthenticationFilter sseAuthenticationFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
@@ -46,10 +48,11 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        .requestMatchers("/sse/subscribe").authenticated()
+                        .requestMatchers("/sse/subscribe").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(sseAuthenticationFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 
@@ -68,7 +71,6 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
-
         return source;
     }
 }
