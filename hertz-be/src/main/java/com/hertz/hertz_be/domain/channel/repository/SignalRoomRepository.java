@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
@@ -109,5 +110,7 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     WHERE sr.id = :roomId
 """)
     String findMatchResultByUser(@Param("userId") Long userId, @Param("roomId") Long roomId);
+
+    List<SignalRoom> findAllBySenderUserIdOrReceiverUserId(Long senderId, Long receiverId);
 
 }

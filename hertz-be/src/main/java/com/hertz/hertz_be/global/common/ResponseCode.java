@@ -68,6 +68,9 @@ public class ResponseCode {
     public static final String EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED = "EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED";
     public static final String EMBEDDING_REGISTER_SERVER_ERROR = "EMBEDDING_REGISTER_SERVER_ERROR";
 
+    /**
+     * 매칭 수락/거절 관련 응답 code
+     */
     public static final String TUNING_SUCCESS = "TUNING_SUCCESS";
     public static final String TUNING_SUCCESS_BUT_NO_MATCH = "TUNING_SUCCESS_BUT_NO_MATCH";
     public static final String TUNING_BAD_REQUEST = "TUNING_BAD_REQUEST";
@@ -76,5 +79,10 @@ public class ResponseCode {
 
     public static final String TUNING_NOT_FOUND_DATA = "TUNING_NOT_FOUND_DATA";
     public static final String TUNING_NOT_FOUND_LIST = "TUNING_NOT_FOUND_LIST";
+
+    /**
+     * User 삭제 관련 응답 code
+     */
+    public static final String USER_DELETE_SUCCESS = "USER_DELETE_SUCCESS";
 
 }
