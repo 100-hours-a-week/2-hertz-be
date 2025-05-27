@@ -173,9 +173,11 @@ public class SseChannelService {
         User partner = room.getPartnerUser(userId);
         if (matchingStatus == MatchingStatus.MATCHED) {
             sendMatchingResultSse(partner, userId, SseEventName.MATCHING_SUCCESS);
+            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", userId);
         }
         else {
             sendMatchingResultSse(partner, userId, SseEventName.MATCHING_REJECTION);
+            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", userId);
         }
     }
 
