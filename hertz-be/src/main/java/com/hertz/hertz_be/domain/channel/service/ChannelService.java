@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -107,7 +108,12 @@ public class ChannelService {
                 .receiverMatchingStatus(MatchingStatus.SIGNAL)
                 .userPairSignal(userPairSignal)
                 .build();
-        signalRoomRepository.save(signalRoom);
+
+        try {
+            signalRoomRepository.save(signalRoom);
+        } catch (DataIntegrityViolationException e) {
+            throw new AlreadyInConversationException(); // 중복 방 생성 시도 감지
+        }
 
         String encryptMessage = aesUtil.encrypt(dto.getMessage());
 
