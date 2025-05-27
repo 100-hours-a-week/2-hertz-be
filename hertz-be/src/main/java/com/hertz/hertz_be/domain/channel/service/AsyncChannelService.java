@@ -112,4 +112,10 @@ public class AsyncChannelService {
     public void updateNavbarMessageNotification(Long userId) {
         sseChannelService.updatePartnerNavbar(userId);
     }
+
+    @Async
+    @Transactional
+    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
+        sseChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+    }
 }

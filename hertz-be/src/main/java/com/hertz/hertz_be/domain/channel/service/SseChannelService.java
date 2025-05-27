@@ -1,9 +1,6 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedInChannelRoomResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.MatchingConvertedResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.NewMessageResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.sse.ChannelListResponseDto;
+import com.hertz.hertz_be.domain.channel.dto.response.sse.*;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
@@ -170,6 +167,26 @@ public class SseChannelService {
 
         sseService.sendToClient(partnerId, eventName.getValue(), dto);
         log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
+    }
+
+    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
+        User partner = room.getPartnerUser(userId);
+        if (matchingStatus == MatchingStatus.MATCHED) {
+            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_SUCCESS);
+        }
+        else {
+            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_REJECTION);
+        }
+    }
+
+    private void sendMatchingResultSse(User partner, Long userId, SseEventName sseEventName) {
+        MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
+                .partnerId(partner.getId())
+                .partnerNickname(partner.getNickname())
+                .partnerProfileImage(partner.getProfileImageUrl())
+                .build();
+
+        sseService.sendToClient(userId, sseEventName.getValue(), dto);
     }
 
 }
