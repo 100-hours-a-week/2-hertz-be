@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -42,8 +43,7 @@ public class AsyncChannelService {
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED &&
-                room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
+        if (room.getReceiverMatchingStatus() != MatchingStatus.SIGNAL && room.getSenderMatchingStatus() != MatchingStatus.SIGNAL) {
             return;
         }
 
@@ -72,7 +72,7 @@ public class AsyncChannelService {
 
     @Async
     public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
+        if (room.getReceiverMatchingStatus() != MatchingStatus.SIGNAL && room.getSenderMatchingStatus() != MatchingStatus.SIGNAL) {
             return;
         }
 
@@ -126,7 +126,7 @@ public class AsyncChannelService {
         User user = userRepository.findByIdWithSentSignalRooms(userId)
                 .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
-        boolean isSender = user.equals(room.getSenderUser());
+        boolean isSender = Objects.equals(userId, room.getSenderUser().getId());
         MatchingStatus partnerStatus = isSender ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
 
         if (partnerStatus == MatchingStatus.SIGNAL) {

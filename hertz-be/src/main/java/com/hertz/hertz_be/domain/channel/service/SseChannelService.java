@@ -70,21 +70,17 @@ public class SseChannelService {
     }
 
     public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
-        Long targetUserId;
-        MatchingStatus status;
+        boolean isReceiver = Objects.equals(userId, room.getReceiverUser().getId());
 
-        if (Objects.equals(userId, room.getReceiverUser().getId())) {
-            targetUserId = room.getReceiverUser().getId();
-            status = room.getReceiverMatchingStatus();
-        } else {
-            targetUserId = room.getSenderUser().getId();
-            status = room.getSenderMatchingStatus();
-        }
+        MatchingStatus userStatus = isReceiver ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+        MatchingStatus partnerStatus = isReceiver ? room.getSenderMatchingStatus() : room.getReceiverMatchingStatus();
 
-        if (status == MatchingStatus.MATCHED) {
-            sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), true);
-        }
-        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), false);
+        boolean userMatched = (userStatus != MatchingStatus.SIGNAL);
+        boolean partnerMatched = (partnerStatus != MatchingStatus.SIGNAL);
+
+        Long targetUserId = isReceiver ? room.getReceiverUser().getId() : room.getSenderUser().getId();
+
+        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), userMatched, partnerMatched);
     }
 
     private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
@@ -99,10 +95,11 @@ public class SseChannelService {
         log.info("[페이지 상관 없이 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
     }
 
-    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded) {
+    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded, boolean partnerHasResponded) {
         MatchingConvertedInChannelRoomResponseDto dto = MatchingConvertedInChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .hasResponded(hasResponded)
+                .partnerHasResponded(partnerHasResponded)
                 .build();
 
         sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
