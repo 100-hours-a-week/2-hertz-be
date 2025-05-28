@@ -1,10 +1,11 @@
 package com.hertz.hertz_be.domain.auth.controller;
 
-import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDTO;
+import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
-import com.hertz.hertz_be.domain.auth.dto.request.TestLoginRequestDTO;
+import com.hertz.hertz_be.domain.auth.dto.request.TestLoginRequestDto;
+import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
@@ -32,6 +33,7 @@ public class AuthController {
     private final AuthService authTokenService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenService;
+    private final UserService userService;
 
     @Value("${is.local}")
     private boolean isLocal;
@@ -41,7 +43,7 @@ public class AuthController {
 
     @PostMapping("/v1/auth/token")
     @Operation(summary = "Access Token 재발급 API")
-    public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDTO>> reissueAccessToken(
+    public ResponseEntity<ResponseDto<ReissueAccessTokenResponseDto>> reissueAccessToken(
             HttpServletRequest request,
             HttpServletResponse response) {
 
@@ -50,8 +52,8 @@ public class AuthController {
             throw new RefreshTokenInvalidException();
         }
 
-        Map.Entry<ReissueAccessTokenResponseDTO, String> result = authTokenService.reissueAccessToken(refreshToken);
-        ReissueAccessTokenResponseDTO accessTokenResponse = result.getKey();
+        Map.Entry<ReissueAccessTokenResponseDto, String> result = authTokenService.reissueAccessToken(refreshToken);
+        ReissueAccessTokenResponseDto accessTokenResponse = result.getKey();
         String newRefreshToken = result.getValue();
 
         //ResponseCookie 설정 (환경에 따라 분기)
@@ -73,7 +75,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "사용자 Id로 AT를 반환하는 API (테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
-    public ResponseEntity<?> login(@RequestBody TestLoginRequestDTO request,
+    public ResponseEntity<?> login(@RequestBody TestLoginRequestDto request,
                                    HttpServletResponse response) {
         Long userId = request.getUserId();  // 클라이언트가 userId를 보냈다고 가정
 
@@ -112,5 +114,23 @@ public class AuthController {
             }
         }
         return null;
+    }
+
+    @DeleteMapping("/{userId}")
+    @Operation(summary = "userId로 특정 사용자 삭제 API (테스트용)",  description = "해당 사용자가 참여중인 모든 채팅방도 삭제 주의")
+    public ResponseEntity<ResponseDto<Void>> deleteUserById(@PathVariable Long userId) {
+        userService.deleteUserById(userId);
+        return ResponseEntity.status(204).body(
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+        );
+    }
+
+    @DeleteMapping("/users")
+    @Operation(summary = "DB에 있는 모든 사용자 정보를 삭제하는 API (테스트용)")
+    public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
+        userService.deleteAllUsers();
+        return ResponseEntity.status(204).body(
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+        );
     }
 }

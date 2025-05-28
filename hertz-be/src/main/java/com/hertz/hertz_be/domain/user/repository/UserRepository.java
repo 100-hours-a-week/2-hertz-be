@@ -31,4 +31,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     String findRelationTypeBetweenUsers(@Param("currentUserId") Long currentUserId,
                                           @Param("targetUserId") Long targetUserId);
+
 }

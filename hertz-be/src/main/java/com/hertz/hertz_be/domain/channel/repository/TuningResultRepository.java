@@ -20,4 +20,6 @@ public interface TuningResultRepository extends JpaRepository<TuningResult, Long
     Optional<TuningResult> findFirstByTuningOrderByLineupAsc(Tuning tuning);
 
     boolean existsByTuning(Tuning tuning);
+
+    void deleteAllByMatchedUser(User matchedUser);
 }

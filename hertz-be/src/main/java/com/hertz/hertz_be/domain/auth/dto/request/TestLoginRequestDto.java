@@ -1,11 +1,11 @@
 package com.hertz.hertz_be.domain.auth.dto.request;
 
 
-public class TestLoginRequestDTO {
+public class TestLoginRequestDto {
 
     private Long userId; // 간단히 userId만 받는다고 가정
 
-    public TestLoginRequestDTO() {
+    public TestLoginRequestDto() {
     }
 
     public Long getUserId() {

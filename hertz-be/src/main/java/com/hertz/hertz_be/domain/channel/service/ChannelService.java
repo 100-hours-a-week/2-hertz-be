@@ -1,11 +1,11 @@
 package com.hertz.hertz_be.domain.channel.service;
 
-import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.*;
 import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDTO;
+import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDto;
 import com.hertz.hertz_be.domain.channel.exception.*;
 import com.hertz.hertz_be.domain.channel.repository.*;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
@@ -16,23 +16,29 @@ import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.AESUtil;
+import com.hertz.hertz_be.global.util.AESUtil;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import com.hertz.hertz_be.global.exception.AiServerNotFoundException;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
@@ -44,6 +50,9 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ChannelService {
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final UserRepository userRepository;
     private final TuningRepository tuningRepository;
     private final TuningResultRepository tuningResultRepository;
@@ -51,8 +60,8 @@ public class ChannelService {
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final ChannelRoomRepository channelRoomRepository;
-
     private final InterestsService interestsService;
+    private final AsyncChannelService asyncChannelService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
@@ -65,6 +74,8 @@ public class ChannelService {
                           SignalMessageRepository signalMessageRepository,
                           ChannelRoomRepository channelRoomRepository,
                           InterestsService interestsService,
+                          AsyncChannelService asyncChannelService,
+                          SseChannelService matchingStatusScheduler,
                           AESUtil aesUtil,
                           @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
@@ -75,12 +86,13 @@ public class ChannelService {
         this.signalRoomRepository = signalRoomRepository;
         this.channelRoomRepository = channelRoomRepository;
         this.interestsService = interestsService;
+        this.asyncChannelService = asyncChannelService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
     }
 
     @Transactional
-    public SendSignalResponseDTO sendSignal(Long senderUserId, SendSignalRequestDTO dto) {
+    public SendSignalResponseDto sendSignal(Long senderUserId, SendSignalRequestDto dto) {
         User sender = userRepository.findById(senderUserId)
                 .orElseThrow(UserNotFoundException::new);
 
@@ -104,7 +116,12 @@ public class ChannelService {
                 .receiverMatchingStatus(MatchingStatus.SIGNAL)
                 .userPairSignal(userPairSignal)
                 .build();
-        signalRoomRepository.save(signalRoom);
+
+        try {
+            signalRoomRepository.save(signalRoom);
+        } catch (DataIntegrityViolationException e) {
+            throw new AlreadyInConversationException(); // 중복 방 생성 시도 감지
+        }
 
         String encryptMessage = aesUtil.encrypt(dto.getMessage());
 
@@ -116,7 +133,16 @@ public class ChannelService {
                 .build();
         signalMessageRepository.save(signalMessage);
 
-        return new SendSignalResponseDTO(signalRoom.getId());
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiver.getId(), true);
+            }
+        });
+
+        return new SendSignalResponseDto(signalRoom.getId());
     }
 
     public static String generateUserPairSignal(Long userId1, Long userId2) {
@@ -135,7 +161,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public TuningResponseDTO getTunedUser(Long userId) {
+    public TuningResponseDto getTunedUser(Long userId) {
         User requester = getUserById(userId);
 
         if (!hasSelectedInterests(requester)) {
@@ -258,12 +284,11 @@ public class ChannelService {
 
     private TuningResponseDTO buildTuningResponseDTO(Long requesterId, User target) {
         Map<String, String> keywords = interestsService.getUserKeywords(target.getId());
-
         Map<String, List<String>> requesterInterests = interestsService.getUserInterests(requesterId);
         Map<String, List<String>> targetInterests = interestsService.getUserInterests(target.getId());
         Map<String, List<String>> sameInterests = interestsService.extractSameInterests(requesterInterests, targetInterests);
 
-        return new TuningResponseDTO(
+        return new TuningResponseDto(
                 target.getId(),
                 target.getProfileImageUrl(),
                 target.getNickname(),
@@ -331,6 +356,8 @@ public class ChannelService {
             }
         }
 
+        asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId); // 비동기 실행
+
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
@@ -338,11 +365,20 @@ public class ChannelService {
                 .map(msg -> ChannelRoomResponseDto.MessageDto.fromProjectionWithDecrypt(msg, aesUtil))
                 .toList();
 
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.updateNavbarMessageNotification(userId);
+            }
+        });
+
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
     }
 
     @Transactional
-    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDTO response) {
+    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDto response) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(ChannelNotFoundException::new);
 
@@ -367,10 +403,20 @@ public class ChannelService {
                 .build();
 
         signalMessageRepository.save(signalMessage);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingConverted(room);
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
+            }
+        });
     }
 
     @Transactional
-    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDTO response, MatchingStatus matchingStatus) {
+    public String channelMatchingStatusUpdate(Long userId, SignalMatchingRequestDto response, MatchingStatus matchingStatus) {
         SignalRoom room = signalRoomRepository.findById(response.getChannelRoomId())
                 .orElseThrow(ChannelNotFoundException::new);
 

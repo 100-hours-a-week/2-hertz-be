@@ -24,12 +24,17 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
 
         Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("code", ResponseCode.UNAUTHORIZED); // TODO: 추후에 ResponceCode로 수정 될 예정
+        errorResponse.put("code", ResponseCode.UNAUTHORIZED);
         errorResponse.put("message", "지정한 리소스에 대한 액세스 권한이 없습니다.");
         errorResponse.put("data", null);
 
-        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+        String json = objectMapper.writeValueAsString(errorResponse);
+
+        response.getWriter().write(json);
+        response.getWriter().flush();
+        response.getWriter().close();
     }
 }

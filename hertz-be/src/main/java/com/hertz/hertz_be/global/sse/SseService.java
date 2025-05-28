@@ -1,6 +1,9 @@
 package com.hertz.hertz_be.global.sse;
 
-import com.hertz.hertz_be.global.common.ResponseDto;
+import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.SseEventName;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -12,51 +15,58 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SseService {
+    private final UserRepository userRepository;
+    // 무제한 유지
+    private static final Long TIMEOUT = 0L;
 
-    private static final Long TIMEOUT = 60 * 1000L; // 1분
+    // userId -> emitter 매핑
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter subscribe(Long userId) {
-        // 기존 연결 제거 (덮어쓰기 방식)
+        userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        // 기존 연결 제거
         if (emitters.containsKey(userId)) {
             emitters.get(userId).complete();
             emitters.remove(userId);
         }
 
         SseEmitter emitter = new SseEmitter(TIMEOUT);
-
         emitters.put(userId, emitter);
 
+        // 프론트에서 eventSource.close()를 호출하면 실행됨
         emitter.onCompletion(() -> {
-            log.info("SSE 연결 완료: userId={}", userId);
+            log.info("SSE 연결 종료: userId={}", userId);
             emitters.remove(userId);
         });
 
         emitter.onTimeout(() -> {
-            log.info("SSE 타임아웃: userId={}", userId);
+            log.info("SSE 타임아웃 발생: userId={}", userId);
             emitter.complete();
             emitters.remove(userId);
         });
 
-        sendToClient(userId, "ping", new ResponseDto<>(
-                "PING",
-                "keep-alive",
-                null
-        ));
+        // 최초 연결 시 ping 전송
+        sendToClient(userId, SseEventName.PING.getValue(), "connect success");
+        log.warn("connect success: userId={}", userId);
 
         return emitter;
     }
 
+    // 15초마다 heartbeat 전송 -> 헬스체크 역할
     @Scheduled(fixedRate = 15000)
     public void sendPeriodicPings() {
         emitters.forEach((userId, emitter) -> {
             try {
                 emitter.send(SseEmitter.event()
-                        .name("ping")
-                        .data(new ResponseDto<>("PING", "keep-alive", null)));
+                        .name(SseEventName.HEARTBEAT.getValue())
+                        .data("heartbeat"));
+                //log.warn("heartbeat: userId={}", userId);
             } catch (IOException e) {
-                log.warn("주기적 Ping 실패: userId={}", userId);
+                log.warn("heartbeat 전송 실패: userId={}, 연결 종료", userId);
                 emitter.complete();
                 emitters.remove(userId);
             }
@@ -65,13 +75,14 @@ public class SseService {
 
     public void sendToClient(Long userId, String eventName, Object data) {
         SseEmitter emitter = emitters.get(userId);
-        if (emitter != null) {
+        if (emitter != null && data != null) {
             try {
                 emitter.send(SseEmitter.event()
                         .name(eventName)
                         .data(data));
             } catch (IOException e) {
-                log.warn("SSE 전송 실패, emitter 제거: userId={}", userId);
+                log.warn("이벤트 전송 실패, 연결 종료: userId={}", userId);
+                emitter.complete();
                 emitters.remove(userId);
             }
         }

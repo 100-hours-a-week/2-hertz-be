@@ -74,6 +74,9 @@ public class SignalRoom {
      * RelationType을 반환하는 유틸
      */
     public String getRelationType() {
+        if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
+            return "MATCHING";
+        }
         // 상황에 따라 ENUM으로 바꿔도 됨
         return "SIGNAL";
     }

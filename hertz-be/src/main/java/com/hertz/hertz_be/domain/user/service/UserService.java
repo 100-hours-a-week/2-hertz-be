@@ -3,8 +3,12 @@ package com.hertz.hertz_be.domain.user.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
-import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
+import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
+import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.InterestsDTO;
 import com.hertz.hertz_be.domain.user.dto.response.KeywordsDTO;
@@ -19,8 +23,10 @@ import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
@@ -38,6 +44,10 @@ public class UserService {
 
     private final InterestsService interestsService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SignalRoomRepository signalRoomRepository;
+    private final SignalMessageRepository signalMessageRepository;
+    private final TuningResultRepository tuningResultRepository;
+    private final UserInterestsRepository userInterestsRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
@@ -138,6 +148,7 @@ public class UserService {
         throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 응답 실패");
     }
 
+
     public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
         User targetUser = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
                 .orElseThrow(() -> new UserException(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다."));
@@ -180,8 +191,33 @@ public class UserService {
                     sameInterestsDto
             );
         }
+    }
 
+    @Transactional
+    public void deleteUserById(Long userId) {
+        User user = userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
+        List<SignalRoom> rooms = signalRoomRepository.findAllBySenderUserIdOrReceiverUserId(userId, userId);
+        for (SignalRoom room : rooms) {
+            signalMessageRepository.deleteAllBySignalRoom(room);
+        }
+        signalRoomRepository.deleteAll(rooms);
+
+        userInterestsRepository.deleteAllByUser(user);
+
+        tuningResultRepository.deleteAllByMatchedUser(user);
+
+        userRepository.delete(user);
+    }
+
+    @Transactional
+    public void deleteAllUsers() {
+        signalMessageRepository.deleteAll();
+        signalRoomRepository.deleteAll();
+        userInterestsRepository.deleteAll();
+        tuningResultRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }
 

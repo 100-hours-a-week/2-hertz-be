@@ -3,7 +3,7 @@ package com.hertz.hertz_be.domain.channel.dto.response;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.global.common.AESUtil;
+import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
