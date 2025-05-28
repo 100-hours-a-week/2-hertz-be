@@ -169,26 +169,38 @@ public class SseChannelService {
         log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
     }
 
-    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        User partner = room.getPartnerUser(userId);
+    public void notifyMatchingResultToPartner(SignalRoom room, User user, User partner, MatchingStatus matchingStatus) {
         if (matchingStatus == MatchingStatus.MATCHED) {
-            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_SUCCESS);
-            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", userId);
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_SUCCESS);
+            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", partner.getId());
         }
         else {
-            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_REJECTION);
-            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", userId);
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_REJECTION);
+            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", partner.getId());
         }
     }
 
-    private void sendMatchingResultSse(User partner, Long userId, SseEventName sseEventName) {
+    public void notifyMatchingConfirmedToPartner(SignalRoom room, User user, User partner) {
         MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
-                .partnerId(partner.getId())
-                .partnerNickname(partner.getNickname())
-                .partnerProfileImage(partner.getProfileImageUrl())
+                .channelRoomId(room.getId())
+                .partnerId(user.getId())
+                .partnerNickname(user.getNickname())
+                .partnerProfileImage(user.getProfileImageUrl())
                 .build();
 
-        sseService.sendToClient(userId, sseEventName.getValue(), dto);
+        sseService.sendToClient(partner.getId(), SseEventName.MATCHING_CONFIRMED.getValue(), dto);
+        log.info("[{}번 유저에게 매칭 여부 SSE 알림 전송]", partner.getId());
+    }
+
+    private void sendMatchingResultSse(SignalRoom room, User user, Long partnerId, SseEventName sseEventName) {
+        MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
+                .channelRoomId(room.getId())
+                .partnerId(user.getId())
+                .partnerNickname(user.getNickname())
+                .partnerProfileImage(user.getProfileImageUrl())
+                .build();
+
+        sseService.sendToClient(partnerId, sseEventName.getValue(), dto);
     }
 
 }

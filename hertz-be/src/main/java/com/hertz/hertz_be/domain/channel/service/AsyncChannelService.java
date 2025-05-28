@@ -5,6 +5,10 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -34,6 +38,7 @@ public class AsyncChannelService {
 
     private final SignalMessageRepository signalMessageRepository;
     private final SseChannelService sseChannelService;
+    private final UserRepository userRepository;
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
@@ -117,6 +122,17 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        sseChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+        User partner = room.getPartnerUser(userId);
+        User user = userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        boolean isSender = user.equals(room.getSenderUser());
+        MatchingStatus partnerStatus = isSender ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+
+        if (partnerStatus == MatchingStatus.SIGNAL) {
+            sseChannelService.notifyMatchingConfirmedToPartner(room, user, partner);
+        } else {
+            sseChannelService.notifyMatchingResultToPartner(room, user, partner, matchingStatus);
+        }
     }
 }
