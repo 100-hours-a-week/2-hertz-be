@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class MatchingResultResponseDto {
+    private Long channelRoomId;
     private Long partnerId;
     private String partnerProfileImage;
     private String partnerNickname;
