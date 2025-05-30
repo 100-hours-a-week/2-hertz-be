@@ -282,7 +282,7 @@ public class ChannelService {
         }
     }
 
-    private TuningResponseDTO buildTuningResponseDTO(Long requesterId, User target) {
+    private TuningResponseDto buildTuningResponseDTO(Long requesterId, User target) {
         Map<String, String> keywords = interestsService.getUserKeywords(target.getId());
         Map<String, List<String>> requesterInterests = interestsService.getUserInterests(requesterId);
         Map<String, List<String>> targetInterests = interestsService.getUserInterests(target.getId());
@@ -298,9 +298,6 @@ public class ChannelService {
                 sameInterests
         );
     }
-
-
-
 
     @Transactional(readOnly = true)
     public boolean hasNewMessages(Long userId) {

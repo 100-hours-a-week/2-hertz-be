@@ -32,4 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     String findRelationTypeBetweenUsers(@Param("currentUserId") Long currentUserId,
                                           @Param("targetUserId") Long targetUserId);
 
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.sentSignalRooms WHERE u.id = :userId")
+    Optional<User> findByIdWithSentSignalRooms(@Param("userId") Long userId);
+
 }

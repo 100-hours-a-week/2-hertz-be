@@ -23,7 +23,6 @@ import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +46,6 @@ public class UserService {
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final TuningResultRepository tuningResultRepository;
-    private final UserInterestsRepository userInterestsRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
