@@ -467,6 +467,16 @@ public class ChannelService {
             throw new ForbiddenChannelException();
         }
 
+        entityManager.flush();
+
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+            }
+        });
+
         // 매칭 수락/거절 후 현재 관계
         if(matchingStatus == MatchingStatus.MATCHED) {
             return signalRoomRepository.findMatchResultByUser(userId, room.getId());

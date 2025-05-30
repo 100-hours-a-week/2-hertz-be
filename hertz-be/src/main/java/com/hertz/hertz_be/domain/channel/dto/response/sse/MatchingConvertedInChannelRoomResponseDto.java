@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class MatchingConvertedInChannelRoomResponseDto {
     private Long channelRoomId;
     private boolean hasResponded;
+    private boolean partnerHasResponded;
 }
