@@ -342,21 +342,6 @@ public class ChannelService {
         return sameInterests;
     }
 
-    @Transactional(readOnly = true)
-    public boolean hasNewMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
-
-        List<SignalRoom> allRooms = Stream.concat(
-                user.getSentSignalRooms().stream(),
-                user.getReceivedSignalRooms().stream()
-        ).collect(Collectors.toList());
-
-        if (allRooms.isEmpty()) return false;
-
-        return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
-    }
-
     // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
