@@ -18,9 +18,12 @@ public class ResponseCode {
     public static final String USER_ALREADY_REGISTERED = "USER_ALREADY_REGISTERED";
     public static final String USER_NOT_REGISTERED = "USER_NOT_REGISTERED";
 
-    // RT 관련 응답 code
+    /**
+     * Auth 관련 응답 code
+     */
     public static final String ACCESS_TOKEN_REISSUED = "ACCESS_TOKEN_REISSUED";
     public static final String REFRESH_TOKEN_INVALID = "REFRESH_TOKEN_INVALID";
+    public static final String LOGOUT_SUCCESS = "LOGOUT_SUCCESS";
 
     // 개인정보 등록 응답 code
     public static final String PROFILE_SAVED_SUCCESSFULLY = "PROFILE_SAVED_SUCCESSFULLY";
