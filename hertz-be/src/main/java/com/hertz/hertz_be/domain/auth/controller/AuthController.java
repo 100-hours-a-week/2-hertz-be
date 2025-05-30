@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -34,6 +35,7 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenService;
     private final UserService userService;
+    private final AuthService authService;
 
     @Value("${is.local}")
     private boolean isLocal;
@@ -74,7 +76,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "사용자 Id로 AT를 반환하는 API (테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
+    @Operation(summary = "사용자 Id로 AT를 반환하는 API, RT는 반환 안됨 (테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
     public ResponseEntity<?> login(@RequestBody TestLoginRequestDto request,
                                    HttpServletResponse response) {
         Long userId = request.getUserId();  // 클라이언트가 userId를 보냈다고 가정
@@ -131,6 +133,15 @@ public class AuthController {
         userService.deleteAllUsers();
         return ResponseEntity.status(204).body(
                 new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+        );
+    }
+
+    @DeleteMapping("/v2/auth/logout")
+    @Operation(summary = "로그아웃 API")
+    public ResponseEntity<ResponseDto<Void>> logout(@AuthenticationPrincipal Long userId) {
+        authService.logout(userId);
+        return ResponseEntity.ok(
+                new ResponseDto<>(ResponseCode.LOGOUT_SUCCESS, "정상적으로 로그아웃되었습니다.", null)
         );
     }
 }
