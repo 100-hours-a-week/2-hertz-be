@@ -9,6 +9,7 @@ import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +18,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -58,17 +58,7 @@ public class AuthController {
         ReissueAccessTokenResponseDto accessTokenResponse = result.getKey();
         String newRefreshToken = result.getValue();
 
-        //ResponseCookie 설정 (환경에 따라 분기)
-        ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
-                .maxAge(maxAgeSeconds)
-                .path("/")
-                .sameSite("None")
-                .domain(isLocal ? ".hertz-tuning.com" : null)  // isLocal일 경우 domain 생략
-                .httpOnly(true)
-                .secure(!isLocal) // isLocal=false면 secure 활성화
-                .build();
-
-        response.setHeader("Set-Cookie", responseCookie.toString());
+        AuthUtil.setRefreshTokenCookie(response, newRefreshToken, maxAgeSeconds, isLocal);
 
         return ResponseEntity.ok(
                 new ResponseDto<>(ResponseCode.ACCESS_TOKEN_REISSUED, "Access Token이 재발급되었습니다.", accessTokenResponse)

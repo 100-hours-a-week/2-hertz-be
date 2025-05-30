@@ -8,13 +8,13 @@ import com.hertz.hertz_be.domain.auth.service.OAuthService;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,17 +54,7 @@ public class OAuthController {
         if (result.isRegistered()) {
             String newRefreshToken = result.getRefreshToken();
 
-            //ResponseCookie 설정 (환경에 따라 분기)
-            ResponseCookie responseCookie = ResponseCookie.from("refreshToken", newRefreshToken)
-                    .maxAge(maxAgeSeconds)
-                    .path("/")
-                    .sameSite("None")
-                    .domain(isLocal ? ".hertz-tuning.com" : null)  // isLocal일 경우 domain 생략
-                    .httpOnly(true)
-                    .secure(!isLocal)                               // isLocal=false면 secure 활성화
-                    .build();
-
-            response.setHeader("Set-Cookie", responseCookie.toString());
+            AuthUtil.setRefreshTokenCookie(response, newRefreshToken, maxAgeSeconds, isLocal);
 
             OAuthLoginResponseDto dto = new OAuthLoginResponseDto(result.getUserId(), result.getAccessToken());
 
