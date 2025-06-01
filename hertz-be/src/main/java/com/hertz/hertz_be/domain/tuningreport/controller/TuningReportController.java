@@ -31,7 +31,7 @@ public class TuningReportController {
     @GetMapping("/reports")
     @Operation(summary = "튜닝 리포트 목록 반환 API")
     public ResponseEntity<ResponseDto<TuningReportListResponse>> createTuningReport (@RequestParam(defaultValue = "0") int page,
-                                                                                     @RequestParam(defaultValue = "20") int size,
+                                                                                     @RequestParam(defaultValue = "10") int size,
                                                                                      @RequestParam(defaultValue = "LATEST") TuningReportSortType sort,
                                                                                      @AuthenticationPrincipal Long userId) {
 
