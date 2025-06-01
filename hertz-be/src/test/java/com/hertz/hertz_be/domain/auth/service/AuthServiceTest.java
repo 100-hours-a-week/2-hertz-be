@@ -73,6 +73,22 @@ public class AuthServiceTest {
         verify(refreshTokenService, never()).saveRefreshToken(anyLong(), anyString(), anyLong());
     }
 
+    @Test
+    @DisplayName("토큰 재발급 RTR - 유효기간 지난 리프레시 토큰일 경우 실패")
+    void reissueAccessToken_shouldReturnRefreshTokenInvalidException_whenExpiredRefreshToken() {
+
+        when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
+                .thenReturn(testUserId);
+        when(refreshTokenService.getRefreshToken(testUserId))
+                .thenReturn(null);
+
+        assertThrows(RefreshTokenInvalidException.class, () -> {
+            authService.reissueAccessToken(refreshToken);
+        });
+
+        verify(refreshTokenService, never()).saveRefreshToken(anyLong(), anyString(), anyLong());
+    }
+
 
 
 }
