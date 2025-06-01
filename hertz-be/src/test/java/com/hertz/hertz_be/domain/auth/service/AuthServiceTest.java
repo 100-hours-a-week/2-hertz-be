@@ -25,8 +25,6 @@ import static org.mockito.Mockito.*;
 public class AuthServiceTest {
     private final Long testUserId = 1L;
     private final String refreshToken = "old-refresh-token";
-    private final String newAccessToken = "new-access-token";
-    private final String newRefreshToken = "new-refresh-token";
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
@@ -43,6 +41,9 @@ public class AuthServiceTest {
     @Test
     @DisplayName("토큰 재발급 RTR - 성공")
     void reissueAccessToken_success() {
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+
         when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
                 .thenReturn(testUserId);
         when(refreshTokenService.getRefreshToken(testUserId))
@@ -60,8 +61,8 @@ public class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 실패")
-    void reissueAccessToken_shouldReturnRefreshTokenInvalidException_whenWrongRefreshToken() {
+    @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 예외 발생")
+    void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenWrongRefreshToken() {
         String wrongRefreshToken = "wrong-refresh-token";
 
         when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
@@ -77,9 +78,8 @@ public class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("토큰 재발급 RTR - 유효기간 지난 리프레시 토큰일 경우 실패")
-    void reissueAccessToken_shouldReturnRefreshTokenInvalidException_whenExpiredRefreshToken() {
-
+    @DisplayName("토큰 재발급 RTR - 유효기간 지난 리프레시 토큰일 경우 예외 발생")
+    void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenExpiredRefreshToken() {
         when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
                 .thenReturn(testUserId);
         when(refreshTokenService.getRefreshToken(testUserId))
@@ -108,7 +108,7 @@ public class AuthServiceTest {
 
     @Test
     @DisplayName("로그아웃 - 존재하지 않는 유저일 경우 예외 발생")
-    void logout_shouldThrowException_whenUserNotFound() {
+    void logout_shouldThrowUserNotFoundException() {
         when(userRepository.findById(testUserId))
                 .thenReturn(Optional.empty());
 
