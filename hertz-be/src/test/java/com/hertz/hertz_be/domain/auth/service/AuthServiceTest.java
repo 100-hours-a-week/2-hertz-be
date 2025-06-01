@@ -58,7 +58,7 @@ public class AuthServiceTest {
 
     @Test
     @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 실패")
-    void reissueAccessToken_shouldReturnRefreshTokenInvalidException() {
+    void reissueAccessToken_shouldReturnRefreshTokenInvalidException_whenWrongRefreshToken() {
         String wrongRefreshToken = "wrong-refresh-token";
 
         when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
