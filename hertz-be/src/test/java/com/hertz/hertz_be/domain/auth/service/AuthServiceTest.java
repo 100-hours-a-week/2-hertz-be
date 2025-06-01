@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.auth.service;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
@@ -103,6 +104,19 @@ public class AuthServiceTest {
 
         verify(userRepository, times(1)).findById(testUserId);
         verify(refreshTokenService, times(1)).deleteRefreshToken(testUserId);
+    }
+
+    @Test
+    @DisplayName("로그아웃 - 존재하지 않는 유저일 경우 예외 발생")
+    void logout_shouldThrowException_whenUserNotFound() {
+        when(userRepository.findById(testUserId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> {
+            authService.logout(testUserId);
+        });
+
+        verify(refreshTokenService, never()).deleteRefreshToken(anyLong());
     }
 
 }
