@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.auth.service;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -89,6 +91,18 @@ public class AuthServiceTest {
         verify(refreshTokenService, never()).saveRefreshToken(anyLong(), anyString(), anyLong());
     }
 
+    @Test
+    @DisplayName("로그아웃 - 성공")
+    void logout_success() {
+        User mockUser = mock(User.class);
 
+        when(userRepository.findById(testUserId))
+                .thenReturn(Optional.of(mockUser));
+
+        authService.logout(testUserId);
+
+        verify(userRepository, times(1)).findById(testUserId);
+        verify(refreshTokenService, times(1)).deleteRefreshToken(testUserId);
+    }
 
 }
