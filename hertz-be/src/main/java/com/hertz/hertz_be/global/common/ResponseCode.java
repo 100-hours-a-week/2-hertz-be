@@ -88,4 +88,7 @@ public class ResponseCode {
      */
     public static final String USER_DELETE_SUCCESS = "USER_DELETE_SUCCESS";
 
+    // 튜닝 리포트 관련 응답 code
+    public static final String REPORT_LIST_FETCH_SUCCESS = "REPORT_LIST_FETCH_SUCCESS";
+
 }
