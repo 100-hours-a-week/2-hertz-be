@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.auth.service;
 
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
+import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,6 +54,23 @@ public class AuthServiceTest {
         assertEquals(newAccessToken, result.getKey().getAccessToken());
         assertEquals(newRefreshToken, result.getValue());
         verify(refreshTokenService, times(1)).saveRefreshToken(eq(testUserId), eq(newRefreshToken), anyLong());
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 실패")
+    void reissueAccessToken_shouldReturnRefreshTokenInvalidException() {
+        String wrongRefreshToken = "wrong-refresh-token";
+
+        when(jwtTokenProvider.getUserIdFromRefreshToken(refreshToken))
+                .thenReturn(testUserId);
+        when(refreshTokenService.getRefreshToken(testUserId))
+                .thenReturn(wrongRefreshToken);
+
+        assertThrows(RefreshTokenInvalidException.class, () -> {
+            authService.reissueAccessToken(refreshToken);
+        });
+
+        verify(refreshTokenService, never()).saveRefreshToken(anyLong(), anyString(), anyLong());
     }
 
 
