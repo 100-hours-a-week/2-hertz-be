@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.tuningreport.entity;
 
+import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
@@ -47,6 +48,10 @@ public class TuningReport {
     @ColumnDefault("0")
     private int reactionHeart;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -64,5 +69,25 @@ public class TuningReport {
     @PreUpdate
     public void preUpdate() { // 엔티티 수정 전 호출
         this.modifiedAt = LocalDateTime.now();
+    }
+
+    public void increaseReaction(ReactionType type) {
+        switch (type) {
+            case CELEBRATE -> this.reactionCelebrate++;
+            case THUMBS_UP -> this.reactionThumbsUp++;
+            case LAUGH -> this.reactionLaugh++;
+            case EYES -> this.reactionEyes++;
+            case HEART -> this.reactionHeart++;
+        }
+    }
+
+    public void decreaseReaction(ReactionType type) {
+        switch (type) {
+            case CELEBRATE -> this.reactionCelebrate = Math.max(0, this.reactionCelebrate - 1);
+            case THUMBS_UP -> this.reactionThumbsUp = Math.max(0, this.reactionThumbsUp - 1);
+            case LAUGH -> this.reactionLaugh = Math.max(0, this.reactionLaugh - 1);
+            case EYES -> this.reactionEyes = Math.max(0, this.reactionEyes - 1);
+            case HEART -> this.reactionHeart = Math.max(0, this.reactionHeart - 1);
+        }
     }
 }

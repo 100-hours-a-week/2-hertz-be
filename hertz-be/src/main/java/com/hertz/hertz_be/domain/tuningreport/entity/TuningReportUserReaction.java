@@ -3,15 +3,13 @@ package com.hertz.hertz_be.domain.tuningreport.entity;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@Builder
 @Table(name = "tuning_report_user_reaction",
        uniqueConstraints = @UniqueConstraint(columnNames = {"report_id", "user_id", "reaction_type"}))
 
