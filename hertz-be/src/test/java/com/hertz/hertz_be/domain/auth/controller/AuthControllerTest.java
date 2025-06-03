@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -115,8 +116,22 @@ class AuthControllerTest {
         refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
 
         mockMvc.perform(post("/api/v1/auth/token")
-                        .cookie(new Cookie("refresh-token", "invalid-token")))
+                        .cookie(new Cookie("refreshToken", "invalid-token")))
                 .andExpect(status().is4xxClientError())
                 .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID));
     }
+
+    @Test
+    @DisplayName("로그아웃 - 성공")
+    void logout_success() throws Exception {
+        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+
+        mockMvc.perform(delete("/api/v2/auth/logout")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .cookie(new Cookie("refreshToken", refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResponseCode.LOGOUT_SUCCESS));
+    }
+
 }
