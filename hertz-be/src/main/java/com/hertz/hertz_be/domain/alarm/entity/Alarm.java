@@ -2,12 +2,15 @@ package com.hertz.hertz_be.domain.alarm.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @SuperBuilder
@@ -37,4 +40,8 @@ public class Alarm {
     @CreationTimestamp
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "alarm")
+    @Builder.Default
+    private List<UserAlarm> users = new ArrayList<>();
 }
