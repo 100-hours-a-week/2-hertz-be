@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Builder
 @Getter
-@Table(name = "user_notification")
+@Table(name = "user_alarm")
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserAlarm {

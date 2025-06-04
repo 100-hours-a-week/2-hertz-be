@@ -26,7 +26,7 @@ public class Alarm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false)
     private String title;
 
     @CreationTimestamp
@@ -38,6 +38,7 @@ public class Alarm {
     private LocalDateTime modifiedAt;
 
     @Column(name = "deleted_at")
+    @Builder.Default
     private LocalDateTime deletedAt = null;
 
     @OneToMany(mappedBy = "alarm")
