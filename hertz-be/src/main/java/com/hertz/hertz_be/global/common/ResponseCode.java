@@ -90,6 +90,7 @@ public class ResponseCode {
 
     // 튜닝 리포트 관련 응답 code
     public static final String REPORT_LIST_FETCH_SUCCESS = "REPORT_LIST_FETCH_SUCCESS";
+    public static final String NO_REPORTS = "NO_REPORTS";
     public static final String REACTION_ADDED = "REACTION_ADDED";
     public static final String REACTION_REMOVED = "REACTION_REMOVED";
     public static final String DELETED_REPORT = "DELETED_REPORT";

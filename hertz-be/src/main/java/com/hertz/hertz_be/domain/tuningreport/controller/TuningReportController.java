@@ -41,11 +41,22 @@ public class TuningReportController {
                                                                                      @AuthenticationPrincipal Long userId) {
 
         TuningReportListResponse response = tuningReportService.getReportList(userId, page, size, sort);
-        return ResponseEntity.ok(new ResponseDto<>(
-                ResponseCode.REPORT_LIST_FETCH_SUCCESS,
-                "튜닝 리포트가 정상적으로 조회되었습니다.",
-                response
-        ));
+
+        if(!response.list().isEmpty()) {
+            return ResponseEntity.ok(new ResponseDto<>(
+                    ResponseCode.REPORT_LIST_FETCH_SUCCESS,
+                    "튜닝 리포트가 정상적으로 조회되었습니다.",
+                    response
+            ));
+        } else {
+            return ResponseEntity.ok(new ResponseDto<>(
+                    ResponseCode.NO_REPORTS,
+                    "새로운 튜닝 리포트가 없습니다.",
+                    null
+            ));
+        }
+
+
     }
 
     /**
