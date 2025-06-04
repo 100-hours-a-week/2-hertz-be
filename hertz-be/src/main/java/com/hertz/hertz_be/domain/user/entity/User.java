@@ -104,4 +104,11 @@ public class User {
     @OneToMany(mappedBy = "writer")
     @Builder.Default
     private List<AlarmNotification> wroteNotifyAlarms = new ArrayList<>();
+  
+    public static User of(Long id) {
+        User user = new User();
+        user.setId(id);
+        return user;
+    }
+
 }
