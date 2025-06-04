@@ -33,7 +33,7 @@ public class SseAuthenticationFilter extends OncePerRequestFilter {
         String requestURI = request.getRequestURI();
 
         if (acceptHeader != null && acceptHeader.contains("text/event-stream")
-                && requestURI.startsWith("/sse/subscribe")) {
+                && requestURI.startsWith("/api/sse/subscribe")) {
 
             String token = extractTokenForSse(request);
             if (token == null || !jwtTokenProvider.validateToken(token)) {

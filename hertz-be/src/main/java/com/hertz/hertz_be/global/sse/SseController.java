@@ -10,7 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/sse")
+@RequestMapping("/api/sse")
 @Tag(name = "SSE 연결 API")
 public class SseController {
 
