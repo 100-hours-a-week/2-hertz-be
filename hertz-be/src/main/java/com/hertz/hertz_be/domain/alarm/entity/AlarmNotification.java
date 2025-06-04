@@ -2,23 +2,20 @@ package com.hertz.hertz_be.domain.alarm.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.w3c.dom.Text;
 
 @Entity
-@Builder
+@SuperBuilder
 @Getter
 @Table(name = "alarm_notification")
 @NoArgsConstructor
 @AllArgsConstructor
-public class AlarmNotification {
+@DiscriminatorValue("NOTICE")
+public class AlarmNotification extends Alarm{
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private Text content;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
 }

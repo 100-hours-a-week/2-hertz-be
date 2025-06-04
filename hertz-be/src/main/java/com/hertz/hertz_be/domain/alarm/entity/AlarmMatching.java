@@ -3,21 +3,18 @@ package com.hertz.hertz_be.domain.alarm.entity;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.w3c.dom.Text;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Builder
+@SuperBuilder
 @Getter
 @Table(name = "alarm_matching")
 @NoArgsConstructor
 @AllArgsConstructor
-public class AlarmMatching {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@DiscriminatorValue("MATCHING")
+public class AlarmMatching extends Alarm{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)

@@ -1,21 +1,22 @@
 package com.hertz.hertz_be.domain.alarm.entity;
 
-import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Builder
+@SuperBuilder
 @Getter
 @Table(name = "alarm")
 @NoArgsConstructor
 @AllArgsConstructor
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "type")
 public class Alarm {
 
     @Id
@@ -25,19 +26,15 @@ public class Alarm {
     @Column(nullable = false, length = 10)
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private AlarmCategory alarmCategory;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "modified_at", nullable = false)
     private LocalDateTime modifiedAt;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 }

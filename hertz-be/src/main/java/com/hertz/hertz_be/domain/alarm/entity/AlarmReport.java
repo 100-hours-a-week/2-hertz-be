@@ -2,21 +2,18 @@ package com.hertz.hertz_be.domain.alarm.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Builder
+@SuperBuilder
 @Getter
 @Table(name = "alarm_report")
 @NoArgsConstructor
 @AllArgsConstructor
-public class AlarmReport {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@DiscriminatorValue("REPORT")
+public class AlarmReport extends Alarm{
 
     @Column(nullable = false)
     private int couple_count;
