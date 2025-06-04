@@ -72,6 +72,11 @@ public class ResponseCode {
     public static final String EMBEDDING_REGISTER_SERVER_ERROR = "EMBEDDING_REGISTER_SERVER_ERROR";
 
     /**
+     * 알림창 관련 응답 code
+     */
+    public static final String NOTICE_CREATED_SUCCESS = "NOTICE_CREATED_SUCCESS";
+
+    /**
      * 매칭 수락/거절 관련 응답 code
      */
     public static final String TUNING_SUCCESS = "TUNING_SUCCESS";

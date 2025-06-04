@@ -1,5 +1,7 @@
 package com.hertz.hertz_be.domain.user.entity;
 
+import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
+import com.hertz.hertz_be.domain.alarm.entity.UserAlarm;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
@@ -95,9 +97,18 @@ public class User {
     @Builder.Default
     private List<Tuning> recommendListByCategory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user")
+    @Builder.Default
+    private List<UserAlarm> alarms = new ArrayList<>();
+
+    @OneToMany(mappedBy = "writer")
+    @Builder.Default
+    private List<AlarmNotification> wroteNotifyAlarms = new ArrayList<>();
+  
     public static User of(Long id) {
         User user = new User();
         user.setId(id);
         return user;
     }
+
 }
