@@ -1,10 +1,10 @@
 package com.hertz.hertz_be.domain.user.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
+import com.hertz.hertz_be.domain.alarm.entity.UserAlarm;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
-import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import com.hertz.hertz_be.domain.user.entity.enums.MembershipType;
@@ -96,4 +96,12 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private List<Tuning> recommendListByCategory = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user")
+    @Builder.Default
+    private List<UserAlarm> alarms = new ArrayList<>();
+
+    @OneToMany(mappedBy = "writer")
+    @Builder.Default
+    private List<AlarmNotification> wroteNotifyAlarms = new ArrayList<>();
 }
