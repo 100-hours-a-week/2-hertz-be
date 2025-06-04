@@ -37,9 +37,8 @@ public class Alarm {
     @Column(name = "modified_at", nullable = false)
     private LocalDateTime modifiedAt;
 
-    @CreationTimestamp
     @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    private LocalDateTime deletedAt = null;
 
     @OneToMany(mappedBy = "alarm")
     @Builder.Default
