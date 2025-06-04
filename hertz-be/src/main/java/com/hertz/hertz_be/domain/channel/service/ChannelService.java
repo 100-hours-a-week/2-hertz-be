@@ -299,6 +299,7 @@ public class ChannelService {
         );
     }
 
+
     @Transactional(readOnly = true)
     public boolean hasNewMessages(Long userId) {
         User user = userRepository.findById(userId)
@@ -312,6 +313,55 @@ public class ChannelService {
         if (allRooms.isEmpty()) return false;
 
         return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
+
+
+    public Map<String, String> getUserKeywords(Long userId) {
+        Map<String, String> keywords = userInterestsRepository.findByUserId(userId).stream()
+                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.KEYWORD)
+                .collect(
+                        LinkedHashMap::new,
+                        (map, ui) -> map.put(ui.getCategoryItem().getCategory().getName(), ui.getCategoryItem().getName()),
+                        LinkedHashMap::putAll
+                );
+
+        return keywords;
+    }
+
+    public Map<String, List<String>> getUserInterests(Long userId) {
+        Map<String, List<String>> interestsMap = new LinkedHashMap<>();
+
+        userInterestsRepository.findByUserId(userId).stream()
+                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.INTEREST)
+                .forEach(ui -> {
+                    String categoryName = ui.getCategoryItem().getCategory().getName();
+                    String itemName = ui.getCategoryItem().getName();
+                    interestsMap.computeIfAbsent(categoryName, k -> new ArrayList<>()).add(itemName);
+                });
+
+        return interestsMap;
+    }
+
+    public Map<String, List<String>> extractSameInterests(Map<String, List<String>> interests1, Map<String, List<String>> interests2) {
+        Map<String, List<String>> sameInterests = new LinkedHashMap<>();
+
+        for (String category : interests1.keySet()) {
+            List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
+            List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
+
+            // 교집합 추출
+            Set<String> common = new HashSet<>(list1);
+            common.retainAll(list2);
+
+            // 값이 있으면 1개만 반환, 없으면 빈 리스트
+            if (!common.isEmpty()) {
+                sameInterests.put(category, List.of(common.iterator().next()));
+            } else {
+                sameInterests.put(category, Collections.emptyList());
+            }
+        }
+
+        return sameInterests;
+
     }
 
     // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
@@ -423,6 +473,16 @@ public class ChannelService {
         if (updatedSender == 0 && updatedReceiver == 0) {
             throw new ForbiddenChannelException();
         }
+
+        entityManager.flush();
+
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+            }
+        });
 
         // 매칭 수락/거절 후 현재 관계
         if(matchingStatus == MatchingStatus.MATCHED) {

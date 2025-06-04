@@ -5,6 +5,10 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -18,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,11 +39,11 @@ public class AsyncChannelService {
 
     private final SignalMessageRepository signalMessageRepository;
     private final SseChannelService sseChannelService;
+    private final UserRepository userRepository;
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED &&
-                room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
+        if (room.getReceiverMatchingStatus() != MatchingStatus.SIGNAL && room.getSenderMatchingStatus() != MatchingStatus.SIGNAL) {
             return;
         }
 
@@ -67,7 +72,7 @@ public class AsyncChannelService {
 
     @Async
     public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
-        if (room.getReceiverMatchingStatus() == MatchingStatus.MATCHED && room.getSenderMatchingStatus() == MatchingStatus.MATCHED) {
+        if (room.getReceiverMatchingStatus() != MatchingStatus.SIGNAL && room.getSenderMatchingStatus() != MatchingStatus.SIGNAL) {
             return;
         }
 
@@ -117,6 +122,17 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        sseChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+        User partner = room.getPartnerUser(userId);
+        User user = userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        boolean isSender = Objects.equals(userId, room.getSenderUser().getId());
+        MatchingStatus partnerStatus = isSender ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+
+        if (partnerStatus == MatchingStatus.SIGNAL) {
+            sseChannelService.notifyMatchingConfirmedToPartner(room, user, partner);
+        } else {
+            sseChannelService.notifyMatchingResultToPartner(room, user, partner, matchingStatus);
+        }
     }
 }

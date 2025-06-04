@@ -6,12 +6,12 @@ import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
 import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -43,18 +43,11 @@ public class UserController {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
 
-        ResponseCookie responseCookie;
-
-        responseCookie = ResponseCookie.from("refreshToken", userInfoResponseDto.getRefreshToken())
-                .maxAge(userInfoResponseDto.getRefreshSecondsUntilExpiry())
-                .path("/")
-                .sameSite("None")
-                .domain(isLocal ? ".hertz-tuning.com" : null)
-                .httpOnly(true)
-                .secure(!isLocal)   // isLocal=false면 secure 활성화
-                .build();
-
-        response.setHeader("Set-Cookie", responseCookie.toString());
+        AuthUtil.setRefreshTokenCookie(response,
+                userInfoResponseDto.getRefreshToken(),
+                userInfoResponseDto.getRefreshSecondsUntilExpiry(),
+                isLocal
+        );
 
         // ✅ 응답 바디 구성
         Map<String, Object> data = new HashMap<>();

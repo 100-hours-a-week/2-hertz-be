@@ -52,22 +52,6 @@ public class ChannelController {
         );
     }
 
-    @GetMapping("/v1/new-messages")
-    @Operation(summary = "새 메세지 여부 체크 API")
-    public ResponseEntity<ResponseDto<Void>> checkNewMessages(@AuthenticationPrincipal Long userId) {
-        boolean hasNewMessage = channelService.hasNewMessages(userId);
-
-        if (hasNewMessage) {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.NEW_MESSAGE, "새 메시지가 정상적으로 조회되었습니다.", null)
-            );
-        } else {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.NO_ANY_NEW_MESSAGE, "새 메시지가 없습니다.", null)
-            );
-        }
-    }
-
     @GetMapping("/v1/channel")
     @Operation(summary = "개인 채널보관함 목록 반환 API")
     public ResponseEntity<ResponseDto<ChannelListResponseDto>> getPersonalSignalRoomList(@AuthenticationPrincipal Long userId,

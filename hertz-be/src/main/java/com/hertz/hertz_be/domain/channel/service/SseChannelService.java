@@ -70,21 +70,17 @@ public class SseChannelService {
     }
 
     public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
-        Long targetUserId;
-        MatchingStatus status;
+        boolean isReceiver = Objects.equals(userId, room.getReceiverUser().getId());
 
-        if (Objects.equals(userId, room.getReceiverUser().getId())) {
-            targetUserId = room.getReceiverUser().getId();
-            status = room.getReceiverMatchingStatus();
-        } else {
-            targetUserId = room.getSenderUser().getId();
-            status = room.getSenderMatchingStatus();
-        }
+        MatchingStatus userStatus = isReceiver ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+        MatchingStatus partnerStatus = isReceiver ? room.getSenderMatchingStatus() : room.getReceiverMatchingStatus();
 
-        if (status == MatchingStatus.MATCHED) {
-            sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), true);
-        }
-        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), false);
+        boolean userMatched = (userStatus != MatchingStatus.SIGNAL);
+        boolean partnerMatched = (partnerStatus != MatchingStatus.SIGNAL);
+
+        Long targetUserId = isReceiver ? room.getReceiverUser().getId() : room.getSenderUser().getId();
+
+        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), userMatched, partnerMatched);
     }
 
     private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
@@ -99,10 +95,11 @@ public class SseChannelService {
         log.info("[페이지 상관 없이 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
     }
 
-    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded) {
+    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded, boolean partnerHasResponded) {
         MatchingConvertedInChannelRoomResponseDto dto = MatchingConvertedInChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .hasResponded(hasResponded)
+                .partnerHasResponded(partnerHasResponded)
                 .build();
 
         sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
@@ -169,26 +166,38 @@ public class SseChannelService {
         log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
     }
 
-    public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        User partner = room.getPartnerUser(userId);
+    public void notifyMatchingResultToPartner(SignalRoom room, User user, User partner, MatchingStatus matchingStatus) {
         if (matchingStatus == MatchingStatus.MATCHED) {
-            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_SUCCESS);
-            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", userId);
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_SUCCESS);
+            log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", partner.getId());
         }
         else {
-            sendMatchingResultSse(partner, userId, SseEventName.MATCHING_REJECTION);
-            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", userId);
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_REJECTION);
+            log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", partner.getId());
         }
     }
 
-    private void sendMatchingResultSse(User partner, Long userId, SseEventName sseEventName) {
+    public void notifyMatchingConfirmedToPartner(SignalRoom room, User user, User partner) {
         MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
-                .partnerId(partner.getId())
-                .partnerNickname(partner.getNickname())
-                .partnerProfileImage(partner.getProfileImageUrl())
+                .channelRoomId(room.getId())
+                .partnerId(user.getId())
+                .partnerNickname(user.getNickname())
+                .partnerProfileImage(user.getProfileImageUrl())
                 .build();
 
-        sseService.sendToClient(userId, sseEventName.getValue(), dto);
+        sseService.sendToClient(partner.getId(), SseEventName.MATCHING_CONFIRMED.getValue(), dto);
+        log.info("[{}번 유저에게 매칭 여부 SSE 알림 전송]", partner.getId());
+    }
+
+    private void sendMatchingResultSse(SignalRoom room, User user, Long partnerId, SseEventName sseEventName) {
+        MatchingResultResponseDto dto = MatchingResultResponseDto.builder()
+                .channelRoomId(room.getId())
+                .partnerId(user.getId())
+                .partnerNickname(user.getNickname())
+                .partnerProfileImage(user.getProfileImageUrl())
+                .build();
+
+        sseService.sendToClient(partnerId, sseEventName.getValue(), dto);
     }
 
 }

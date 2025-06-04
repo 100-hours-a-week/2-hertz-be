@@ -17,7 +17,8 @@ public enum SseEventName {
     NEW_MESSAGE_RECEPTION("new-message-reception"),
     NEW_SIGNAL_RECEPTION("new-signal-reception"),
     MATCHING_SUCCESS("matching-success"),
-    MATCHING_REJECTION("matching-rejection");
+    MATCHING_REJECTION("matching-rejection"),
+    MATCHING_CONFIRMED("matching-confirmed");
 
     private final String value;
 }
