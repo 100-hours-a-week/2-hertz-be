@@ -88,6 +88,11 @@ public class ResponseCode {
     public static final String TUNING_NOT_FOUND_DATA = "TUNING_NOT_FOUND_DATA";
     public static final String TUNING_NOT_FOUND_LIST = "TUNING_NOT_FOUND_LIST";
 
+
+    /* 마이페이지, 상대방 상세 페이지 조회 */
+    public static final String USER_INFO_FETCH_SUCCESS = "USER_INFO_FETCH_SUCCESS";
+    public static final String OTHER_USER_INFO_FETCH_SUCCESS = "OTHER_USER_INFO_FETCH_SUCCESS";
+
     /**
      * User 삭제 관련 응답 code
      */
