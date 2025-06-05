@@ -12,7 +12,6 @@ import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjec
 import com.hertz.hertz_be.domain.channel.repository.projection.RoomWithLastSenderProjection;
 import com.hertz.hertz_be.domain.interests.entity.enums.InterestsCategoryType;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
-import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
@@ -59,8 +58,6 @@ public class ChannelService {
     private final UserInterestsRepository userInterestsRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
-    private final ChannelRoomRepository channelRoomRepository;
-    private final InterestsService interestsService;
     private final AsyncChannelService asyncChannelService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
@@ -72,8 +69,6 @@ public class ChannelService {
                           UserInterestsRepository userInterestsRepository,
                           SignalRoomRepository signalRoomRepository,
                           SignalMessageRepository signalMessageRepository,
-                          ChannelRoomRepository channelRoomRepository,
-                          InterestsService interestsService,
                           AsyncChannelService asyncChannelService,
                           SseChannelService matchingStatusScheduler,
                           AESUtil aesUtil,
@@ -84,8 +79,6 @@ public class ChannelService {
         this.userInterestsRepository = userInterestsRepository;
         this.signalMessageRepository = signalMessageRepository;
         this.signalRoomRepository = signalRoomRepository;
-        this.channelRoomRepository = channelRoomRepository;
-        this.interestsService = interestsService;
         this.asyncChannelService = asyncChannelService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
@@ -283,10 +276,11 @@ public class ChannelService {
     }
 
     private TuningResponseDto buildTuningResponseDTO(Long requesterId, User target) {
-        Map<String, String> keywords = interestsService.getUserKeywords(target.getId());
-        Map<String, List<String>> requesterInterests = interestsService.getUserInterests(requesterId);
-        Map<String, List<String>> targetInterests = interestsService.getUserInterests(target.getId());
-        Map<String, List<String>> sameInterests = interestsService.extractSameInterests(requesterInterests, targetInterests);
+        Map<String, String> keywords = getUserKeywords(target.getId());
+
+        Map<String, List<String>> requesterInterests = getUserInterests(requesterId);
+        Map<String, List<String>> targetInterests = getUserInterests(target.getId());
+        Map<String, List<String>> sameInterests = extractSameInterests(requesterInterests, targetInterests);
 
         return new TuningResponseDto(
                 target.getId(),
@@ -298,21 +292,6 @@ public class ChannelService {
                 sameInterests
         );
     }
-
-
-    @Transactional(readOnly = true)
-    public boolean hasNewMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
-
-        List<SignalRoom> allRooms = Stream.concat(
-                user.getSentSignalRooms().stream(),
-                user.getReceivedSignalRooms().stream()
-        ).collect(Collectors.toList());
-
-        if (allRooms.isEmpty()) return false;
-
-        return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
 
 
     public Map<String, String> getUserKeywords(Long userId) {
@@ -361,7 +340,6 @@ public class ChannelService {
         }
 
         return sameInterests;
-
     }
 
     // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
