@@ -73,19 +73,22 @@ public class SseService {
         });
     }
 
-    public void sendToClient(Long userId, String eventName, Object data) {
+    public boolean sendToClient(Long userId, String eventName, Object data) {
         SseEmitter emitter = emitters.get(userId);
         if (emitter != null && data != null) {
             try {
                 emitter.send(SseEmitter.event()
                         .name(eventName)
                         .data(data));
+                return true;
             } catch (IOException e) {
                 log.warn("이벤트 전송 실패, 연결 종료: userId={}", userId);
                 emitter.complete();
                 emitters.remove(userId);
+                return false;
             }
         }
+        return false;
     }
 
     public void disconnect(Long userId) {

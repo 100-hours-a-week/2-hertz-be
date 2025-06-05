@@ -89,7 +89,6 @@ public class AsyncChannelService {
         LocalDateTime sentTime = firstMessage.getSendAt();
 
         if (sentTime.plusMinutes(matchingConvertDelayMinutes).isBefore(LocalDateTime.now())) {
-            log.info("[조건 충족] receiverUser의 첫 메시지로부터 {}분 경과: roomId={}", matchingConvertDelayMinutes, roomId);
             sseChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
         }
     }
