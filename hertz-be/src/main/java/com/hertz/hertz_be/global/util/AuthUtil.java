@@ -1,5 +1,7 @@
 package com.hertz.hertz_be.global.util;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseCookie;
 
@@ -16,5 +18,15 @@ public class AuthUtil {
                 .build();
 
         response.setHeader("Set-Cookie", cookie.toString());
+    }
+
+    public static String extractRefreshTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+        for (Cookie cookie : request.getCookies()) {
+            if ("refreshToken".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 }

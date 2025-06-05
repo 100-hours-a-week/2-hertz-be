@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
+                                "/api/sse/subscribe",
                                 "/api/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",

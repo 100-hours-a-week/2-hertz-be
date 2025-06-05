@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.global.auth.filter;
 
+import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import static com.hertz.hertz_be.global.util.AuthUtil.extractRefreshTokenFromCookie;
+
 @Component
 @RequiredArgsConstructor
 public class SseAuthenticationFilter extends OncePerRequestFilter {
@@ -35,16 +38,12 @@ public class SseAuthenticationFilter extends OncePerRequestFilter {
         if (acceptHeader != null && acceptHeader.contains("text/event-stream")
                 && requestURI.startsWith("/api/sse/subscribe")) {
 
-            String token = extractTokenForSse(request);
-            if (token == null || !jwtTokenProvider.validateToken(token)) {
-                // 명시적으로 예외를 던져서 Spring Security 예외 흐름으로 넘김
-                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.setContentType("application/json");
-                response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"유효하지 않은 토큰입니다.\"}");
-                return;
+            String refreshToken = extractRefreshTokenFromCookie(request);
+            if (refreshToken == null) {
+                throw new RefreshTokenInvalidException();
             }
 
-            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            Long userId = jwtTokenProvider.getUserIdFromRefreshToken(refreshToken);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
