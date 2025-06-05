@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.auth.controller;
 
+import static com.hertz.hertz_be.global.util.AuthUtil.extractRefreshTokenFromCookie;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
@@ -66,7 +67,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "사용자 Id로 AT를 반환하는 API, RT는 반환 안됨 (테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
+    @Operation(summary = "사용자 Id로 AT와 RT를 반환하는 API(테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
     public ResponseEntity<?> login(@RequestBody TestLoginRequestDto request,
                                    HttpServletResponse response) {
         Long userId = request.getUserId();  // 클라이언트가 userId를 보냈다고 가정
@@ -96,16 +97,6 @@ public class AuthController {
     @Operation(summary = "서버 헬스체크를 위한 API")
     public ResponseEntity<String> ping() {
         return ResponseEntity.ok("pong");
-    }
-
-    private String extractRefreshTokenFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
-        for (Cookie cookie : request.getCookies()) {
-            if ("refreshToken".equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
     }
 
     @DeleteMapping("/{userId}")
