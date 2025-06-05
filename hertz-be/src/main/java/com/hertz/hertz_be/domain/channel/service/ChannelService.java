@@ -314,17 +314,6 @@ public class ChannelService {
 
         return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
 
-
-    public Map<String, String> getUserKeywords(Long userId) {
-        Map<String, String> keywords = userInterestsRepository.findByUserId(userId).stream()
-                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.KEYWORD)
-                .collect(
-                        LinkedHashMap::new,
-                        (map, ui) -> map.put(ui.getCategoryItem().getCategory().getName(), ui.getCategoryItem().getName()),
-                        LinkedHashMap::putAll
-                );
-
-        return keywords;
     }
 
     public Map<String, List<String>> getUserInterests(Long userId) {
