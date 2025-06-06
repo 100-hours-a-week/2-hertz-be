@@ -1,18 +1,28 @@
 package com.hertz.hertz_be.domain.alarm.service;
 
-import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
-import com.hertz.hertz_be.domain.alarm.entity.UserAlarm;
+import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.AlarmItem;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
+import com.hertz.hertz_be.domain.alarm.entity.*;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +54,54 @@ public class AlarmService {
                 .toList();
 
         userAlarmRepository.saveAll(userAlarms);
+    }
+
+    @Transactional(readOnly = true)
+    public AlarmListResponseDto getAlarmList(int page, int size, Long userId) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(30);
+
+        Page<UserAlarm> alarms = userAlarmRepository.findRecentUserAlarms(userId, thresholdDate, pageRequest);
+
+        List<AlarmItem> alarmItems = alarms.getContent().stream()
+                .map(userAlarm -> {
+                    Alarm alarm = userAlarm.getAlarm();
+
+                    if (alarm instanceof AlarmNotification notification) {
+                        return new NoticeAlarm(
+                                "NOTICE",
+                                notification.getTitle(),
+                                notification.getContent(),
+                                notification.getCreatedAt().toString()
+                        );
+                    }
+                    else if (alarm instanceof AlarmMatching matching) {
+                        SignalRoom signalRoom = matching.getSignalRoom();
+                        Long channelRoomId = signalRoom.isUserExited(userId) ? null : signalRoom.getId();
+
+                        return new MatchingAlarm(
+                                "MATCHING",
+                                matching.getTitle(),
+                                channelRoomId,
+                                matching.getCreatedAt().toString()
+                        );
+                    } else if (alarm instanceof AlarmReport report) {
+                        return new ReportAlarm(
+                                "REPORT",
+                                report.getTitle(),
+                                report.getCreatedAt().toString()
+                        );
+                    } else {
+                        throw new InternalServerErrorException();
+                    }
+                })
+                .collect(Collectors.toList());
+
+        return new AlarmListResponseDto(
+                alarmItems,
+                alarms.getNumber(),
+                alarms.getSize(),
+                alarms.isLast()
+        );
     }
 }

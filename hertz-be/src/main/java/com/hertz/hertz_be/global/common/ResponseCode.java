@@ -75,6 +75,8 @@ public class ResponseCode {
      * 알림창 관련 응답 code
      */
     public static final String NOTICE_CREATED_SUCCESS = "NOTICE_CREATED_SUCCESS";
+    public static final String ALARM_FETCH_SUCCESS = "ALARM_FETCH_SUCCESS";
+    public static final String NO_ALARMS = "NO_ALARMS";
 
     /**
      * 매칭 수락/거절 관련 응답 code
