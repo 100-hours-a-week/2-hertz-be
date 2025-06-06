@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum Category {
+public enum ChannelCategory {
     FRIEND("친구", "FRIEND"),
     COUPLE("커플", "COUPLE");
 

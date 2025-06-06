@@ -3,7 +3,7 @@ package com.hertz.hertz_be.domain.channel.service;
 import com.hertz.hertz_be.domain.channel.dto.request.SignalMatchingRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.*;
 import com.hertz.hertz_be.domain.channel.entity.*;
-import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.channel.entity.enums.ChannelCategory;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.dto.request.SendSignalRequestDto;
 import com.hertz.hertz_be.domain.channel.exception.*;
@@ -111,7 +111,7 @@ public class ChannelService {
         SignalRoom signalRoom = SignalRoom.builder()
                 .senderUser(sender)
                 .receiverUser(receiver)
-                .category(Category.FRIEND)
+                .category(ChannelCategory.FRIEND)
                 .senderMatchingStatus(MatchingStatus.SIGNAL)
                 .receiverMatchingStatus(MatchingStatus.SIGNAL)
                 .userPairSignal(userPairSignal)
@@ -245,11 +245,11 @@ public class ChannelService {
     }
 
     private Tuning getOrCreateTuning(User user) {
-        return tuningRepository.findByUserAndCategory(user, Category.FRIEND)
+        return tuningRepository.findByUserAndCategory(user, ChannelCategory.FRIEND)
                 .orElseGet(() -> tuningRepository.save(
                         Tuning.builder()
                                 .user(user)
-                                .category(Category.FRIEND)
+                                .category(ChannelCategory.FRIEND)
                                 .build()));
     }
 
