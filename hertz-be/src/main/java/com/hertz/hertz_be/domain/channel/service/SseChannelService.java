@@ -69,6 +69,7 @@ public class SseChannelService {
     }
 
     public void notifyMatchingConvertedInChannelRoom(SignalRoom room, Long userId) {
+        User partnerUser = room.getPartnerUser(userId);
         boolean isReceiver = Objects.equals(userId, room.getReceiverUser().getId());
 
         MatchingStatus userStatus = isReceiver ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
@@ -77,9 +78,7 @@ public class SseChannelService {
         boolean userMatched = (userStatus != MatchingStatus.SIGNAL);
         boolean partnerMatched = (partnerStatus != MatchingStatus.SIGNAL);
 
-        Long targetUserId = isReceiver ? room.getReceiverUser().getId() : room.getSenderUser().getId();
-
-        sendMatchingConvertedInChannelRoom(targetUserId, room.getId(), userMatched, partnerMatched);
+        sendMatchingConvertedInChannelRoom(userId, room.getId(), userMatched, partnerMatched, partnerUser.getNickname());
     }
 
     private void sendMatchingConvertedSse(Long targetUserId, Long partnerId, String partnerNickname, Long roomId, LocalDateTime matchedAt) {
@@ -94,15 +93,16 @@ public class SseChannelService {
         if (result){log.info("[페이지 상관 없이 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);}
     }
 
-    private void sendMatchingConvertedInChannelRoom(Long targetUserId, Long roomId, boolean hasResponded, boolean partnerHasResponded) {
+    private void sendMatchingConvertedInChannelRoom(Long userId, Long roomId, boolean hasResponded, boolean partnerHasResponded, String partnerNickName) {
         MatchingConvertedInChannelRoomResponseDto dto = MatchingConvertedInChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .hasResponded(hasResponded)
                 .partnerHasResponded(partnerHasResponded)
+                .partnerNickname(partnerNickName)
                 .build();
 
-        boolean result = sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
-        if (result){log.info("[채팅방 안에서 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);}
+        boolean result = sseService.sendToClient(userId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
+        if (result){log.info("[채팅방 안에서 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", userId, roomId);}
     }
 
     public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
