@@ -97,5 +97,15 @@ public class SignalRoom {
         return "UNMATCHING";
     }
 
+    /**
+     * 현재 유저가 SignalRoom을 나갔는지 아닌지 여부
+     */
+    public boolean isUserExited(Long userId) {
+        boolean isSender = senderUser.getId().equals(userId);
+        LocalDateTime exitedAt = isSender ? senderExitedAt : receiverExitedAt;
+        return exitedAt != null;
+    }
+
+
 }
 
