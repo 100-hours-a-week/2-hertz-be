@@ -76,9 +76,10 @@ public class SignalRoom {
     public String getRelationType() {
         if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
             return "MATCHING";
-        }
-        // 상황에 따라 ENUM으로 바꿔도 됨
-        return "SIGNAL";
+        } else if (senderMatchingStatus == MatchingStatus.SIGNAL && receiverMatchingStatus == MatchingStatus.SIGNAL) {
+            return "SIGNAL";
+        }// 상황에 따라 ENUM으로 바꿔도 됨
+        return "UNMATCHING";
     }
 
 }
