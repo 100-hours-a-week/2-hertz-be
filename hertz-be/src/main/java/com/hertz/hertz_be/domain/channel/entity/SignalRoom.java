@@ -50,6 +50,16 @@ public class SignalRoom {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @CreationTimestamp
+    @Column(name = "receiver_exited_at")
+    @Builder.Default
+    private LocalDateTime receiverExitedAt = null;
+
+    @CreationTimestamp
+    @Column(name = "sender_exited_at")
+    @Builder.Default
+    private LocalDateTime senderExitedAt = null;
+
     @OneToMany(mappedBy = "signalRoom")
     @Builder.Default
     private List<SignalMessage> messages = new ArrayList<>();
