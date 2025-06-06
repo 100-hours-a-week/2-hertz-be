@@ -11,4 +11,7 @@ public class NewMessageResponseDto {
     private Long partnerId;
     private String partnerNickname;
     private String message;
+    private String messageSendAt;
+    private String partnerProfileImage;
+    private String relationType;
 }

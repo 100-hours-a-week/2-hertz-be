@@ -159,6 +159,9 @@ public class SseChannelService {
                 .partnerId(signalMessage.getSenderUser().getId())
                 .partnerNickname(signalMessage.getSenderUser().getNickname())
                 .message(decryptedMessage)
+                .messageSendAt(String.valueOf(signalMessage.getSendAt()))
+                .partnerProfileImage(signalMessage.getSenderUser().getProfileImageUrl())
+                .relationType(signalMessage.getSignalRoom().getRelationType())
                 .build();
 
         boolean result = sseService.sendToClient(partnerId, eventName.getValue(), dto);
