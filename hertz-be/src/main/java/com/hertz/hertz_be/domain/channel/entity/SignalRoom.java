@@ -90,11 +90,11 @@ public class SignalRoom {
      */
     public String getRelationType() {
         if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
-            return "MATCHING";
+            return MatchingStatus.MATCHED.getValue();
         } else if (senderMatchingStatus == MatchingStatus.SIGNAL && receiverMatchingStatus == MatchingStatus.SIGNAL) {
-            return "SIGNAL";
-        }// 상황에 따라 ENUM으로 바꿔도 됨
-        return "UNMATCHING";
+            return MatchingStatus.SIGNAL.getValue();
+        }
+        return MatchingStatus.UNMATCHED.getValue();
     }
 
     /**
