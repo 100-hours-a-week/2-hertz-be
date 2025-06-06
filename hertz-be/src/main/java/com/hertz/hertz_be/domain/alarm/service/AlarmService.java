@@ -6,6 +6,7 @@ import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
 import com.hertz.hertz_be.domain.alarm.entity.*;
+import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
@@ -69,7 +70,7 @@ public class AlarmService {
 
                     if (alarm instanceof AlarmNotification notification) {
                         return new NoticeAlarm(
-                                "NOTICE",
+                                AlarmCategory.NOTICE.getValue(),
                                 notification.getTitle(),
                                 notification.getContent(),
                                 notification.getCreatedAt().toString()
@@ -80,14 +81,14 @@ public class AlarmService {
                         Long channelRoomId = signalRoom.isUserExited(userId) ? null : signalRoom.getId();
 
                         return new MatchingAlarm(
-                                "MATCHING",
+                                AlarmCategory.MATCHING.getValue(),
                                 matching.getTitle(),
                                 channelRoomId,
                                 matching.getCreatedAt().toString()
                         );
                     } else if (alarm instanceof AlarmReport report) {
                         return new ReportAlarm(
-                                "REPORT",
+                                AlarmCategory.REPORT.getValue(),
                                 report.getTitle(),
                                 report.getCreatedAt().toString()
                         );
