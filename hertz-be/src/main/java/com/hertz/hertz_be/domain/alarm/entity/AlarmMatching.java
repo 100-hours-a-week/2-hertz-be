@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.alarm.entity;
 
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,10 @@ public class AlarmMatching extends Alarm{
 
     @Column(name = "partner_nickname", nullable = false)
     private String partnerNickname;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "signal_room_id", nullable = false)
+    private SignalRoom signalRoom;
 
     @Column(name = "is_matched", nullable = false)
     private boolean isMatched;

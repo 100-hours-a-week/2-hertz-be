@@ -1,7 +1,6 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.channel.entity.enums.ChannelCategory;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -33,7 +32,7 @@ public class Tuning {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
-    private Category category;
+    private ChannelCategory category;
 
     @CreationTimestamp
     @Column(nullable = false)

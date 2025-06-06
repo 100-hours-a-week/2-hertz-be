@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
-import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
+import com.hertz.hertz_be.domain.channel.entity.enums.ChannelCategory;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -33,7 +34,7 @@ public class SignalRoom {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private Category category;
+    private ChannelCategory category;
 
     @Column(name = "user_pair_signal", nullable = false, unique = true, length = 35)
     private String userPairSignal;
@@ -50,9 +51,23 @@ public class SignalRoom {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @CreationTimestamp
+    @Column(name = "receiver_exited_at")
+    @Builder.Default
+    private LocalDateTime receiverExitedAt = null;
+
+    @CreationTimestamp
+    @Column(name = "sender_exited_at")
+    @Builder.Default
+    private LocalDateTime senderExitedAt = null;
+
     @OneToMany(mappedBy = "signalRoom")
     @Builder.Default
     private List<SignalMessage> messages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "signalRoom")
+    @Builder.Default
+    private List<AlarmMatching> alarms = new ArrayList<>();
 
     /**
      * 현재 유저 기준으로 상대방을 반환
@@ -75,12 +90,22 @@ public class SignalRoom {
      */
     public String getRelationType() {
         if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
-            return "MATCHING";
+            return MatchingStatus.MATCHED.getValue();
         } else if (senderMatchingStatus == MatchingStatus.SIGNAL && receiverMatchingStatus == MatchingStatus.SIGNAL) {
-            return "SIGNAL";
-        }// 상황에 따라 ENUM으로 바꿔도 됨
-        return "UNMATCHING";
+            return MatchingStatus.SIGNAL.getValue();
+        }
+        return MatchingStatus.UNMATCHED.getValue();
     }
+
+    /**
+     * 현재 유저가 SignalRoom을 나갔는지 아닌지 여부
+     */
+    public boolean isUserExited(Long userId) {
+        boolean isSender = senderUser.getId().equals(userId);
+        LocalDateTime exitedAt = isSender ? senderExitedAt : receiverExitedAt;
+        return exitedAt != null;
+    }
+
 
 }
 
