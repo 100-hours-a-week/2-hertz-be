@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
+import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -63,6 +64,10 @@ public class SignalRoom {
     @OneToMany(mappedBy = "signalRoom")
     @Builder.Default
     private List<SignalMessage> messages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "signalRoom")
+    @Builder.Default
+    private List<AlarmMatching> alarms = new ArrayList<>();
 
     /**
      * 현재 유저 기준으로 상대방을 반환
