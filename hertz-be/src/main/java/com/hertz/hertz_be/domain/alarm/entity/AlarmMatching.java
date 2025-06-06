@@ -23,6 +23,9 @@ public class AlarmMatching extends Alarm{
     @Column(name = "partner_nickname", nullable = false)
     private String partnerNickname;
 
+    @Column(name = "channel_roomId", nullable = false)
+    private Long channelRoomId;
+
     @Column(name = "is_matched", nullable = false)
     private boolean isMatched;
 }
