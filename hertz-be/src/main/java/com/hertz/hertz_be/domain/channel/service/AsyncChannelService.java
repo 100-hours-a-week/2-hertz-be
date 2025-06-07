@@ -150,7 +150,10 @@ public class AsyncChannelService {
         boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
         MatchingStatus partnerMatchingStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
 
-        if (partnerMatchingStatus == MatchingStatus.SIGNAL) { return; }
+        if (partnerMatchingStatus == MatchingStatus.SIGNAL) {
+            log.info("[{} 상대방의 상태]", partnerMatchingStatus);
+            return;
+        }
         alarmService.createMatchingAlarm(latestRoomForm, user, partner);
     }
 }

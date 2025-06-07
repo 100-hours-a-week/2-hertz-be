@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.alarm.service;
 
+import static com.hertz.hertz_be.global.util.MessageCreatorUtil.*;
 import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.AlarmItem;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
@@ -105,14 +106,6 @@ public class AlarmService {
 
         userAlarmRepository.save(userAlarmForPartner);
 
-    }
-
-    public String createSuccessMessage(String nickname) {
-        return String.format("🎉 축하드려요, ‘%s’님과 매칭에 성공했습니다!", nickname);
-    }
-
-    public String createFailureMessage(String nickname) {
-        return String.format("😥 아쉽지만, ‘%s’님과의 매칭은 성사되지 않았습니다.", nickname);
     }
 
     @Transactional(readOnly = true)
