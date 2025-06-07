@@ -470,6 +470,7 @@ public class ChannelService {
             @Override
             public void afterCommit() {
                 asyncChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+                asyncChannelService.createMatchingAlarm(room, userId);
             }
         });
 
