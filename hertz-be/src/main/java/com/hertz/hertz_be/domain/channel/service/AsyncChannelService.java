@@ -125,17 +125,18 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        User partner = room.getPartnerUser(userId);
+        SignalRoom latestRoomForm = entityManager.find(SignalRoom.class, room.getId());
+        User partner = latestRoomForm.getPartnerUser(userId);
         User user = userRepository.findByIdWithSentSignalRooms(userId)
                 .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
-        boolean isSender = Objects.equals(userId, room.getSenderUser().getId());
-        MatchingStatus partnerStatus = isSender ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+        boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
+        MatchingStatus partnerStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
 
         if (partnerStatus == MatchingStatus.SIGNAL) {
-            sseChannelService.notifyMatchingConfirmedToPartner(room, user, partner);
+            sseChannelService.notifyMatchingConfirmedToPartner(latestRoomForm, user, partner);
         } else {
-            sseChannelService.notifyMatchingResultToPartner(room, user, partner, matchingStatus);
+            sseChannelService.notifyMatchingResultToPartner(latestRoomForm, user, partner, matchingStatus);
         }
     }
 
@@ -150,10 +151,7 @@ public class AsyncChannelService {
         boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
         MatchingStatus partnerMatchingStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
 
-        if (partnerMatchingStatus == MatchingStatus.SIGNAL) {
-            log.info("[{} 상대방의 상태]", partnerMatchingStatus);
-            return;
-        }
+        if (partnerMatchingStatus == MatchingStatus.SIGNAL) { return; }
         alarmService.createMatchingAlarm(latestRoomForm, user, partner);
     }
 }
