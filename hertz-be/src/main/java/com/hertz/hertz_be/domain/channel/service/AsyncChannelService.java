@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.service;
 
+import com.hertz.hertz_be.domain.alarm.service.AlarmService;
 import com.hertz.hertz_be.domain.channel.dto.object.UserMessageCountDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
@@ -42,6 +43,7 @@ public class AsyncChannelService {
     private final SignalMessageRepository signalMessageRepository;
     private final SseChannelService sseChannelService;
     private final UserRepository userRepository;
+    private final AlarmService alarmService;
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
@@ -123,17 +125,33 @@ public class AsyncChannelService {
     @Async
     @Transactional
     public void notifyMatchingResultToPartner(SignalRoom room, Long userId, MatchingStatus matchingStatus) {
-        User partner = room.getPartnerUser(userId);
+        SignalRoom latestRoomForm = entityManager.find(SignalRoom.class, room.getId());
+        User partner = latestRoomForm.getPartnerUser(userId);
         User user = userRepository.findByIdWithSentSignalRooms(userId)
                 .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
-        boolean isSender = Objects.equals(userId, room.getSenderUser().getId());
-        MatchingStatus partnerStatus = isSender ? room.getReceiverMatchingStatus() : room.getSenderMatchingStatus();
+        boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
+        MatchingStatus partnerStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
 
         if (partnerStatus == MatchingStatus.SIGNAL) {
-            sseChannelService.notifyMatchingConfirmedToPartner(room, user, partner);
+            sseChannelService.notifyMatchingConfirmedToPartner(latestRoomForm, user, partner);
         } else {
-            sseChannelService.notifyMatchingResultToPartner(room, user, partner, matchingStatus);
+            sseChannelService.notifyMatchingResultToPartner(latestRoomForm, user, partner, matchingStatus);
         }
+    }
+
+    @Async
+    @Transactional
+    public void createMatchingAlarm(SignalRoom room, Long userId) {
+        SignalRoom latestRoomForm = entityManager.find(SignalRoom.class, room.getId());
+        User partner = latestRoomForm.getPartnerUser(userId);
+        User user = userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
+        MatchingStatus partnerMatchingStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
+
+        if (partnerMatchingStatus == MatchingStatus.SIGNAL) { return; }
+        alarmService.createMatchingAlarm(latestRoomForm, user, partner);
     }
 }

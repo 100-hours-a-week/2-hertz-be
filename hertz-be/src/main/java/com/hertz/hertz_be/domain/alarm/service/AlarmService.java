@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.alarm.service;
 
+import static com.hertz.hertz_be.global.util.MessageCreatorUtil.*;
 import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.AlarmItem;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
@@ -7,10 +8,12 @@ import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
 import com.hertz.hertz_be.domain.alarm.entity.*;
 import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
+import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
@@ -23,12 +26,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AlarmService {
     private final AlarmNotificationRepository alarmNotificationRepository;
+    private final AlarmMatchingRepository alarmMatchingRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
 
@@ -55,6 +60,52 @@ public class AlarmService {
                 .toList();
 
         userAlarmRepository.saveAll(userAlarms);
+    }
+
+    @Transactional
+    public void createMatchingAlarm(SignalRoom room, User user, User partner) {
+        String alarmTitleForUser;
+        String alarmTitleForPartner;
+        if (Objects.equals(room.getRelationType(), MatchingStatus.UNMATCHED.getValue())) {
+            alarmTitleForUser = createFailureMessage(partner.getNickname());
+            alarmTitleForPartner = createFailureMessage(user.getNickname());
+        } else {
+            alarmTitleForUser = createSuccessMessage(partner.getNickname());
+            alarmTitleForPartner = createSuccessMessage(user.getNickname());
+        }
+
+        AlarmMatching alarmMatchingForUser = AlarmMatching.builder()
+                .title(alarmTitleForUser)
+                .partner(partner)
+                .partnerNickname(partner.getNickname())
+                .signalRoom(room)
+                .isMatched(false)
+                .build();
+        AlarmMatching savedAlarmForUser = alarmMatchingRepository.save(alarmMatchingForUser);
+
+        UserAlarm userAlarmForUser = UserAlarm.builder()
+                .alarm(savedAlarmForUser)
+                .user(user)
+                .build();
+
+        userAlarmRepository.save(userAlarmForUser);
+
+        AlarmMatching alarmMatchingForPartner = AlarmMatching.builder()
+                .title(alarmTitleForPartner)
+                .partner(user)
+                .partnerNickname(user.getNickname())
+                .signalRoom(room)
+                .isMatched(false)
+                .build();
+        AlarmMatching savedAlarmForPartner = alarmMatchingRepository.save(alarmMatchingForPartner);
+
+        UserAlarm userAlarmForPartner = UserAlarm.builder()
+                .alarm(savedAlarmForPartner)
+                .user(partner)
+                .build();
+
+        userAlarmRepository.save(userAlarmForPartner);
+
     }
 
     @Transactional(readOnly = true)
