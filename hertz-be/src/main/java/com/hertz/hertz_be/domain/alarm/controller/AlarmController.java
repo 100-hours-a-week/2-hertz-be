@@ -47,7 +47,7 @@ public class AlarmController {
                 ResponseCode.ALARM_FETCH_SUCCESS, "알림이 정상적으로 조회되었습니다.", dto));
     }
 
-    @DeleteMapping("/api/v2/users/alarms/{alarmId}")
+    @DeleteMapping("/v2/users/alarms/{alarmId}")
     @Operation(summary = "특정 알림 삭제 API")
     public  ResponseEntity<ResponseDto<Void>> deleteAlarm(@PathVariable Long alarmId, @AuthenticationPrincipal Long userId) {
         alarmService.deleteAlarm(alarmId, userId);
