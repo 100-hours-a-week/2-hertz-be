@@ -41,7 +41,7 @@ public class Alarm {
     @Builder.Default
     private LocalDateTime deletedAt = null;
 
-    @OneToMany(mappedBy = "alarm", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "alarm", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private List<UserAlarm> users = new ArrayList<>();
 }
