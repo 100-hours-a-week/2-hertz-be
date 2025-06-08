@@ -1,6 +1,9 @@
 package com.hertz.hertz_be.domain.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
+import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
+import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
@@ -46,6 +49,8 @@ public class UserService {
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final TuningResultRepository tuningResultRepository;
+    private final AlarmNotificationRepository alarmNotificationRepository;
+    private final UserAlarmRepository userAlarmRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
@@ -205,6 +210,10 @@ public class UserService {
         userInterestsRepository.deleteAllByUser(user);
 
         tuningResultRepository.deleteAllByMatchedUser(user);
+
+        List<AlarmNotification> notifications = alarmNotificationRepository.findAllByWriter(user);
+        notifications.forEach(n -> n.removeWriter());
+        alarmNotificationRepository.saveAll(notifications);
 
         userRepository.delete(user);
     }

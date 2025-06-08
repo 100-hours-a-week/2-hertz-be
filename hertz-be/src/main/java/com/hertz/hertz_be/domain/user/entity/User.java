@@ -97,7 +97,7 @@ public class User {
     @Builder.Default
     private List<Tuning> recommendListByCategory = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private List<UserAlarm> alarms = new ArrayList<>();
 
