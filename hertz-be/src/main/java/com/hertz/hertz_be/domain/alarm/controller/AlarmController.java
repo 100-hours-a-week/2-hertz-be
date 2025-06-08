@@ -33,7 +33,7 @@ public class AlarmController {
         );
     }
 
-    @GetMapping("/api/v2/alarms")
+    @GetMapping("/v2/alarms")
     @Operation(summary = "특정 사용자를 위한 최근 30일 동안 모든 알림 반환 API")
     public ResponseEntity<ResponseDto<AlarmListResponseDto>> getAlarmList(@RequestParam(defaultValue = "0") int page,
                                                                           @RequestParam(defaultValue = "10") int size,
@@ -45,6 +45,14 @@ public class AlarmController {
         }
         return ResponseEntity.ok(new ResponseDto<>(
                 ResponseCode.ALARM_FETCH_SUCCESS, "알림이 정상적으로 조회되었습니다.", dto));
+    }
+
+    @DeleteMapping("/v2/users/alarms/{alarmId}")
+    @Operation(summary = "특정 알림 삭제 API")
+    public  ResponseEntity<ResponseDto<Void>> deleteAlarm(@PathVariable Long alarmId, @AuthenticationPrincipal Long userId) {
+        alarmService.deleteAlarm(alarmId, userId);
+        return ResponseEntity.ok(new ResponseDto<>(
+                ResponseCode.ALARM_DELETE_SUCCESS, "알림이 성공적으로 삭제되었습니다.", null));
     }
 
 }

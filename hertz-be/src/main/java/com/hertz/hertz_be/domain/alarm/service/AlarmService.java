@@ -11,6 +11,7 @@ import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
+import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 public class AlarmService {
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
+    private final AlarmRepository alarmRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
 
@@ -155,5 +157,13 @@ public class AlarmService {
                 alarms.getSize(),
                 alarms.isLast()
         );
+    }
+
+    @Transactional
+    public void deleteAlarm(Long alarmId, Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        alarmRepository.deleteById(alarmId);
     }
 }

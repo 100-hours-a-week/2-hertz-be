@@ -21,6 +21,10 @@ public class AlarmNotification extends Alarm{
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "writer_id", nullable = false)
+    @JoinColumn(name = "writer_id", nullable = true)
     private User writer;
+
+    public void removeWriter() {
+        this.writer = null;
+    }
 }

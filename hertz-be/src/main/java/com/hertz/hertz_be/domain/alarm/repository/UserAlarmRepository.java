@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.alarm.repository;
 
 import com.hertz.hertz_be.domain.alarm.entity.UserAlarm;
+import com.hertz.hertz_be.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +25,6 @@ public interface UserAlarmRepository extends JpaRepository<UserAlarm, Long> {
             @Param("thresholdDate") LocalDateTime thresholdDate,
             Pageable pageable
     );
+
+    void deleteAllByUser(User user);
 }
