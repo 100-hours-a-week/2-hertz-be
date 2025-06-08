@@ -33,7 +33,7 @@ public class AlarmController {
         );
     }
 
-    @GetMapping("/api/v2/alarms")
+    @GetMapping("/v2/alarms")
     @Operation(summary = "특정 사용자를 위한 최근 30일 동안 모든 알림 반환 API")
     public ResponseEntity<ResponseDto<AlarmListResponseDto>> getAlarmList(@RequestParam(defaultValue = "0") int page,
                                                                           @RequestParam(defaultValue = "10") int size,
