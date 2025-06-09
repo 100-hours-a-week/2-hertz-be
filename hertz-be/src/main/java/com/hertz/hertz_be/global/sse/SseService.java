@@ -74,7 +74,7 @@ public class SseService {
     public boolean sendToClient(Long userId, String eventName, Object data) {
         String storedToken = refreshTokenService.getRefreshToken(userId);
         if (storedToken == null) {
-            sendErrorAndComplete(null, ResponseCode.REFRESH_TOKEN_INVALID, "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
+            sendErrorAndComplete(userId, ResponseCode.REFRESH_TOKEN_INVALID, "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
             return false;
         }
 
@@ -101,6 +101,8 @@ public class SseService {
             emitter.send(SseEmitter.event()
                     .name("error")
                     .data(Map.of("code", code, "message", message)));
+            emitter.complete();
+            emitters.remove(userId);
         } catch (IOException ex) {
             emitter.complete();
             emitters.remove(userId);
