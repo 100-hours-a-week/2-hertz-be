@@ -74,7 +74,7 @@ public class SseService {
     public boolean sendToClient(Long userId, String eventName, Object data) {
         String storedToken = refreshTokenService.getRefreshToken(userId);
         if (storedToken == null) {
-            sendErrorAndComplete(userId, ResponseCode.REFRESH_TOKEN_INVALID, "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
+            sendErrorAndComplete(userId, ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요.");
             return false;
         }
 
