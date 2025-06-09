@@ -1,11 +1,4 @@
 package com.hertz.hertz_be.domain.auth.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@Getter
-@AllArgsConstructor
-public class ReissueAccessTokenResponseDto {
-    private String accessToken;
-}
+public record ReissueAccessTokenResponseDto(String accessToken) {}
 
