@@ -51,21 +51,21 @@ public class OAuthController {
     ) {
         OAuthLoginResult result = oAuthService.oauthLogin(provider, request);
 
-        if (result.isRegistered()) {
-            String newRefreshToken = result.getRefreshToken();
+        if (result.registered()) {
+            String newRefreshToken = result.refreshToken();
 
             AuthUtil.setRefreshTokenCookie(response, newRefreshToken, maxAgeSeconds, isLocal);
 
-            OAuthLoginResponseDto dto = new OAuthLoginResponseDto(result.getUserId(), result.getAccessToken());
+            OAuthLoginResponseDto dto = new OAuthLoginResponseDto(result.userId(), result.accessToken());
 
-            boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.getUserId()));
+            boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.userId()));
             if (!hasSelectedInterests) {
                 return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "사용자가 아직 취향 선택을 완료하지 않았습니다.", dto));
             }
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));
 
         } else {
-            OAuthSignupResponseDto dto = new OAuthSignupResponseDto(result.getProviderId());
+            OAuthSignupResponseDto dto = new OAuthSignupResponseDto(result.providerId());
             return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_NOT_REGISTERED, "신규 회원입니다.", dto));
         }
     }
