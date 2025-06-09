@@ -6,7 +6,6 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
-import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
@@ -55,8 +54,8 @@ public class AsyncChannelService {
 
         Map<Long, Long> countMap = counts.stream()
                 .collect(Collectors.toMap(
-                        UserMessageCountDto::getUserId,
-                        UserMessageCountDto::getMessageCount
+                        UserMessageCountDto::userId,
+                        UserMessageCountDto::messageCount
                 ));
 
         if (shouldNotifyMatchingConverted(room, countMap)) {
