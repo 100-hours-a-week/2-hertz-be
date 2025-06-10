@@ -109,7 +109,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/users")
-    @Operation(summary = "DB에 있는 모든 사용자 정보를 삭제하는 API (테스트용)")
+    @Operation(summary = "DB에 있는 모든 사용자 정보 및 과련 모든 데이터를 삭제하는 API (테스트용)")
     public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
         userService.deleteAllUsers();
         return ResponseEntity.status(204).body(

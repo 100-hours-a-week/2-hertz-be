@@ -2,16 +2,21 @@ package com.hertz.hertz_be.domain.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
+import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
+import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
+import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
+import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.InterestsDTO;
 import com.hertz.hertz_be.domain.user.dto.response.KeywordsDTO;
@@ -51,6 +56,10 @@ public class UserService {
     private final TuningResultRepository tuningResultRepository;
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final UserAlarmRepository userAlarmRepository;
+    private final AlarmMatchingRepository alarmMatchingRepository;
+    private final TuningReportRepository tuningReportRepository;
+    private final TuningReportUserReactionRepository tuningReportUserReactionRepository;
+    private final TuningRepository tuningRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final long TIMEOUT_NANOS = 5_000_000_000L; // // 5초 = 5_000_000_000 나노초
 
@@ -224,6 +233,12 @@ public class UserService {
         signalRoomRepository.deleteAll();
         userInterestsRepository.deleteAll();
         tuningResultRepository.deleteAll();
+        tuningRepository.deleteAll();
+        userAlarmRepository.deleteAll();
+        alarmMatchingRepository.deleteAll();
+        alarmNotificationRepository.deleteAll();
+        tuningReportUserReactionRepository.deleteAll();
+        tuningReportRepository.deleteAll();
         userRepository.deleteAll();
     }
 }
