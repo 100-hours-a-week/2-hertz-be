@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.tuningreport.entity;
 
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,6 +9,7 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -16,11 +18,16 @@ import java.time.LocalDateTime;
 @SQLDelete(sql = "UPDATE tuning_report SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
 @Table(name = "tuning_report")
+@Builder
 public class TuningReport {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToOne
+    @JoinColumn(name = "signal_room_id", nullable = false, unique = true)
+    private SignalRoom signalRoom;
 
     @Column(length = 50, nullable = false)
     private String title;
@@ -47,6 +54,13 @@ public class TuningReport {
     @Column(name = "reaction_heart", nullable = false)
     @ColumnDefault("0")
     private int reactionHeart;
+
+    @Column(name = "email_domain", nullable = false)
+    private String emailDomain;
+
+    @Column(name = "is_visible", nullable = false)
+    @ColumnDefault("false")
+    private boolean isVisible;
 
     @Version
     @Column(name = "version")
@@ -89,5 +103,17 @@ public class TuningReport {
             case EYES -> this.reactionEyes = Math.max(0, this.reactionEyes - 1);
             case HEART -> this.reactionHeart = Math.max(0, this.reactionHeart - 1);
         }
+    }
+
+    public static TuningReport of(SignalRoom signalRoom, String emailDomain, Map<String, Object> response) {
+        Map<String, Object> dataMap = (Map<String, Object>) response.get("data");
+        return TuningReport.builder()
+                .signalRoom(signalRoom)
+                .title((String) dataMap.get("title"))
+                .content((String) dataMap.get("content"))
+                .emailDomain(emailDomain)
+                .isVisible(false)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 }
