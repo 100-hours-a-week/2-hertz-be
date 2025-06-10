@@ -131,4 +131,12 @@ public class ChannelController {
                             , "매칭 거절이 완료되었습니다."
                             , null));
     }
+
+    @DeleteMapping("/v2/channel-rooms/{channelRoomId}")
+    @Operation(summary = "채널방 나가기 API")
+    public ResponseEntity<ResponseDto<Void>> leaveChannelRoom(@PathVariable Long channelRoomId,
+                                                              @AuthenticationPrincipal Long userId) {
+        channelService.leaveChannelRoom(channelRoomId, userId);
+        return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_EXIT_SUCCESS, "채널방에서 정상적으로 나갔습니다.", null));
+    }
 }

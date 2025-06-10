@@ -481,4 +481,15 @@ public class ChannelService {
             return ResponseCode.MATCH_REJECTION_SUCCESS;
         }
     }
+
+
+    @Transactional
+    public void leaveChannelRoom(Long roomId, Long userId) {
+        SignalRoom room = signalRoomRepository.findById(roomId)
+                .orElseThrow(ChannelNotFoundException::new);
+        userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        room.leaveChannelRoom(userId);
+    }
 }
