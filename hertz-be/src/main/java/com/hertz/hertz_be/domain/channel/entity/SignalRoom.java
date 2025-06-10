@@ -89,10 +89,10 @@ public class SignalRoom {
     public String getRelationType() {
         if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
             return MatchingStatus.MATCHED.getValue();
-        } else if (senderMatchingStatus == MatchingStatus.SIGNAL && receiverMatchingStatus == MatchingStatus.SIGNAL) {
-            return MatchingStatus.SIGNAL.getValue();
+        } else if (senderMatchingStatus == MatchingStatus.UNMATCHED || receiverMatchingStatus == MatchingStatus.UNMATCHED) {
+            return MatchingStatus.UNMATCHED.getValue();
         }
-        return MatchingStatus.UNMATCHED.getValue();
+        return MatchingStatus.SIGNAL.getValue();
     }
 
     /**

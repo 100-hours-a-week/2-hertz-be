@@ -41,6 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -353,15 +354,20 @@ public class ChannelService {
 
     }
 
-    // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+
         if (result.isEmpty()) {
             return null;
         }
 
         List<ChannelSummaryDto> list = result.getContent().stream()
+                .filter(p -> {
+                    boolean isSender = userId.equals(p.getSenderUserId());
+                    LocalDateTime exitedAt = isSender ? p.getSenderExitedAt() : p.getReceiverExitedAt();
+                    return exitedAt == null;
+                })
                 .map(p -> ChannelSummaryDto.fromProjectionWithDecrypt(p, aesUtil))
                 .toList();
 
@@ -369,12 +375,16 @@ public class ChannelService {
     }
 
     @Transactional
-    public ChannelRoomResponseDto getChannelRoomMessages(Long roomId, Long userId, int page, int size) {
+    public ChannelRoomResponseDto getChannelRoom(Long roomId, Long userId, int page, int size) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(ChannelNotFoundException::new);
 
         if (!room.isParticipant(userId)) {
             throw new ForbiddenChannelException();
+        }
+
+        if (room.isUserExited(userId)) {
+            throw new AlreadyExitedChannelRoomException();
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();

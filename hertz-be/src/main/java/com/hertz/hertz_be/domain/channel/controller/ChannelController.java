@@ -74,7 +74,7 @@ public class ChannelController {
                                                                                       @RequestParam(defaultValue = "0") int page,
                                                                                       @RequestParam(defaultValue = "20") int size) {
 
-        ChannelRoomResponseDto response = channelService.getChannelRoomMessages(channelRoomId, userId, page, size);
+        ChannelRoomResponseDto response = channelService.getChannelRoom(channelRoomId, userId, page, size);
         return ResponseEntity.ok(new ResponseDto<>("CHANNEL_ROOM_SUCCESS", "채널방이 정상적으로 조회되었습니다.", response));
     }
 

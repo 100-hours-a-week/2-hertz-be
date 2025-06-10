@@ -10,4 +10,8 @@ public interface ChannelRoomProjection {
     String getRelationType();
     String getPartnerNickname();
     String getPartnerProfileImage();
+    LocalDateTime getSenderExitedAt();
+    LocalDateTime getReceiverExitedAt();
+    Long getSenderUserId();
+    Long getReceiverUserId();
 }
