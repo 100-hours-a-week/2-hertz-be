@@ -1,7 +1,7 @@
 package com.hertz.hertz_be.domain.channel.entity;
 
 import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
-import com.hertz.hertz_be.domain.channel.entity.enums.ChannelCategory;
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -38,7 +38,7 @@ public class SignalRoom {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private ChannelCategory category;
+    private Category category;
 
     @Column(name = "user_pair_signal", nullable = false, unique = true, length = 35)
     private String userPairSignal;
