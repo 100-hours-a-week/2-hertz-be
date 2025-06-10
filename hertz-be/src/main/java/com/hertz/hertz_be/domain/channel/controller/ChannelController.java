@@ -58,7 +58,6 @@ public class ChannelController {
                                                                                          @RequestParam(defaultValue = "0") int page,
                                                                                          @RequestParam(defaultValue = "10") int size) {
 
-        // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
         ChannelListResponseDto response = channelService.getPersonalSignalRoomList(userId, page, size);
 
         if (response == null) {
