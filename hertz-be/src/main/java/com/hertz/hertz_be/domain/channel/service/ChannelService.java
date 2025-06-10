@@ -121,7 +121,7 @@ public class ChannelService {
         try {
             signalRoomRepository.save(signalRoom);
         } catch (DataIntegrityViolationException e) {
-            throw new AlreadyInConversationException(); // 중복 방 생성 시도 감지
+            throw new AlreadyInConversationException();
         }
 
         String encryptMessage = aesUtil.encrypt(dto.getMessage());
@@ -338,11 +338,9 @@ public class ChannelService {
             List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
             List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
 
-            // 교집합 추출
             Set<String> common = new HashSet<>(list1);
             common.retainAll(list2);
 
-            // 값이 있으면 1개만 반환, 없으면 빈 리스트
             if (!common.isEmpty()) {
                 sameInterests.put(category, List.of(common.iterator().next()));
             } else {
@@ -388,21 +386,20 @@ public class ChannelService {
         }
 
         Long partnerId = room.getPartnerUser(userId).getId();
-        // Todo: AI 쪽 DB에만 사용자 남아있는 경우 410 발생하며 모든 사용자 서비스 사용 불가능한 부분 리팩토링 필요
+
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
                 .orElseThrow(() -> new UserException("USER_DEACTIVATED", "상대방이 탈퇴한 사용자입니다."));
 
         Optional<RoomWithLastSenderProjection> result = signalMessageRepository.findRoomsWithLastSender(roomId);
 
-        // 마지막 메세지를 보낸 사람이
         if(result.isPresent()){
             RoomWithLastSenderProjection lastSender = result.get();
-            if (!Objects.equals(lastSender.getLastSenderId(), userId)) { // 내가 아닐 경우
-                signalMessageRepository.markAllMessagesAsReadByRoomId(roomId); // isRead = true 처리
+            if (!Objects.equals(lastSender.getLastSenderId(), userId)) {
+                signalMessageRepository.markAllMessagesAsReadByRoomId(roomId);
             }
         }
 
-        asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId); // 비동기 실행
+        asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
 
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
@@ -441,7 +438,6 @@ public class ChannelService {
 
         String encryptMessage = aesUtil.encrypt(response.getMessage());
 
-        // 메시지 저장
         SignalMessage signalMessage = SignalMessage.builder()
                 .signalRoom(room)
                 .senderUser(user)
@@ -484,7 +480,10 @@ public class ChannelService {
             }
         });
 
-        // 매칭 수락/거절 후 현재 관계
+
+        /**
+         * 매칭 수락/거절 후 현재 관계 반환
+         */
         if(matchingStatus == MatchingStatus.MATCHED) {
             return signalRoomRepository.findMatchResultByUser(userId, room.getId());
         } else {
