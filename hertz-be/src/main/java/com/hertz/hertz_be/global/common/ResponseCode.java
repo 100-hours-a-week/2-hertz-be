@@ -45,6 +45,8 @@ public class ResponseCode {
     public static final String ALREADY_IN_CONVERSATION = "ALREADY_IN_CONVERSATION";
     public static final String NEW_MESSAGE = "NEW_MESSAGE";
     public static final String NO_ANY_NEW_MESSAGE = "NO_ANY_NEW_MESSAGE";
+    public static final String CHANNEL_ROOM_EXIT_SUCCESS = "CHANNEL_ROOM_EXIT_SUCCESS";
+    public static final String ALREADY_EXITED_CHANNEL_ROOM = "ALREADY_EXITED_CHANNEL_ROOM";
 
     // 튜닝 추천 상대 반환 로직 관련 응답 code
     public static final String USER_INTERESTS_NOT_SELECTED = "USER_INTERESTS_NOT_SELECTED";

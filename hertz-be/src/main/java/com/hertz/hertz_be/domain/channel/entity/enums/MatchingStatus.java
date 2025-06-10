@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MatchingStatus {
     SIGNAL("시그널", "SIGNAL"),
-    MATCHED("매칭 수락", "MATCHED"),
+    MATCHED("매칭 수락", "MATCHING"),
     UNMATCHED("매칭 거절", "UNMATCHED");
 
     private final String label;

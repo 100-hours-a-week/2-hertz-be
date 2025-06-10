@@ -58,7 +58,6 @@ public class ChannelController {
                                                                                          @RequestParam(defaultValue = "0") int page,
                                                                                          @RequestParam(defaultValue = "10") int size) {
 
-        // Todo: 추후 시그널 -> 채널로 마이그레이션 시 메소드명 변경 필요 (getPersonalSignalRoomList -> getPersonalChannelList)
         ChannelListResponseDto response = channelService.getPersonalSignalRoomList(userId, page, size);
 
         if (response == null) {
@@ -74,7 +73,7 @@ public class ChannelController {
                                                                                       @RequestParam(defaultValue = "0") int page,
                                                                                       @RequestParam(defaultValue = "20") int size) {
 
-        ChannelRoomResponseDto response = channelService.getChannelRoomMessages(channelRoomId, userId, page, size);
+        ChannelRoomResponseDto response = channelService.getChannelRoom(channelRoomId, userId, page, size);
         return ResponseEntity.ok(new ResponseDto<>("CHANNEL_ROOM_SUCCESS", "채널방이 정상적으로 조회되었습니다.", response));
     }
 
@@ -130,5 +129,13 @@ public class ChannelController {
                             channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.UNMATCHED)
                             , "매칭 거절이 완료되었습니다."
                             , null));
+    }
+
+    @DeleteMapping("/v2/channel-rooms/{channelRoomId}")
+    @Operation(summary = "채널방 나가기 API")
+    public ResponseEntity<ResponseDto<Void>> leaveChannelRoom(@PathVariable Long channelRoomId,
+                                                              @AuthenticationPrincipal Long userId) {
+        channelService.leaveChannelRoom(channelRoomId, userId);
+        return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_EXIT_SUCCESS, "채널방에서 정상적으로 나갔습니다.", null));
     }
 }

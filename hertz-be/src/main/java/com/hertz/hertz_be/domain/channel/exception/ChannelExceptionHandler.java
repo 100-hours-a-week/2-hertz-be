@@ -29,7 +29,8 @@ public class ChannelExceptionHandler {
     }
 
     @ExceptionHandler({
-            CannotSendSignalToSelfException.class
+            CannotSendSignalToSelfException.class,
+            AlreadyExitedChannelRoomException.class
     })
     public ResponseEntity<ResponseDto<Void>> badRequestException(RuntimeException ex) {
         String code = ((BaseChannelException) ex).getCode();

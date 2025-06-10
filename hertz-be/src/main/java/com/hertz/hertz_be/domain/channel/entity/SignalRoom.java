@@ -51,12 +51,10 @@ public class SignalRoom {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @CreationTimestamp
     @Column(name = "receiver_exited_at")
     @Builder.Default
     private LocalDateTime receiverExitedAt = null;
 
-    @CreationTimestamp
     @Column(name = "sender_exited_at")
     @Builder.Default
     private LocalDateTime senderExitedAt = null;
@@ -91,10 +89,10 @@ public class SignalRoom {
     public String getRelationType() {
         if (senderMatchingStatus == MatchingStatus.MATCHED && receiverMatchingStatus == MatchingStatus.MATCHED) {
             return MatchingStatus.MATCHED.getValue();
-        } else if (senderMatchingStatus == MatchingStatus.SIGNAL && receiverMatchingStatus == MatchingStatus.SIGNAL) {
-            return MatchingStatus.SIGNAL.getValue();
+        } else if (senderMatchingStatus == MatchingStatus.UNMATCHED || receiverMatchingStatus == MatchingStatus.UNMATCHED) {
+            return MatchingStatus.UNMATCHED.getValue();
         }
-        return MatchingStatus.UNMATCHED.getValue();
+        return MatchingStatus.SIGNAL.getValue();
     }
 
     /**
@@ -106,6 +104,18 @@ public class SignalRoom {
         return exitedAt != null;
     }
 
-
+    /**
+     * 현재 유저 SignalRoom을 나가기
+     */
+    public void leaveChannelRoom(Long userId) {
+        boolean isSender = senderUser.getId().equals(userId);
+        if (isSender) {
+            if (this.senderExitedAt != null) return;
+            this.senderExitedAt = LocalDateTime.now();
+        } else {
+            if (this.receiverExitedAt != null) return;
+            this.receiverExitedAt = LocalDateTime.now();
+        }
+    }
 }
 
