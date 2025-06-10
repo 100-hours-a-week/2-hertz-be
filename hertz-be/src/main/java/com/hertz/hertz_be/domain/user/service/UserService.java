@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
+import com.hertz.hertz_be.domain.alarm.entity.AlarmReport;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
@@ -57,6 +58,7 @@ public class UserService {
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
+    private final AlarmRepository alarmRepository;
     private final TuningReportRepository tuningReportRepository;
     private final TuningReportUserReactionRepository tuningReportUserReactionRepository;
     private final TuningRepository tuningRepository;
@@ -237,6 +239,7 @@ public class UserService {
         userAlarmRepository.deleteAll();
         alarmMatchingRepository.deleteAll();
         alarmNotificationRepository.deleteAll();
+        alarmRepository.deleteAll();
         tuningReportUserReactionRepository.deleteAll();
         tuningReportRepository.deleteAll();
         userRepository.deleteAll();
