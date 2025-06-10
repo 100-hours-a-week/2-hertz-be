@@ -58,4 +58,6 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
     int markAllMessagesAsReadByRoomId(@Param("roomId") Long roomId);
 
     void deleteAllBySignalRoom(SignalRoom signalRoom);
+
+    int countBySignalRoom(SignalRoom signalRoom);
 }

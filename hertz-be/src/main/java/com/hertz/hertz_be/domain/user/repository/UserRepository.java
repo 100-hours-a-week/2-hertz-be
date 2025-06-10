@@ -35,4 +35,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.sentSignalRooms WHERE u.id = :userId")
     Optional<User> findByIdWithSentSignalRooms(@Param("userId") Long userId);
 
+
+    @Query("SELECT DISTINCT SUBSTRING_INDEX(u.email, '@', -1) FROM User u WHERE u.deletedAt IS NULL and u.id = :userId")
+    String findDistinctEmailDomains(@Param("userId") Long userId);
+
 }
