@@ -49,11 +49,13 @@ public class TuningReportReactionService {
             isReacted = true;
         }
 
-        int reactionCount = report.getReactionCelebrate()
-                + report.getReactionThumbsUp()
-                + report.getReactionLaugh()
-                + report.getReactionEyes()
-                + report.getReactionHeart();
+        int reactionCount = switch(reactionType) {
+            case CELEBRATE  -> report.getReactionCelebrate();
+            case EYES       -> report.getReactionEyes();
+            case HEART      -> report.getReactionHeart();
+            case LAUGH      -> report.getReactionLaugh();
+            case THUMBS_UP  -> report.getReactionThumbsUp();
+        };
 
         return new TuningReportReactionResponse (reportId, reactionType, isReacted, reactionCount);
 
