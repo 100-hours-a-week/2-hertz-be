@@ -36,8 +36,10 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
             ELSE 'false'
         END AS isRead,
         CASE
-            WHEN sr.receiver_matching_status = 'MATCHED' AND sr.sender_matching_status = 'MATCHED'
-            THEN 'MATCHING'
+            WHEN sr.sender_matching_status = 'MATCHED' AND sr.receiver_matching_status = 'MATCHED'
+                THEN 'MATCHING'
+            WHEN sr.sender_matching_status = 'UNMATCHED' OR sr.receiver_matching_status = 'UNMATCHED'
+                THEN 'UNMATCHED'
             ELSE 'SIGNAL'
         END AS relationType
     FROM signal_room sr
