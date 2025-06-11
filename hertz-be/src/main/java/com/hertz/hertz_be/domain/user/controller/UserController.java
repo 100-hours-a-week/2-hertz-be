@@ -88,7 +88,7 @@ public class UserController {
                                                                       @AuthenticationPrincipal Long id) {
         UserProfileDTO response = userService.getUserProfile(userId, id);
 
-        if(response.getRelationType().equals("ME")) {
+        if("ME".equals(response.getRelationType())) {
             return ResponseEntity.ok(
                     new ResponseDto<>(ResponseCode.USER_INFO_FETCH_SUCCESS, "사용자의 정보가 정상적으로 조회되었습니다.", response)
             );
