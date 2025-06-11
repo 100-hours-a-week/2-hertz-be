@@ -186,6 +186,15 @@ public class AlarmService {
                 })
                 .collect(Collectors.toList());
 
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAlarmService.updateAlarmNotification(userId);
+            }
+        });
+
         return new AlarmListResponseDto(
                 alarmItems,
                 alarms.getNumber(),
