@@ -104,7 +104,7 @@ public class AuthController {
     public ResponseEntity<ResponseDto<Void>> deleteUserById(@PathVariable Long userId) {
         userService.deleteUserById(userId);
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "사용자가 정상적으로 삭제되었습니다.", null)
         );
     }
 
@@ -113,7 +113,7 @@ public class AuthController {
     public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
         userService.deleteAllUsers();
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "모든 사용자와 사용자 관련 데이터 모두 정상적으로 삭제되었습니다.", null)
         );
     }
 
