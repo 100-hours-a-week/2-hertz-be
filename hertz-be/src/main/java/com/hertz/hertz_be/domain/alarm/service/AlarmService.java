@@ -141,12 +141,16 @@ public class AlarmService {
 
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AlarmListResponseDto getAlarmList(int page, int size, Long userId) {
         PageRequest pageRequest = PageRequest.of(page, size);
         LocalDateTime thresholdDate = LocalDateTime.now().minusDays(30);
 
         Page<UserAlarm> alarms = userAlarmRepository.findRecentUserAlarms(userId, thresholdDate, pageRequest);
+
+        alarms.getContent().stream()
+                .filter(userAlarm -> !userAlarm.getIsRead())
+                .forEach(UserAlarm::setIsRead);
 
         List<AlarmItem> alarmItems = alarms.getContent().stream()
                 .map(userAlarm -> {

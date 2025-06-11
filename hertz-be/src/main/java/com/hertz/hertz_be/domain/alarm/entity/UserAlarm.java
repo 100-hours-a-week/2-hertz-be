@@ -30,4 +30,8 @@ public class UserAlarm {
     @Column(name = "is_read", nullable = false)
     @Builder.Default
     private Boolean isRead = false;
+
+    public void setIsRead() {
+        this.isRead = true;
+    }
 }
