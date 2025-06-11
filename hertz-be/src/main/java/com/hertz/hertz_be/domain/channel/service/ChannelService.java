@@ -410,7 +410,7 @@ public class ChannelService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 asyncChannelService.updateNavbarMessageNotification(userId);
