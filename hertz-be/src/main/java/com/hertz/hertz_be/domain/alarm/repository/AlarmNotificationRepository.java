@@ -7,7 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface AlarmNotificationRepository extends JpaRepository<AlarmNotification, Long> {
-    void deleteAllByWriter(User user);
-
     List<AlarmNotification> findAllByWriter(User user);
 }

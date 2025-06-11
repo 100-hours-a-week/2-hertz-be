@@ -103,8 +103,8 @@ public class AuthController {
     @Operation(summary = "userId로 특정 사용자 삭제 API (테스트용)",  description = "해당 사용자가 참여중인 모든 채팅방도 삭제 주의")
     public ResponseEntity<ResponseDto<Void>> deleteUserById(@PathVariable Long userId) {
         userService.deleteUserById(userId);
-        return ResponseEntity.status(204).body(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+        return ResponseEntity.ok(
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "사용자가 정상적으로 삭제되었습니다.", null)
         );
     }
 
@@ -112,8 +112,8 @@ public class AuthController {
     @Operation(summary = "DB에 있는 모든 사용자 정보 및 과련 모든 데이터를 삭제하는 API (테스트용)")
     public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
         userService.deleteAllUsers();
-        return ResponseEntity.status(204).body(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "시그널 룸이 성공적으로 생성되었습니다.", null)
+        return ResponseEntity.ok(
+                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "모든 사용자와 사용자 관련 데이터 모두 정상적으로 삭제되었습니다.", null)
         );
     }
 

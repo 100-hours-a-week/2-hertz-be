@@ -18,16 +18,24 @@ import lombok.experimental.SuperBuilder;
 public class AlarmMatching extends Alarm{
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(nullable = true)
     private User partner;
 
     @Column(name = "partner_nickname", nullable = false)
     private String partnerNickname;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "signal_room_id", nullable = false)
+    @JoinColumn(name = "signal_room_id", nullable = true)
     private SignalRoom signalRoom;
 
     @Column(name = "is_matched", nullable = false)
     private boolean isMatched;
+
+    public void removePartner() {
+        this.partner = null;
+    }
+
+    public void removeSignalRoom() {
+        this.signalRoom = null;
+    }
 }
