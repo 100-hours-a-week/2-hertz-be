@@ -8,7 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface AlarmMatchingRepository extends JpaRepository<AlarmMatching, Long> {
-    List<AlarmMatching> findAllByPartner(User partner);
+
+    List<AlarmMatching> findAllByPartner(User user);
 
     List<AlarmMatching> findAllBySignalRoomIn(List<SignalRoom> rooms);
 }

@@ -9,7 +9,10 @@ import java.util.List;
 
 @Repository
 public interface TuningReportUserReactionRepository extends JpaRepository<TuningReportUserReaction, Long> {
+
     List<TuningReportUserReaction> findAllByUserIdAndReportIdIn(Long userId, List<Long> reportIds);
     boolean existsByReportIdAndUserIdAndReactionType(Long reportId, Long userId, ReactionType reactionType);
     void deleteByReportIdAndUserIdAndReactionType(Long reportId, Long userId, ReactionType reactionType);
+
+    List<TuningReportUserReaction> findAllByReportId(Long id);
 }

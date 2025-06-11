@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,4 +27,6 @@ public interface TuningReportRepository extends JpaRepository<TuningReport, Long
     Page<TuningReport> findAllOrderByTotalReactionDesc(Pageable pageable);
 
     Optional<TuningReport> findBySignalRoom(SignalRoom signalRoom);
+
+    List<TuningReport> findAllBySignalRoomIn(List<SignalRoom> rooms);
 }

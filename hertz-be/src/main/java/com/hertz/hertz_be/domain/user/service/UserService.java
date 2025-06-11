@@ -3,7 +3,6 @@ package com.hertz.hertz_be.domain.user.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
-import com.hertz.hertz_be.domain.alarm.entity.AlarmReport;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
@@ -29,9 +28,12 @@ import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserOauthRepository;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
+import com.hertz.hertz_be.domain.tuningreport.entity.TuningReportUserReaction;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -214,44 +217,59 @@ public class UserService {
                 .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
 
         List<SignalRoom> rooms = signalRoomRepository.findAllBySenderUserIdOrReceiverUserId(userId, userId);
+
+        // 1. 관련된 TuningReport 먼저 조회
+        List<TuningReport> tuningReports = tuningReportRepository.findAllBySignalRoomIn(rooms);
+
+        // 2. TuningReportUserReaction → reportId 기준으로 먼저 삭제
+        for (TuningReport tuningReport : tuningReports) {
+            List<TuningReportUserReaction> reactions = tuningReportUserReactionRepository.findAllByReportId(tuningReport.getId());
+            tuningReportUserReactionRepository.deleteAll(reactions);
+        }
+
+        // 3. TuningReport 삭제
+        tuningReportRepository.deleteAll(tuningReports);
+
+        // 4. SignalMessage 삭제
         for (SignalRoom room : rooms) {
             signalMessageRepository.deleteAllBySignalRoom(room);
         }
-        signalRoomRepository.deleteAll(rooms);
 
-        userInterestsRepository.deleteAllByUser(user);
-        tuningResultRepository.deleteAllByMatchedUser(user);
-
-        // AlarmNotification 처리
+        // 5. AlarmNotification 처리
         List<AlarmNotification> notifications = alarmNotificationRepository.findAllByWriter(user);
         notifications.forEach(AlarmNotification::removeWriter);
-        alarmNotificationRepository.saveAll(notifications);
 
-        // AlarmMatching 처리
+        // 6. AlarmMatching 처리
         List<AlarmMatching> matchingByUser = alarmMatchingRepository.findAllByPartner(user);
         matchingByUser.forEach(AlarmMatching::removePartner);
-        alarmMatchingRepository.saveAll(matchingByUser);
 
         List<AlarmMatching> matchingByRoom = alarmMatchingRepository.findAllBySignalRoomIn(rooms);
         matchingByRoom.forEach(AlarmMatching::removeSignalRoom);
-        alarmMatchingRepository.saveAll(matchingByRoom);
 
+        // 7. SignalRoom 삭제 (version 필드 있음 → 영속화해서 삭제)
+        List<Long> roomIds = rooms.stream().map(SignalRoom::getId).toList();
+        List<SignalRoom> managedRooms = signalRoomRepository.findAllById(roomIds);
+        signalRoomRepository.deleteAll(managedRooms);
+
+        // 8. 기타 관련 삭제
+        userInterestsRepository.deleteAllByUser(user);
+        tuningResultRepository.deleteAllByMatchedUser(user);
+
+        // 9. 마지막으로 user 삭제
         userRepository.delete(user);
     }
 
     @Transactional
     public void deleteAllUsers() {
         signalMessageRepository.deleteAll();
-        signalRoomRepository.deleteAll();
+        tuningReportUserReactionRepository.deleteAll();
+        tuningReportRepository.deleteAll();
         userInterestsRepository.deleteAll();
         tuningResultRepository.deleteAll();
         tuningRepository.deleteAll();
         userAlarmRepository.deleteAll();
-        alarmMatchingRepository.deleteAll();
-        alarmNotificationRepository.deleteAll();
         alarmRepository.deleteAll();
-        tuningReportUserReactionRepository.deleteAll();
-        tuningReportRepository.deleteAll();
+        signalRoomRepository.deleteAll();
         userRepository.deleteAll();
     }
 }
