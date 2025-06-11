@@ -131,7 +131,7 @@ public class AlarmService {
                     }
                     else if (alarm instanceof AlarmMatching matching) {
                         SignalRoom signalRoom = matching.getSignalRoom();
-                        Long channelRoomId = signalRoom.isUserExited(userId) ? null : signalRoom.getId();
+                        Long channelRoomId = (signalRoom != null && !signalRoom.isUserExited(userId)) ? signalRoom.getId() : null;
 
                         return new MatchingAlarm(
                                 AlarmCategory.MATCHING.getValue(),
