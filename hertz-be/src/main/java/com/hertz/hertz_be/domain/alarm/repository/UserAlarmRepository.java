@@ -26,5 +26,7 @@ public interface UserAlarmRepository extends JpaRepository<UserAlarm, Long> {
             Pageable pageable
     );
 
-    void deleteAllByUser(User user);
+    @Query("SELECT CASE WHEN COUNT(ua) > 0 THEN true ELSE false END " +
+            "FROM UserAlarm ua WHERE ua.user.id = :userId AND ua.isRead = false")
+    boolean isThereNewAlarm(@Param("userId") Long userId);
 }

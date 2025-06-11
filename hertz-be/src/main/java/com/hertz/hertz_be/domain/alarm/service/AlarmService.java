@@ -19,11 +19,16 @@ import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,11 +38,16 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AlarmService {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
     private final AlarmRepository alarmRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
+    private final AsyncAlarmService asyncAlarmService;
 
     @Transactional
     public void createNotifyAlarm(CreateNotifyAlarmRequestDto dto, Long userId) {
@@ -62,6 +72,17 @@ public class AlarmService {
                 .toList();
 
         userAlarmRepository.saveAll(userAlarms);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (User user : allUsers) {
+                    asyncAlarmService.updateAlarmNotification(user.getId());
+                }
+            }
+        });
     }
 
     @Transactional
@@ -108,14 +129,28 @@ public class AlarmService {
 
         userAlarmRepository.save(userAlarmForPartner);
 
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAlarmService.updateAlarmNotification(user.getId());
+                asyncAlarmService.updateAlarmNotification(partner.getId());
+            }
+        });
+
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AlarmListResponseDto getAlarmList(int page, int size, Long userId) {
         PageRequest pageRequest = PageRequest.of(page, size);
         LocalDateTime thresholdDate = LocalDateTime.now().minusDays(30);
 
         Page<UserAlarm> alarms = userAlarmRepository.findRecentUserAlarms(userId, thresholdDate, pageRequest);
+
+        alarms.getContent().stream()
+                .filter(userAlarm -> !userAlarm.getIsRead())
+                .forEach(UserAlarm::setIsRead);
 
         List<AlarmItem> alarmItems = alarms.getContent().stream()
                 .map(userAlarm -> {
@@ -150,6 +185,15 @@ public class AlarmService {
                     }
                 })
                 .collect(Collectors.toList());
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAlarmService.updateAlarmNotification(userId);
+            }
+        });
 
         return new AlarmListResponseDto(
                 alarmItems,
