@@ -1,0 +1,19 @@
+# Gradle
+.gradle
+build/
+**/build/
+!hertz-be/build/libs/*.jar
+
+# IDE
+.idea
+*.iml
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+
+# 기타
+.env
