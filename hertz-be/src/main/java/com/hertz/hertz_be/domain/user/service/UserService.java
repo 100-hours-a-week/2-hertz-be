@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmReport;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
@@ -219,12 +220,21 @@ public class UserService {
         signalRoomRepository.deleteAll(rooms);
 
         userInterestsRepository.deleteAllByUser(user);
-
         tuningResultRepository.deleteAllByMatchedUser(user);
 
+        // AlarmNotification 처리
         List<AlarmNotification> notifications = alarmNotificationRepository.findAllByWriter(user);
-        notifications.forEach(n -> n.removeWriter());
+        notifications.forEach(AlarmNotification::removeWriter);
         alarmNotificationRepository.saveAll(notifications);
+
+        // AlarmMatching 처리
+        List<AlarmMatching> matchingByUser = alarmMatchingRepository.findAllByPartner(user);
+        matchingByUser.forEach(AlarmMatching::removePartner);
+        alarmMatchingRepository.saveAll(matchingByUser);
+
+        List<AlarmMatching> matchingByRoom = alarmMatchingRepository.findAllBySignalRoomIn(rooms);
+        matchingByRoom.forEach(AlarmMatching::removeSignalRoom);
+        alarmMatchingRepository.saveAll(matchingByRoom);
 
         userRepository.delete(user);
     }
