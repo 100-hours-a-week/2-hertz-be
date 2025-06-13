@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -27,9 +28,11 @@ public class SseService {
 
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
+    @Transactional(readOnly = true)
     public SseEmitter subscribe(Long userId) {
-        userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException();
+        }
 
         if (emitters.containsKey(userId)) {
             emitters.get(userId).complete();
