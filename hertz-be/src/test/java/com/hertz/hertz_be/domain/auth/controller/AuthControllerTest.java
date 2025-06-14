@@ -1,10 +1,9 @@
 package com.hertz.hertz_be.domain.auth.controller;
 
+import com.hertz.hertz_be.domain.auth.fixture.UserFixture;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
-import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -25,8 +24,6 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,7 +58,6 @@ class AuthControllerTest {
             .withExposedPorts(6379)
             .waitingFor(Wait.forListeningPort());
 
-
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", redisContainer::getHost);
@@ -76,14 +72,7 @@ class AuthControllerTest {
         userRepository.deleteAll();
         refreshTokenRepository.deleteAll();
 
-        user = User.builder()
-                .ageGroup(AgeGroup.AGE_20S)
-                .gender(Gender.MALE)
-                .email(UUID.randomUUID() + "@email.com")
-                .profileImageUrl("http://example.com/profile.png")
-                .nickname("tester")
-                .oneLineIntroduction("안녕하세요")
-                .build();
+        user = UserFixture.createTestUser();
         userRepository.save(user);
 
         refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
