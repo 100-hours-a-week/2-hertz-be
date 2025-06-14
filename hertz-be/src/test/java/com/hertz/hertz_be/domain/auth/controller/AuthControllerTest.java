@@ -93,7 +93,6 @@ class AuthControllerTest {
     @Test
     @DisplayName("토큰 재발급 RTR - 유효한 리프레시 토큰일 경우 재발급 성공")
     void reissueAccessToken_shouldSucceed_whenValidRefreshToken() throws Exception {
-        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
 
         mockMvc.perform(post("/api/v1/auth/token")
@@ -114,8 +113,6 @@ class AuthControllerTest {
     @Test
     @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 예외 발생")
     void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenWrongRefreshToken() throws Exception {
-        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
-
         mockMvc.perform(post("/api/v1/auth/token")
                         .cookie(new Cookie("refreshToken", "invalid-token")))
                 .andExpect(status().is4xxClientError())
@@ -125,7 +122,6 @@ class AuthControllerTest {
     @Test
     @DisplayName("로그아웃 - 성공")
     void logout_success() throws Exception {
-        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
 
         mockMvc.perform(delete("/api/v2/auth/logout")
