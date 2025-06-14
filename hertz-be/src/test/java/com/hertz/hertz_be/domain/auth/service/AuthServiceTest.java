@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import com.hertz.hertz_be.global.sse.SseService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,9 @@ public class AuthServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private SseService sseService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -55,7 +59,7 @@ public class AuthServiceTest {
 
         Map.Entry<ReissueAccessTokenResponseDto, String> result = authService.reissueAccessToken(refreshToken);
 
-        assertEquals(newAccessToken, result.getKey().getAccessToken());
+        assertEquals(newAccessToken, result.getKey().accessToken());
         assertEquals(newRefreshToken, result.getValue());
         verify(refreshTokenService, times(1)).saveRefreshToken(eq(testUserId), eq(newRefreshToken), anyLong());
     }
@@ -104,6 +108,7 @@ public class AuthServiceTest {
 
         verify(userRepository, times(1)).findById(testUserId);
         verify(refreshTokenService, times(1)).deleteRefreshToken(testUserId);
+        verify(sseService, times(1)).disconnect(testUserId);
     }
 
     @Test
