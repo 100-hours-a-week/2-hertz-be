@@ -27,4 +27,9 @@ public class RefreshTokenRepository {
         String key = REFRESH_TOKEN_PREFIX + userId;
         redisTemplate.delete(key);
     }
+
+    public void deleteAll() {
+        redisTemplate.keys(REFRESH_TOKEN_PREFIX + "*")
+                .forEach(redisTemplate::delete);
+    }
 }
