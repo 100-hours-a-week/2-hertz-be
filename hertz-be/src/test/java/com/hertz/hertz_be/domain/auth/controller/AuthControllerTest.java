@@ -72,9 +72,9 @@ class AuthControllerTest {
     }
 
     @BeforeEach
-    void setUp() {
+    void initializeUserAndRefreshToken() {
         userRepository.deleteAll();
-        refreshTokenRepository.deleteAll(); // Redis 초기화까지 안전하게
+        refreshTokenRepository.deleteAll();
 
         user = User.builder()
                 .ageGroup(AgeGroup.AGE_20S)
