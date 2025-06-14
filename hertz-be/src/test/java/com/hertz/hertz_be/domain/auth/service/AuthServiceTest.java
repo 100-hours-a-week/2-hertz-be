@@ -63,6 +63,10 @@ class AuthServiceTest {
 
         assertEquals(newAccessToken, result.getKey().accessToken());
         assertEquals(newRefreshToken, result.getValue());
+
+        verify(jwtTokenProvider, times(1)).getUserIdFromRefreshToken(refreshToken);
+        verify(jwtTokenProvider, times(1)).createAccessToken(testUserId);
+        verify(jwtTokenProvider, times(1)).createRefreshToken(testUserId);
         verify(refreshTokenService, times(1)).saveRefreshToken(eq(testUserId), eq(newRefreshToken), anyLong());
     }
 
