@@ -99,15 +99,19 @@ class AuthControllerTest {
                         .cookie(new Cookie("refreshToken", refreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResponseCode.ACCESS_TOKEN_REISSUED))
+                .andExpect(jsonPath("$.message").value("Access Token이 재발급되었습니다."))
                 .andExpect(jsonPath("$.data.accessToken").value(accessToken));
     }
 
     @Test
     @DisplayName("토큰 재발급 RTR - 유효기간 지난 리프레시 토큰일 경우 예외 발생")
     void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenNoRefreshToken() throws Exception {
+        refreshTokenRepository.deleteRefreshToken(user.getId());
+
         mockMvc.perform(post("/api/v1/auth/token"))
-                .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID))
+                .andExpect(jsonPath("$.message").value("Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요."));
     }
 
     @Test
@@ -116,7 +120,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/token")
                         .cookie(new Cookie("refreshToken", "invalid-token")))
                 .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID));
+                .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID))
+                .andExpect(jsonPath("$.message").value("Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요."));
     }
 
     @Test
@@ -128,7 +133,8 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer " + accessToken)
                         .cookie(new Cookie("refreshToken", refreshToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(ResponseCode.LOGOUT_SUCCESS));
+                .andExpect(jsonPath("$.code").value(ResponseCode.LOGOUT_SUCCESS))
+                .andExpect(jsonPath("$.message").value("정상적으로 로그아웃되었습니다."));
     }
 
 }
