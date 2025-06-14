@@ -74,6 +74,7 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
+        refreshTokenRepository.deleteAll(); // Redis 초기화까지 안전하게
 
         user = User.builder()
                 .ageGroup(AgeGroup.AGE_20S)
@@ -86,6 +87,7 @@ class AuthControllerTest {
         userRepository.save(user);
 
         refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
     }
 
     @Test
