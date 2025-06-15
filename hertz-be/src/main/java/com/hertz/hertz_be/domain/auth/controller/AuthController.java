@@ -68,29 +68,18 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "사용자 Id로 AT와 RT를 반환하는 API(테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
-    public ResponseEntity<?> login(@RequestBody TestLoginRequestDto request,
-                                   HttpServletResponse response) {
-        Long userId = request.getUserId();  // 클라이언트가 userId를 보냈다고 가정
+    public ResponseEntity<?> login(@RequestBody TestLoginRequestDto request, HttpServletResponse response) {
+        Long userId = request.getUserId();
 
-        // Access Token 발급
         String accessToken = jwtTokenProvider.createAccessToken(userId);
-
-        // Refresh Token 발급
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        // Redis에 Refresh Token 저장
-        refreshTokenService.saveRefreshToken(userId, refreshToken, 1209600L); // 14일 (초 단위)
+        refreshTokenService.saveRefreshToken(userId, refreshToken, maxAgeSeconds);
+        AuthUtil.setRefreshTokenCookie(response, refreshToken, maxAgeSeconds, isLocal);
 
-        // Set-Cookie 수동 설정 (SameSite=None + Secure + HttpOnly)
-        String cookieValue = String.format(
-                "refreshToken=%s; Max-Age=%d; Path=/; HttpOnly; Secure; SameSite=None",
-                refreshToken, 1209600
+        return ResponseEntity.ok(
+                Map.of("accessToken", accessToken)
         );
-        response.setHeader("Set-Cookie", cookieValue);
-
-        // Access Token은 JSON body로 반환
-        return ResponseEntity.ok()
-                .body(Map.of("accessToken", accessToken));
     }
 
     @GetMapping("/ping")
