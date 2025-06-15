@@ -135,6 +135,27 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("logout API - AT 헤더 누락 시 400 반환")
+    void logout_shouldReturn400_whenNoAccessToken() throws Exception {
+        mockMvc.perform(delete("/api/v2/auth/logout")
+                        .cookie(new Cookie("refreshToken", refreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(ResponseCode.ACCESS_TOKEN_EXPIRED))
+                .andExpect(jsonPath("$.message").value("Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다."));
+    }
+
+    @Test
+    @DisplayName("logout API - 잘못된 AT 헤더 시 400 반환")
+    void logout_shouldReturn400_whenInvalidAccessToken() throws Exception {
+        mockMvc.perform(delete("/api/v2/auth/logout")
+                        .header("Authorization", "Bearer invalid-token")
+                        .cookie(new Cookie("refreshToken", refreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(ResponseCode.ACCESS_TOKEN_EXPIRED))
+                .andExpect(jsonPath("$.message").value("Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다."));
+    }
+
+    @Test
     @DisplayName("login API - 사용자 ID로 AT/RT 발급 및 쿠키 설정 성공")
     void login_shouldSucceed() throws Exception {
         Long testUserId = user.getId();
