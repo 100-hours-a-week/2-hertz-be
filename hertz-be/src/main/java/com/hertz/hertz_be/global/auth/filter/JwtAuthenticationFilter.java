@@ -2,7 +2,7 @@ package com.hertz.hertz_be.global.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import io.jsonwebtoken.ExpiredJwtException;
+import com.hertz.hertz_be.global.common.ResponseCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,8 +74,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
 
+        } catch (IllegalStateException ex) {
+            sendErrorResponse(response, ResponseCode.UNAUTHORIZED,
+                    "Access Token이 필요한 요청입니다.", HttpServletResponse.SC_UNAUTHORIZED);
         } catch (Exception ex) {
-            sendErrorResponse(response, "ACCESS_TOKEN_EXPIRED",
+            sendErrorResponse(response, ResponseCode.ACCESS_TOKEN_EXPIRED,
                     "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.", HttpServletResponse.SC_UNAUTHORIZED);
         }
     }
