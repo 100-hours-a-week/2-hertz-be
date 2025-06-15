@@ -86,6 +86,7 @@ class AuthControllerTest {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
 
         mockMvc.perform(post("/api/v1/auth/token")
+                        .header("Authorization", "Bearer " + accessToken)
                         .cookie(new Cookie("refreshToken", refreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResponseCode.ACCESS_TOKEN_REISSUED))
@@ -97,8 +98,11 @@ class AuthControllerTest {
     @DisplayName("토큰 재발급 RTR - 유효기간 지난 리프레시 토큰일 경우 예외 발생")
     void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenNoRefreshToken() throws Exception {
         refreshTokenRepository.deleteRefreshToken(user.getId());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
 
-        mockMvc.perform(post("/api/v1/auth/token"))
+        mockMvc.perform(post("/api/v1/auth/token")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .cookie(new Cookie("refreshToken", refreshToken)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID))
                 .andExpect(jsonPath("$.message").value("Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요."));
@@ -107,7 +111,10 @@ class AuthControllerTest {
     @Test
     @DisplayName("토큰 재발급 RTR - 유효하지 않은 리프레시 토큰일 경우 예외 발생")
     void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenWrongRefreshToken() throws Exception {
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+
         mockMvc.perform(post("/api/v1/auth/token")
+                        .header("Authorization", "Bearer " + accessToken)
                         .cookie(new Cookie("refreshToken", "invalid-token")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID))
@@ -128,12 +135,12 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("login API - 사용자 ID로 AT/RT 발급 및 쿠키 설정")
+    @DisplayName("login API - 사용자 ID로 AT/RT 발급 및 쿠키 설정 성공")
     void login_shouldSucceed() throws Exception {
         Long testUserId = user.getId();
         String requestBody = String.format("{\"userId\": %d}", testUserId);
 
-        mockMvc.perform(post("/api/login")
+        mockMvc.perform(post("/api/test/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -145,7 +152,7 @@ class AuthControllerTest {
     void login_shouldReturn400_whenInvalidRequest() throws Exception {
         String badRequestBody = "{}";
 
-        mockMvc.perform(post("/api/login")
+        mockMvc.perform(post("/api/test/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(badRequestBody))
                 .andExpect(status().isBadRequest());
@@ -156,7 +163,7 @@ class AuthControllerTest {
     void deleteUserById_shouldSucceed() throws Exception {
         Long userId = user.getId();
 
-        mockMvc.perform(delete("/api/{userId}", userId))
+        mockMvc.perform(delete("/api/test/{userId}", userId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResponseCode.USER_DELETE_SUCCESS))
                 .andExpect(jsonPath("$.message").value("사용자가 정상적으로 삭제되었습니다."));
@@ -170,7 +177,7 @@ class AuthControllerTest {
     void deleteUserById_shouldReturn400_whenUserNotFound() throws Exception {
         Long invalidId = 9999L;
 
-        mockMvc.perform(delete("/api/{userId}", invalidId))
+        mockMvc.perform(delete("/api/test/{userId}", invalidId))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ResponseCode.USER_NOT_FOUND))
                 .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."));
@@ -180,7 +187,7 @@ class AuthControllerTest {
     @DisplayName("deleteAllUsers API - 모든 사용자 및 연관 데이터 삭제")
     void deleteAllUsers_shouldSucceed() throws Exception {
 
-        mockMvc.perform(delete("/api/users"))
+        mockMvc.perform(delete("/api/test/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResponseCode.USER_DELETE_SUCCESS))
                 .andExpect(jsonPath("$.message").value("모든 사용자와 사용자 관련 데이터 모두 정상적으로 삭제되었습니다."));
