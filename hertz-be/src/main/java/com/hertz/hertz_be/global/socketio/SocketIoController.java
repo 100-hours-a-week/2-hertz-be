@@ -55,26 +55,6 @@ public class SocketIoController {
 
     public ConnectListener listenConnected() {
         return (client) -> {
-            try {
-                String token = client.getHandshakeData().getUrlParams().get("token").get(0);
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-
-                log.info(":: SocketIo Connect - userId : {} ", userId);
-
-                List<Long> joinedRoomIds = signalRoomRepository.findRoomIdsByUserId(userId);
-
-                for(Long roomId: joinedRoomIds) {
-                    String roomKey = "room-" + roomId;
-                    client.joinRoom(roomKey);
-                    log.info("# user {} → {}", userId, roomKey);
-                }
-
-                client.set("userId", userId);
-            } catch (Exception e) {
-                log.warn("⚠️ JWT 토큰 검증 실패 - 연결 거부: {}", e.getMessage());
-                client.disconnect();
-            }
-
         };
     }
 
@@ -82,14 +62,6 @@ public class SocketIoController {
         return (client) -> {
             String sessionId = client.getSessionId().toString();
             log.info(":: SocketIo Disconnect - " + sessionId + " ::");
-
-            Long userId = client.get("userId");
-
-            for(String room : client.getAllRooms()) {
-                client.leaveRoom(room);
-                log.info("# user {} → {}", userId, room);
-            }
-
             client.disconnect();
         };
     }
