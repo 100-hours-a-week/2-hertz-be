@@ -11,7 +11,7 @@ public class UserException extends RuntimeException {
         this.code = code;
     }
 
-    public UserException (String message, String code) {
+    public UserException(String code, String message) {
         super(message);
         this.code = code;
     }
