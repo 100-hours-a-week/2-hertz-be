@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -124,6 +125,30 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResponseCode.LOGOUT_SUCCESS))
                 .andExpect(jsonPath("$.message").value("정상적으로 로그아웃되었습니다."));
+    }
+
+    @Test
+    @DisplayName("login API - 사용자 ID로 AT/RT 발급 및 쿠키 설정")
+    void login_shouldSucceed() throws Exception {
+        Long testUserId = user.getId();
+        String requestBody = String.format("{\"userId\": %d}", testUserId);
+
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists());
+    }
+
+    @Test
+    @DisplayName("login API - 잘못된 요청(userId 누락) 시 400 반환")
+    void login_shouldReturn400_whenInvalidRequest() throws Exception {
+        String badRequestBody = "{}";
+
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(badRequestBody))
+                .andExpect(status().isBadRequest());
     }
 
 }
