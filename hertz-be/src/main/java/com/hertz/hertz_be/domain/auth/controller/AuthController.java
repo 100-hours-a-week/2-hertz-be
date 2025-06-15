@@ -67,7 +67,7 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/login")
+    @PostMapping("/test/login")
     @Operation(summary = "사용자 Id로 AT와 RT를 반환하는 API(테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
     public ResponseEntity<?> login(@Valid @RequestBody TestLoginRequestDto request, HttpServletResponse response) {
         Long userId = request.getUserId();
@@ -89,7 +89,7 @@ public class AuthController {
         return ResponseEntity.ok("pong");
     }
 
-    @DeleteMapping("/{userId}")
+    @DeleteMapping("/test/{userId}")
     @Operation(summary = "userId로 특정 사용자 삭제 API (테스트용)",  description = "해당 사용자가 참여중인 모든 채팅방도 삭제 주의")
     public ResponseEntity<ResponseDto<Void>> deleteUserById(@PathVariable Long userId) {
         userService.deleteUserById(userId);
@@ -98,7 +98,7 @@ public class AuthController {
         );
     }
 
-    @DeleteMapping("/users")
+    @DeleteMapping("/test/users")
     @Operation(summary = "DB에 있는 모든 사용자 정보 및 과련 모든 데이터를 삭제하는 API (테스트용)")
     public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
         userService.deleteAllUsers();
