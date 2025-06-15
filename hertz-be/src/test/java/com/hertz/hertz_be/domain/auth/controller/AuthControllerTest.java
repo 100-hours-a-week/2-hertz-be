@@ -109,7 +109,7 @@ class AuthControllerTest {
     void reissueAccessToken_shouldThrowRefreshTokenInvalidException_whenWrongRefreshToken() throws Exception {
         mockMvc.perform(post("/api/v1/auth/token")
                         .cookie(new Cookie("refreshToken", "invalid-token")))
-                .andExpect(status().is4xxClientError())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ResponseCode.REFRESH_TOKEN_INVALID))
                 .andExpect(jsonPath("$.message").value("Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요."));
     }
