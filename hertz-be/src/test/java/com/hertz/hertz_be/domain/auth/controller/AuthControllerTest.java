@@ -151,4 +151,42 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @DisplayName("deleteUserById API - 특정 사용자 삭제")
+    void deleteUserById_shouldSucceed() throws Exception {
+        Long userId = user.getId();
+
+        mockMvc.perform(delete("/api/{userId}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResponseCode.USER_DELETE_SUCCESS))
+                .andExpect(jsonPath("$.message").value("사용자가 정상적으로 삭제되었습니다."));
+
+        boolean exists = userRepository.existsById(userId);
+        assert !exists;
+    }
+
+    @Test
+    @DisplayName("deleteUserById API - 존재하지 않는 사용자 ID일 경우 400")
+    void deleteUserById_shouldReturn400_whenUserNotFound() throws Exception {
+        Long invalidId = 9999L;
+
+        mockMvc.perform(delete("/api/{userId}", invalidId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ResponseCode.USER_NOT_FOUND))
+                .andExpect(jsonPath("$.message").value("사용자가 존재하지 않습니다."));
+    }
+
+    @Test
+    @DisplayName("deleteAllUsers API - 모든 사용자 및 연관 데이터 삭제")
+    void deleteAllUsers_shouldSucceed() throws Exception {
+
+        mockMvc.perform(delete("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResponseCode.USER_DELETE_SUCCESS))
+                .andExpect(jsonPath("$.message").value("모든 사용자와 사용자 관련 데이터 모두 정상적으로 삭제되었습니다."));
+
+        long count = userRepository.count();
+        assert count == 0;
+    }
+
 }
