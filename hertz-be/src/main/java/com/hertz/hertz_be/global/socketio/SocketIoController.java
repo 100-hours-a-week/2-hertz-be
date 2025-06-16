@@ -55,6 +55,8 @@ public class SocketIoController {
 
     public ConnectListener listenConnected() {
         return (client) -> {
+            Map<String, List<String>> params = client.getHandshakeData().getUrlParams();
+            log.info(":: SocketIo Connect - " + params.toString() + " ::");
         };
     }
 
