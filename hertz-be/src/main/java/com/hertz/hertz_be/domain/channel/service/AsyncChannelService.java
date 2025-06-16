@@ -32,9 +32,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AsyncChannelService {
+
     @Value("${matching.convert.delay-minutes}")
     private long matchingConvertDelayMinutes;
     private final long ONE_MESSAGE = 1L;
+
+    //Todo: 2차 압데이트 전에 장확한 날짜로 수정
+    private static final LocalDateTime VERSION_2_UPDATE_DATE = LocalDateTime.of(2025, 5, 15, 0, 0);
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -50,7 +54,8 @@ public class AsyncChannelService {
             return;
         }
 
-        List<UserMessageCountDto> counts = signalMessageRepository.countMessagesBySenderInRoom(room.getId());
+        List<UserMessageCountDto> counts = signalMessageRepository
+                .countMessagesBySenderInRoomAfter(room.getId(), VERSION_2_UPDATE_DATE);
 
         Map<Long, Long> countMap = counts.stream()
                 .collect(Collectors.toMap(
@@ -70,7 +75,7 @@ public class AsyncChannelService {
     private boolean shouldNotifyMatchingConverted(SignalRoom room, Map<Long, Long> countMap) {
         Long receiverId = room.getReceiverUser().getId();
         Long receiverMessageCount = countMap.getOrDefault(receiverId, 0L);
-        return receiverMessageCount == ONE_MESSAGE; // Todo: 나중에 v2 배포할 때, "if (receiverMessageCount >= ONE_MESSAGE)" 로 일시적으로 수정
+        return receiverMessageCount >= ONE_MESSAGE;
     }
 
     @Async
@@ -84,7 +89,7 @@ public class AsyncChannelService {
         Long receiverId = room.getReceiverUser().getId();
 
         List<SignalMessage> messages = signalMessageRepository
-                .findBySignalRoomIdAndSenderUserIdOrderBySendAtAsc(roomId, receiverId);
+                .findBySignalRoomIdAndSenderUserIdAndSendAtAfterOrderBySendAtAsc(roomId, receiverId, VERSION_2_UPDATE_DATE);
 
         if (messages.isEmpty()) return;
 

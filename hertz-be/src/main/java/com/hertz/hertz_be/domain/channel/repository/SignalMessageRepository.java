@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,22 +20,24 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
     boolean existsBySignalRoomInAndSenderUserNotAndIsReadFalse(List<SignalRoom> signalRooms, User senderUser);
     Page<SignalMessage> findBySignalRoom_Id(Long roomId, Pageable pageable);
 
-    @Query("SELECT m FROM SignalMessage m WHERE m.signalRoom.id = :roomId AND m.senderUser.id = :userId ORDER BY m.sendAt ASC")
-    List<SignalMessage> findBySignalRoomIdAndSenderUserIdOrderBySendAtAsc(
-            @Param("roomId") Long roomId,
-            @Param("userId") Long userId
+    List<SignalMessage> findBySignalRoomIdAndSenderUserIdAndSendAtAfterOrderBySendAtAsc(
+            Long signalRoomId,
+            Long senderUserId,
+            LocalDateTime sendAt
     );
 
-    // 특정 SignalRoom에서 특정 사용자가 보낸 메시지들을 sendAt 기준 오름차순으로 모두 조회
     @Query("""
     SELECT new com.hertz.hertz_be.domain.channel.dto.object.UserMessageCountDto(
-    m.senderUser.id, COUNT(m)
+        m.senderUser.id, COUNT(m)
     )
     FROM SignalMessage m
-    WHERE m.signalRoom.id = :roomId
+    WHERE m.signalRoom.id = :roomId AND m.sendAt >= :filterDate
     GROUP BY m.senderUser.id
     """)
-    List<UserMessageCountDto> countMessagesBySenderInRoom(@Param("roomId") Long roomId);
+    List<UserMessageCountDto> countMessagesBySenderInRoomAfter(
+            @Param("roomId") Long roomId,
+            @Param("filterDate") LocalDateTime filterDate
+    );
 
     @Query(value = """
     SELECT
