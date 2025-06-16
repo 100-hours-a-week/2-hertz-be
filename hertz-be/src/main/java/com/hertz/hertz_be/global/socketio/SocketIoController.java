@@ -56,7 +56,20 @@ public class SocketIoController {
     public ConnectListener listenConnected() {
         return (client) -> {
             Map<String, List<String>> params = client.getHandshakeData().getUrlParams();
-            log.info(":: SocketIo Connect - " + params.toString() + " ::");
+            String token = params.get("token").get(0);
+            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+
+            log.info(":: SocketIo Connect - userId : {} ", userId);
+
+            List<Long> joinedRoomIds = signalRoomRepository.findRoomIdsByUserId(userId);
+
+            for(Long roomId: joinedRoomIds) {
+                String roomKey = "room-" + roomId;
+                client.joinRoom(roomKey);
+                log.info("# user {} → {}", userId, roomKey);
+            }
+
+            client.set("userId", userId);
         };
     }
 
@@ -64,6 +77,14 @@ public class SocketIoController {
         return (client) -> {
             String sessionId = client.getSessionId().toString();
             log.info(":: SocketIo Disconnect - " + sessionId + " ::");
+
+            Long userId = client.get("userId");
+
+            for(String room : client.getAllRooms()) {
+                client.leaveRoom(room);
+                log.info("# user {} → {}", userId, room);
+            }
+
             client.disconnect();
         };
     }
