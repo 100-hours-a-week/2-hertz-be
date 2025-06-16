@@ -4,6 +4,7 @@ import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -81,6 +83,14 @@ public class GlobalExceptionHandler {
                         "요청한 URI의 메소드에 대해 서버가 구현하고 있지 않습니다.",
                         null
                 ));
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ResponseDto<Void>> handleBusinessException(BusinessException e) {
+        log.warn("[비즈니스 로직 에러 발생] {}", e.getMessage());
+        return ResponseEntity
+                .status(e.getStatus())
+                .body(new ResponseDto<>(e.getCode(), e.getMessage(), null));
     }
 
 }
