@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.global.exception;
 
 import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.validation.ConstraintViolationException;
@@ -76,6 +77,8 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    // TODO(yunbin): tuningreport 도메인까지 리팩토링 완료되면 위에 있는 기존 공통 예외 로직 삭제할 것
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ResponseDto<Void>> handleBusinessException(BusinessException e) {
         log.warn("[비즈니스 로직 에러 발생] {}", e.getMessage());
@@ -84,31 +87,43 @@ public class GlobalExceptionHandler {
                 .body(new ResponseDto<>(e.getCode(), e.getMessage(), null));
     }
 
-    // TODO(yunbin): tuningreport 도메인까지 리팩토링 완료되면 위에 있는 기존 공통 예외 로직 삭제할 것
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResponseDto<Void>> handleUnexpectedException(Exception e) {
         log.warn("[비즈니스에서 잡지 못하는 에러 발생] {}", e.getMessage());
+
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, e.getMessage(), null));
+                .status(NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus())
+                .body(new ResponseDto<>(
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getMessage(),
+                        null
+                ));
     }
 
     @ExceptionHandler({ DataAccessException.class, SQLException.class })
     public ResponseEntity<ResponseDto<Void>> handleDatabaseException(Exception e) {
         log.warn("[DB 에러] {}", e.getMessage());
+
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, e.getMessage(), null));
+                .status(NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus())
+                .body(new ResponseDto<>(
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getMessage(),
+                        null
+                ));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
-    public ResponseEntity<ResponseDto<Void>> handleValidationException(Exception e){
+    public ResponseEntity<ResponseDto<Void>> handleValidationException(Exception e) {
         log.warn("[요청 HTTP BODY 검증 에러] {}", e.getMessage());
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ResponseDto<>(ResponseCode.BAD_REQUEST, e.getMessage(), null));
+                .status(NewResponseCode.BAD_REQUEST.getHttpStatus())
+                .body(new ResponseDto<>(
+                        NewResponseCode.BAD_REQUEST.getCode(),
+                        NewResponseCode.BAD_REQUEST.getMessage(),
+                        null
+                ));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -116,10 +131,10 @@ public class GlobalExceptionHandler {
         log.warn("[요청 HTTP URL 검증 에러] {}", e.getMessage());
 
         return ResponseEntity
-                .status(HttpStatus.NOT_IMPLEMENTED)
+                .status(NewResponseCode.NOT_IMPLEMENTED.getHttpStatus())
                 .body(new ResponseDto<>(
-                        ResponseCode.NOT_IMPLEMENTED,
-                        "요청한 URI의 메소드에 대해 서버가 구현하고 있지 않습니다.",
+                        NewResponseCode.NOT_IMPLEMENTED.getCode(),
+                        NewResponseCode.NOT_IMPLEMENTED.getMessage(),
                         null
                 ));
     }
