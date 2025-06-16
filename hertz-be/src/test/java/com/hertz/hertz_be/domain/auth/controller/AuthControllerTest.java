@@ -140,8 +140,8 @@ class AuthControllerTest {
         mockMvc.perform(delete("/api/v2/auth/logout")
                         .cookie(new Cookie("refreshToken", refreshToken)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value(ResponseCode.ACCESS_TOKEN_EXPIRED))
-                .andExpect(jsonPath("$.message").value("Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다."));
+                .andExpect(jsonPath("$.code").value(ResponseCode.UNAUTHORIZED))
+                .andExpect(jsonPath("$.message").value("Access Token이 필요한 요청입니다."));
     }
 
     @Test
