@@ -5,6 +5,7 @@ import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.sql.SQLException;
 
 @Slf4j
 @RestControllerAdvice
@@ -73,9 +76,45 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // HTTP 메서드(예: PATCH, PUT, DELETE)와 URI에 대해 컨트롤러가 존재 검증
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ResponseDto<Void>> handleBusinessException(BusinessException e) {
+        log.warn("[비즈니스 로직 에러 발생] {}", e.getMessage());
+        return ResponseEntity
+                .status(e.getStatus())
+                .body(new ResponseDto<>(e.getCode(), e.getMessage(), null));
+    }
+
+    // TODO(yunbin): tuningreport 도메인까지 리팩토링 완료되면 위에 있는 기존 공통 예외 로직 삭제할 것
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ResponseDto<Void>> handleUnexpectedException(Exception e) {
+        log.warn("[비즈니스에서 잡지 못하는 에러 발생] {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, e.getMessage(), null));
+    }
+
+    @ExceptionHandler({ DataAccessException.class, SQLException.class })
+    public ResponseEntity<ResponseDto<Void>> handleDatabaseException(Exception e) {
+        log.warn("[DB 에러] {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, e.getMessage(), null));
+    }
+
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<ResponseDto<Void>> handleValidationException(Exception e){
+        log.warn("[요청 HTTP BODY 검증 에러] {}", e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ResponseDto<>(ResponseCode.BAD_REQUEST, e.getMessage(), null));
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ResponseDto<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+    public ResponseEntity<ResponseDto<Void>> handleMethodNotSupported(Exception e) {
+        log.warn("[요청 HTTP URL 검증 에러] {}", e.getMessage());
+
         return ResponseEntity
                 .status(HttpStatus.NOT_IMPLEMENTED)
                 .body(new ResponseDto<>(
@@ -83,14 +122,6 @@ public class GlobalExceptionHandler {
                         "요청한 URI의 메소드에 대해 서버가 구현하고 있지 않습니다.",
                         null
                 ));
-    }
-
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ResponseDto<Void>> handleBusinessException(BusinessException e) {
-        log.warn("[비즈니스 로직 에러 발생] {}", e.getMessage());
-        return ResponseEntity
-                .status(e.getStatus())
-                .body(new ResponseDto<>(e.getCode(), e.getMessage(), null));
     }
 
 }
