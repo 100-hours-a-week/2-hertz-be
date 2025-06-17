@@ -3,9 +3,9 @@ package com.hertz.hertz_be.domain.auth.service;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
 import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.sse.SseService;
 import io.jsonwebtoken.JwtException;
@@ -62,9 +62,9 @@ public class AuthService {
     public void logout(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new BusinessException(
-                    NewResponseCode.NOT_FOUND.getCode(),
-                    NewResponseCode.NOT_FOUND.getHttpStatus(),
-                    "요청한 사용자를 찾을 수 없습니다."
+                    UserResponseCode.USER_NOT_FOUND.getCode(),
+                    UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                    UserResponseCode.USER_NOT_FOUND.getMessage()
             );
         }
 

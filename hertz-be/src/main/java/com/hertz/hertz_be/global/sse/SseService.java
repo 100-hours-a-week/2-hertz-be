@@ -2,9 +2,10 @@ package com.hertz.hertz_be.global.sse;
 
 import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
-import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,7 +31,11 @@ public class SseService {
     @Transactional(readOnly = true)
     public SseEmitter subscribe(Long userId) {
         if (!userRepository.existsById(userId)) {
-            throw new UserNotFoundException();
+            throw new BusinessException(
+                    UserResponseCode.USER_NOT_FOUND.getCode(),
+                    UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                    UserResponseCode.USER_NOT_FOUND.getMessage()
+            );
         }
 
         if (emitters.containsKey(userId)) {
