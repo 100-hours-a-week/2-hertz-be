@@ -2,7 +2,7 @@ package com.hertz.hertz_be.domain.auth.controller;
 
 import static com.hertz.hertz_be.global.util.AuthUtil.extractRefreshTokenFromCookie;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
-import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.domain.auth.dto.request.TestLoginRequestDto;
@@ -10,11 +10,11 @@ import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +52,10 @@ public class AuthController {
 
         String refreshToken = extractRefreshTokenFromCookie(request);
         if (refreshToken == null) {
-            throw new RefreshTokenInvalidException();
+            throw new BusinessException(
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
         }
 
         Map.Entry<ReissueAccessTokenResponseDto, String> result = authTokenService.reissueAccessToken(refreshToken);
