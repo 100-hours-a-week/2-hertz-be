@@ -3,14 +3,13 @@ package com.hertz.hertz_be.domain.auth.service;
 import com.hertz.hertz_be.domain.auth.client.KakaoOAuthClient;
 import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
-import com.hertz.hertz_be.domain.auth.exception.OAuthStateInvalidException;
-import com.hertz.hertz_be.domain.auth.exception.ProviderInvalidException;
-import com.hertz.hertz_be.domain.auth.exception.RateLimitException;
+import com.hertz.hertz_be.domain.auth.exception.OAuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.repository.UserOauthRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -52,17 +51,29 @@ public class OAuthService {
                     + "&response_type=code"
                     + "&state=" + state;
         }
-        throw new ProviderInvalidException();
+        throw new BusinessException(
+                OAuthResponseCode.UNSUPPORTED_PROVIDER.getCode(),
+                OAuthResponseCode.UNSUPPORTED_PROVIDER.getHttpStatus(),
+                OAuthResponseCode.UNSUPPORTED_PROVIDER.getMessage()
+        );
     }
 
     public OAuthLoginResult oauthLogin(String provider, OAuthLoginRequestDto request) {
         if (!"kakao".equalsIgnoreCase(provider)) {
-            throw new ProviderInvalidException();
+            throw new BusinessException(
+                    OAuthResponseCode.UNSUPPORTED_PROVIDER.getCode(),
+                    OAuthResponseCode.UNSUPPORTED_PROVIDER.getHttpStatus(),
+                    OAuthResponseCode.UNSUPPORTED_PROVIDER.getMessage()
+            );
         }
 
         String stateKey = "OAUTH:STATE:" + request.getState();
         if (!"VALID".equals(redisTemplate.opsForValue().get(stateKey))) {
-            throw new OAuthStateInvalidException();
+            throw new BusinessException(
+                    OAuthResponseCode.OAUTH_STATE_INVALID.getCode(),
+                    OAuthResponseCode.OAUTH_STATE_INVALID.getHttpStatus(),
+                    OAuthResponseCode.OAUTH_STATE_INVALID.getMessage()
+            );
         }
         redisTemplate.delete(stateKey);
 
@@ -71,7 +82,11 @@ public class OAuthService {
         try {
             kakaoData = kakaoOAuthClient.getUserInfoAndTokens(request.getCode());
         } catch (HttpClientErrorException.TooManyRequests e) {
-            throw new RateLimitException();
+            throw new BusinessException(
+                    OAuthResponseCode.RATE_LIMIT.getCode(),
+                    OAuthResponseCode.RATE_LIMIT.getHttpStatus(),
+                    OAuthResponseCode.RATE_LIMIT.getMessage()
+            );
         }
         String providerId = kakaoData.get("id").toString();
         String providerRefreshToken = kakaoData.get("refresh_token").toString();
