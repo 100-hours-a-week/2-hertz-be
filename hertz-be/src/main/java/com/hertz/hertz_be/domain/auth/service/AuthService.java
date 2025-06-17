@@ -64,7 +64,7 @@ public class AuthService {
             throw new BusinessException(
                     UserResponseCode.USER_NOT_FOUND.getCode(),
                     UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                    UserResponseCode.USER_NOT_FOUND.getMessage()
+                    "로그아웃을 요청한 사용자가 존재하지 않습니다."
             );
         }
 

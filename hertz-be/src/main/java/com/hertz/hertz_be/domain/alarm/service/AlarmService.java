@@ -54,7 +54,7 @@ public class AlarmService {
                 .orElseThrow(() -> new BusinessException(
                         UserResponseCode.USER_NOT_FOUND.getCode(),
                         UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                        "공지 알람 작성 API를 요청한 사용자가 존재하지 않습니다."
                 ));
 
         AlarmNotification alarmNotification = AlarmNotification.builder()
@@ -212,7 +212,7 @@ public class AlarmService {
             throw new BusinessException(
                     UserResponseCode.USER_NOT_FOUND.getCode(),
                     UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                    UserResponseCode.USER_NOT_FOUND.getMessage()
+                    "알람 삭제 API를 요청한 사용자가 존재하지 않습니다."
             );
         }
 
