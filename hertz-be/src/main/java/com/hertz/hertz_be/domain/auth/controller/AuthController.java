@@ -65,7 +65,7 @@ public class AuthController {
         AuthUtil.setRefreshTokenCookie(response, newRefreshToken, maxAgeSeconds, isLocal);
 
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.ACCESS_TOKEN_REISSUED, "Access Token이 재발급되었습니다.", accessTokenResponse)
+                new ResponseDto<>(AuthResponseCode.ACCESS_TOKEN_REISSUED.getCode(), AuthResponseCode.ACCESS_TOKEN_REISSUED.getMessage(), accessTokenResponse)
         );
     }
 
@@ -107,7 +107,7 @@ public class AuthController {
     public ResponseEntity<ResponseDto<Void>> deleteUserById(@PathVariable Long userId) {
         userService.deleteUserById(userId);
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "사용자가 정상적으로 삭제되었습니다.", null)
+                new ResponseDto<>(AuthResponseCode.USER_DELETE_SUCCESS.getCode(), AuthResponseCode.USER_DELETE_SUCCESS.getMessage(), null)
         );
     }
 
@@ -116,7 +116,7 @@ public class AuthController {
     public ResponseEntity<ResponseDto<Void>> deleteAllUsers() {
         userService.deleteAllUsers();
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.USER_DELETE_SUCCESS, "모든 사용자와 사용자 관련 데이터 모두 정상적으로 삭제되었습니다.", null)
+                new ResponseDto<>(AuthResponseCode.USER_DELETE_SUCCESS.getCode(), AuthResponseCode.USER_DELETE_SUCCESS.getMessage(), null)
         );
     }
 
@@ -125,7 +125,7 @@ public class AuthController {
     public ResponseEntity<ResponseDto<Void>> logout(@AuthenticationPrincipal Long userId) {
         authService.logout(userId);
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.LOGOUT_SUCCESS, "정상적으로 로그아웃되었습니다.", null)
+                new ResponseDto<>(AuthResponseCode.LOGOUT_SUCCESS.getCode(), AuthResponseCode.LOGOUT_SUCCESS.getMessage(), null)
         );
     }
 }
