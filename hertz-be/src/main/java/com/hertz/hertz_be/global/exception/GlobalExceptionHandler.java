@@ -28,23 +28,6 @@ public class GlobalExceptionHandler {
                 .body(new ResponseDto(ex.getCode(), ex.getMessage(), null));
     }
 
-
-    // 경로 변수나 쿼리 파라미터 @Valid 검증, DTO @Valid 검증, JSON 형식 오류 (e.g. null, 오타 등)
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    public ResponseEntity<ResponseDto<Void>> handleMessageNotReadable(Exception ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ResponseDto<>(ResponseCode.BAD_REQUEST, "잘못된 요청입니다.", null));
-    }
-
-    // 존재하지 않는 URL
-    @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ResponseDto<Void>> handleNotFound(NoHandlerFoundException ex) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ResponseDto<>(ResponseCode.NOT_FOUND, "존재하지 않는 API입니다.", null));
-    }
-
 //    // 비즈니스 로직에서 잡지못한 모든 예외 검증
 //    @ExceptionHandler(Exception.class)
 //    public ResponseEntity<ResponseDto<Void>> handleException(Exception ex) {
