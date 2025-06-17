@@ -1,6 +1,5 @@
 package com.hertz.hertz_be.domain.channel.exception;
 
-import com.hertz.hertz_be.domain.auth.exception.BaseAuthException;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.Getter;
 
