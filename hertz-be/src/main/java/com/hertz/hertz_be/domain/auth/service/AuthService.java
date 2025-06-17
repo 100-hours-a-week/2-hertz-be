@@ -1,12 +1,12 @@
 package com.hertz.hertz_be.domain.auth.service;
 
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
-import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
-import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
-import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import com.hertz.hertz_be.global.common.NewResponseCode;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.sse.SseService;
 import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
@@ -35,7 +35,10 @@ public class AuthService {
             String storedToken = refreshTokenService.getRefreshToken(userId);
 
             if (storedToken == null || !storedToken.equals(refreshToken)) {
-                throw new RefreshTokenInvalidException();
+                throw new BusinessException(
+                        AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
+                        AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
+                        AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
             }
 
             String newAccessToken = jwtTokenProvider.createAccessToken(userId);
@@ -49,13 +52,21 @@ public class AuthService {
                     newRefreshToken
             );
         } catch (JwtException e) {
-            throw new RefreshTokenInvalidException();
+            throw new BusinessException(
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
         }
     }
 
     public void logout(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
+        if (!userRepository.existsById(userId)) {
+            throw new BusinessException(
+                    NewResponseCode.NOT_FOUND.getCode(),
+                    NewResponseCode.NOT_FOUND.getHttpStatus(),
+                    "요청한 사용자를 찾을 수 없습니다."
+            );
+        }
 
         refreshTokenService.deleteRefreshToken(userId);
         sseService.disconnect(userId);
