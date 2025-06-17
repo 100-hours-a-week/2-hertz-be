@@ -1,10 +1,9 @@
 package com.hertz.hertz_be.global.sse;
 
-import com.hertz.hertz_be.domain.auth.exception.RefreshTokenInvalidException;
+import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.channel.exception.UserNotFoundException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.SseEventName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,7 +76,7 @@ public class SseService {
     public boolean sendToClient(Long userId, String eventName, Object data) {
         String storedToken = refreshTokenService.getRefreshToken(userId);
         if (storedToken == null) {
-            sendErrorAndComplete(userId, ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요.");
+            sendErrorAndComplete(userId, AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(), AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
             return false;
         }
 
