@@ -4,6 +4,7 @@ import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResponseDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthSignupResponseDto;
+import com.hertz.hertz_be.domain.auth.exception.OAuthResponseCode;
 import com.hertz.hertz_be.domain.auth.service.OAuthService;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseCode;
@@ -60,13 +61,13 @@ public class OAuthController {
 
             boolean hasSelectedInterests = channelService.hasSelectedInterests(channelService.getUserById(result.userId()));
             if (!hasSelectedInterests) {
-                return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_INTERESTS_NOT_SELECTED, "사용자가 아직 취향 선택을 완료하지 않았습니다.", dto));
+                return ResponseEntity.ok(new ResponseDto<>(OAuthResponseCode.USER_INTERESTS_NOT_SELECTED.getCode(), OAuthResponseCode.USER_INTERESTS_NOT_SELECTED.getMessage(), dto));
             }
-            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_ALREADY_REGISTERED, "로그인에 성공했습니다.", dto));
+            return ResponseEntity.ok(new ResponseDto<>(OAuthResponseCode.USER_ALREADY_REGISTERED.getCode(), OAuthResponseCode.USER_ALREADY_REGISTERED.getMessage(), dto));
 
         } else {
             OAuthSignupResponseDto dto = new OAuthSignupResponseDto(result.providerId());
-            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.USER_NOT_REGISTERED, "신규 회원입니다.", dto));
+            return ResponseEntity.ok(new ResponseDto<>(OAuthResponseCode.USER_NOT_REGISTERED.getCode(), OAuthResponseCode.USER_NOT_REGISTERED.getMessage(), dto));
         }
     }
 }
