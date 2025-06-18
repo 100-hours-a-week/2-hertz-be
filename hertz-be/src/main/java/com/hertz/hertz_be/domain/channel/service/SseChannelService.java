@@ -6,10 +6,10 @@ import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.SseEventName;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.sse.SseService;
 import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
@@ -145,7 +145,11 @@ public class SseChannelService {
 
     public void updatePartnerNavbar(Long userId) {
         User user = userRepository.findByIdWithSentSignalRooms(userId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                ));
 
         List<SignalRoom> allRooms = Stream.concat(
                 user.getSentSignalRooms().stream(),

@@ -7,10 +7,10 @@ import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.ResponseCode;
-import com.hertz.hertz_be.global.exception.InternalServerErrorException;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,7 +106,11 @@ public class AsyncChannelService {
     public void sendNewMessageNotifyToPartner(SignalMessage signalMessage, Long partnerId, boolean isSignal) {
         // signalMessage는 detached 상태 → DB에서 최신 상태 조회
         SignalMessage latestMessageForm = signalMessageRepository.findById(signalMessage.getId())
-                .orElseThrow(InternalServerErrorException::new);
+                .orElseThrow(() -> new BusinessException(
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getMessage()
+                ));
 
         if (!latestMessageForm.getIsRead()) {
             sseChannelService.updatePartnerChannelList(latestMessageForm, partnerId);
@@ -132,7 +136,11 @@ public class AsyncChannelService {
         SignalRoom latestRoomForm = entityManager.find(SignalRoom.class, room.getId());
         User partner = latestRoomForm.getPartnerUser(userId);
         User user = userRepository.findByIdWithSentSignalRooms(userId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                ));
 
         boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
         MatchingStatus partnerStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
@@ -150,7 +158,11 @@ public class AsyncChannelService {
         SignalRoom latestRoomForm = entityManager.find(SignalRoom.class, room.getId());
         User partner = latestRoomForm.getPartnerUser(userId);
         User user = userRepository.findByIdWithSentSignalRooms(userId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                ));
 
         boolean isSender = Objects.equals(userId, latestRoomForm.getSenderUser().getId());
         MatchingStatus partnerMatchingStatus = isSender ? latestRoomForm.getReceiverMatchingStatus() : latestRoomForm.getSenderMatchingStatus();
