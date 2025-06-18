@@ -2,6 +2,7 @@ package com.hertz.hertz_be.domain.interests.controller;
 
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.response.UserInterestsResponseDto;
+import com.hertz.hertz_be.domain.interests.exception.InterestsResponseCode;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
@@ -41,6 +42,6 @@ public class InterestsController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(ResponseCode.INTERESTS_SAVED_SUCCESSFULLY, "사용자의 취향이 정상적으로 저장되었습니다.", null));
+                .body(new ResponseDto<>(InterestsResponseCode.INTERESTS_SAVED_SUCCESSFULLY.getCode(), InterestsResponseCode.INTERESTS_SAVED_SUCCESSFULLY.getMessage(), null));
     }
 }

@@ -15,9 +15,12 @@ import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryRepositor
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerErrorException;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -74,7 +77,11 @@ public class InterestsService {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> {
                         log.error("❌ [saveUserInterests] 유저 없음 - userId: {}", userId);
-                        return new UserException("사용자를 찾을 수 없습니다.", ResponseCode.BAD_REQUEST);
+                        return new BusinessException(
+                                UserResponseCode.USER_NOT_FOUND.getCode(),
+                                UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                                "취향 등록을 요청한 사용자가 존재하지 않습니다."
+                        );
                     });
             log.debug("✅ [saveUserInterests] 유저 조회 완료 - email: {}", user.getEmail());
 
@@ -90,7 +97,11 @@ public class InterestsService {
                 saveInterestItems(user, interestsMap, aiInterests);
             } catch (Exception e) {
                 log.error("❌ [saveUserInterests] 취향 저장 중 예외 발생", e);
-                throw new UserException("취향 등록 처리에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
+                throw new BusinessException(
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                        NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                        "취향 저장 중 예외 발생했습니다."
+                );
             }
 
 
@@ -107,6 +118,11 @@ public class InterestsService {
                         });
                     } catch (Exception e) {
                         log.error("❌ AI 서버 호출 실패", e);
+                        throw new BusinessException(
+                                NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                                NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                                "취향 저장 중 AI 서버 호출 실패하여 예외 발생했습니다."
+                        );
                     }
                 }
             });
@@ -139,7 +155,11 @@ public class InterestsService {
             List<String> itemNames = entry.getValue();
 
             if (itemNames == null) {
-                throw new UserException("관심사 항목에 null 값이 있습니다", ResponseCode.BAD_REQUEST);
+                throw new BusinessException(
+                        NewResponseCode.BAD_REQUEST.getCode(),
+                        NewResponseCode.BAD_REQUEST.getHttpStatus(),
+                        "관심사 항목에 null 값이 있습니다."
+                );
             }
 
             log.debug("📌 [saveInterestItems] 카테고리: {}, 항목 수: {}", categoryName, itemNames.size());
@@ -169,7 +189,11 @@ public class InterestsService {
                             return interestsCategoryRepository.findByCategoryTypeAndName(categoryType, categoryName)
                                     .orElseThrow(() -> {
                                         log.error("❌ [saveSingleUserInterest] 저장 중 예외 발생", e);
-                                        return new RuntimeException("카테고리 중복 저장 실패");
+                                        return new BusinessException(
+                                                NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                                                NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                                                "취향 저장 중 카테고리 중복 저장 실패하여 예외 발생했습니다."
+                                        );
                                     });
                         }
                     });
@@ -187,7 +211,11 @@ public class InterestsService {
                             return interestsCategoryItemRepository.findByCategoryAndName(category, itemName)
                                     .orElseThrow(() -> {
                                         log.error("❌ [saveSingleUserInterest - CategoryItem] 저장 중 예외 발생", e);
-                                        return new RuntimeException("아이템 중복 저장 실패");
+                                        return new BusinessException(
+                                                NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                                                NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                                                "취향 저장 중 아이템 중복 저장 실패하여 예외 발생했습니다."
+                                        );
                                     });
                         }
                     });
@@ -202,7 +230,11 @@ public class InterestsService {
             log.debug("✅ [saveSingleUserInterest - CategoryItem] 저장 완료 - categoryItemId: {}", categoryItem.getId());
         } catch (Exception e) {
             log.error("❌ [saveSingleUserInterest] 저장 실패 - category: {}, item: {}", categoryName, itemName, e);
-            throw new UserException("단일 취향 아이템 저장에 문제가 발생했습니다.", ResponseCode.BAD_REQUEST);
+            throw new BusinessException(
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                    "단일 취향 아이템 저장에 문제가 발생했습니다."
+            );
         }
     }
 
@@ -237,46 +269,90 @@ public class InterestsService {
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .block();
-        }catch (WebClientResponseException e) {
-            log.warn("⚠️ [AI 서버 오류] status: {}, body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+        }catch (WebClientResponseException ex) {
+            log.warn("⚠️ [AI 서버 오류] status: {}, body: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
 
             try {
-                String body = e.getResponseBodyAsString();
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode json = mapper.readTree(body);
-                String code = json.has("code") ? json.get("code").asText() : null;
-              
-                return switch (code) {
-                    case ResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID -> {
-                        log.warn("⚠️ 이미 등록된 유저. userId: {}", userId);
-                        yield Map.of("code", ResponseCode.EMBEDDING_REGISTER_SUCCESS); // 정상처럼 처리
-                    }
-                    case ResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED -> throw new SimilarityUpdateFailedException();
-                    case ResponseCode.EMBEDDING_REGISTER_SERVER_ERROR -> throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
-                    case ResponseCode.BAD_REQUEST_VALIDATION_ERROR -> throw new InvalidException();
-                    default -> throw new RegisterBadRequestException(code);
-                };
+                return webClient.post()
+                        .uri(uri)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(aiRequest)
+                        .retrieve()
+                        .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                        .block();
+            } catch (WebClientResponseException e) {
+                log.warn("⚠️ [AI 서버 오류] status: {}, body: {}", e.getStatusCode(), e.getResponseBodyAsString());
 
-            } catch (Exception parsingEx) {
-                log.error("❌ AI 응답 파싱 실패", parsingEx);
-                throw new AiServerErrorException(ResponseCode.TUNING_INTERNAL_SERVER_ERROR);
+                try {
+                    // JSON 파싱
+                    String body = e.getResponseBodyAsString();
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode json = mapper.readTree(body);
+                    String code = json.has("code") ? json.get("code").asText() : null;
+
+                    // 정상 처리 케이스
+                    if (InterestsResponseCode.EMBEDDING_CONFLICT_DUPLICATE_ID.getCode().equals(code)) {
+                        log.warn("⚠️ 이미 등록된 유저. userId: {}", userId);
+                        return Map.of("code", InterestsResponseCode.EMBEDDING_REGISTER_SUCCESS.getCode());
+                    }
+
+                    // 오류 코드 집합
+                    Set<String> aiErrorCodes = Set.of(
+                            InterestsResponseCode.EMBEDDING_REGISTER_SIMILARITY_UPDATE_FAILED.getCode(),
+                            InterestsResponseCode.EMBEDDING_REGISTER_SERVER_ERROR.getCode(),
+                            InterestsResponseCode.BAD_REQUEST_VALIDATION_ERROR.getCode()
+                    );
+
+                    // 예외 throw
+                    if (aiErrorCodes.contains(code)) {
+                        throw new BusinessException(
+                                NewResponseCode.AI_SERVER_ERROR.getCode(),
+                                NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                                "취향 저장 중 AI 서버에서 오류가 발생했습니다."
+                        );
+                    }
+
+                    // 알 수 없는 코드도 동일 처리
+                    throw new BusinessException(
+                            NewResponseCode.AI_SERVER_ERROR.getCode(),
+                            NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                            "취향 저장 중 AI 서버에서 오류가 발생했습니다."
+                    );
+
+                } catch (Exception parsingEx) {
+                    log.error("❌ [AI 서버 응답 파싱 실패]", parsingEx);
+                    throw new BusinessException(
+                            NewResponseCode.AI_SERVER_ERROR.getCode(),
+                            NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                            "취향 저장 중 AI 서버에서 오류가 발생했습니다."
+                    );
+                }
             }
         }
     }
 
     public void validateUserInterestsInput(Map<String, String> keywordsMap, Map<String, List<String>> interestsMap) {
+        Runnable throwEmptyListException = () -> {
+            throw new BusinessException(
+                    InterestsResponseCode.EMPTY_LIST_NOT_ALLOWED.getCode(),
+                    InterestsResponseCode.EMPTY_LIST_NOT_ALLOWED.getHttpStatus(),
+                    InterestsResponseCode.EMPTY_LIST_NOT_ALLOWED.getMessage()
+            );
+        };
+
         for (String value : keywordsMap.values()) {
             if (value == null || value.trim().isEmpty()) {
-                throw new InvalidInterestsInputException();
+                throwEmptyListException.run();
             }
         }
+
         for (List<String> list : interestsMap.values()) {
             if (list == null || list.isEmpty()) {
-                throw new InvalidInterestsInputException();
+                throwEmptyListException.run();
             }
             for (String item : list) {
                 if (item == null || item.trim().isEmpty()) {
-                    throw new InvalidInterestsInputException();
+                    throwEmptyListException.run();
                 }
             }
         }
