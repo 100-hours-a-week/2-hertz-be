@@ -16,7 +16,7 @@ public enum ChannelResponseCode {
     NO_CHANNEL_ROOM(HttpStatus.OK, "NO_CHANNEL_ROOM", "채널 방이 존재하지 않습니다."),
     MESSAGE_CREATED(HttpStatus.CREATED, "MESSAGE_CREATED", "메시지가 성공적으로 생성되었습니다."),
     MATCH_SUCCESS(HttpStatus.OK, "MATCH_SUCCESS", "매칭이 성공적으로 완료되었습니다."),
-    MATCH_PENDING(HttpStatus.ACCEPTED, "MATCH_PENDING", "매칭이 대기 상태입니다."),
+    MATCH_PENDING(HttpStatus.ACCEPTED, "MATCH_PENDING", "상대방의 응답을 기다리는 중입니다."),
     MATCH_REJECTION_SUCCESS(HttpStatus.OK, "MATCH_REJECTION_SUCCESS", "매칭 거절이 성공적으로 처리되었습니다."),
     TUNING_SUCCESS(HttpStatus.OK, "TUNING_SUCCESS", "튜닝이 성공적으로 완료되었습니다."),
     NO_TUNING_CANDIDATE(HttpStatus.OK, "NO_TUNING_CANDIDATE", "추천할 튜닝 후보자가 없습니다."),

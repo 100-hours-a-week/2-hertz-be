@@ -21,7 +21,6 @@ import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.util.AESUtil;
-import com.hertz.hertz_be.global.common.ResponseCode;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -599,7 +598,7 @@ public class ChannelService {
         if(matchingStatus == MatchingStatus.MATCHED) {
             return signalRoomRepository.findMatchResultByUser(userId, room.getId());
         } else {
-            return ResponseCode.MATCH_REJECTION_SUCCESS;
+            return ChannelResponseCode.MATCH_REJECTION_SUCCESS.getCode();
         }
     }
 
