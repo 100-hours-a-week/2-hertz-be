@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.auth.exception;
+package com.hertz.hertz_be.domain.auth.responsecode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -2,13 +2,12 @@ package com.hertz.hertz_be.domain.auth.controller;
 
 import static com.hertz.hertz_be.global.util.AuthUtil.extractRefreshTokenFromCookie;
 import com.hertz.hertz_be.domain.auth.dto.response.ReissueAccessTokenResponseDto;
-import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
+import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.domain.auth.dto.request.TestLoginRequestDto;
 import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.util.AuthUtil;

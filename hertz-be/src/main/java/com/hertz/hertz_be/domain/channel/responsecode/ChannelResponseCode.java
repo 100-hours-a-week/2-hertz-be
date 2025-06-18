@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.channel.exception;
+package com.hertz.hertz_be.domain.channel.responsecode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

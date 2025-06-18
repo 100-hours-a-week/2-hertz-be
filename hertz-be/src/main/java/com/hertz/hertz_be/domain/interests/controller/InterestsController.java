@@ -2,9 +2,8 @@ package com.hertz.hertz_be.domain.interests.controller;
 
 import com.hertz.hertz_be.domain.interests.dto.request.UserInterestsRequestDto;
 import com.hertz.hertz_be.domain.interests.dto.response.UserInterestsResponseDto;
-import com.hertz.hertz_be.domain.interests.exception.InterestsResponseCode;
+import com.hertz.hertz_be.domain.interests.responsecode.InterestsResponseCode;
 import com.hertz.hertz_be.domain.interests.service.InterestsService;
-import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

@@ -3,7 +3,7 @@ package com.hertz.hertz_be.domain.alarm.controller;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
 import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
 import com.hertz.hertz_be.domain.alarm.service.AlarmService;
-import com.hertz.hertz_be.domain.alarm.exception.AlarmResponseCode;
+import com.hertz.hertz_be.domain.alarm.responsecode.AlarmResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

@@ -3,7 +3,7 @@ package com.hertz.hertz_be.domain.auth.service;
 import com.hertz.hertz_be.domain.auth.client.KakaoOAuthClient;
 import com.hertz.hertz_be.domain.auth.dto.request.OAuthLoginRequestDto;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
-import com.hertz.hertz_be.domain.auth.exception.OAuthResponseCode;
+import com.hertz.hertz_be.domain.auth.responsecode.OAuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;

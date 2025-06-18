@@ -1,8 +1,8 @@
 package com.hertz.hertz_be.global.sse;
 
-import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
+import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
-import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
+import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.exception.BusinessException;

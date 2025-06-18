@@ -2,7 +2,7 @@ package com.hertz.hertz_be.global.sse;
 
 import static com.hertz.hertz_be.global.util.AuthUtil.extractRefreshTokenFromCookie;
 
-import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
+import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import io.swagger.v3.oas.annotations.tags.Tag;

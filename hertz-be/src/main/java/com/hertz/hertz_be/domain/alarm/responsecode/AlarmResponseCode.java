@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.alarm.exception;
+package com.hertz.hertz_be.domain.alarm.responsecode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

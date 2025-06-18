@@ -2,12 +2,12 @@ package com.hertz.hertz_be.global.socketio;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
-import com.hertz.hertz_be.domain.channel.exception.ChannelNotFoundException;
-import com.hertz.hertz_be.domain.channel.exception.ForbiddenChannelException;
+import com.hertz.hertz_be.domain.channel.responsecode.ChannelNotFoundException;
+import com.hertz.hertz_be.domain.channel.responsecode.ForbiddenChannelException;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.responsecode.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.util.AESUtil;

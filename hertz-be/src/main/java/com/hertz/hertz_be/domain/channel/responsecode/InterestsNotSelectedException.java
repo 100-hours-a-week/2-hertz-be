@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.channel.exception;
+package com.hertz.hertz_be.domain.channel.responsecode;
 
 import com.hertz.hertz_be.global.common.ResponseCode;
 import lombok.Getter;
