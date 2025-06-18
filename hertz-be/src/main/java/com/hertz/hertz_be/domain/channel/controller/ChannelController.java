@@ -7,8 +7,10 @@ import com.hertz.hertz_be.domain.channel.dto.response.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.SendSignalResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.TuningResponseDto;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
+import com.hertz.hertz_be.domain.channel.exception.ChannelResponseCode;
 import com.hertz.hertz_be.domain.channel.service.ChannelService;
-import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -35,7 +37,7 @@ public class ChannelController {
                                                                          @AuthenticationPrincipal Long userId) {
         SendSignalResponseDto response = channelService.sendSignal(userId, requestDTO);
         return ResponseEntity.status(201).body(
-                new ResponseDto<>(ResponseCode.SIGNAL_ROOM_CREATED, "시그널 룸이 성공적으로 생성되었습니다.", response)
+                new ResponseDto<>(ChannelResponseCode.SIGNAL_ROOM_CREATED.getCode(), ChannelResponseCode.SIGNAL_ROOM_CREATED.getMessage(), response)
         );
 
     }
@@ -45,10 +47,10 @@ public class ChannelController {
     public ResponseEntity<ResponseDto<TuningResponseDto>> getTunedUser(@AuthenticationPrincipal Long userId) {
         TuningResponseDto response = channelService.getTunedUser(userId);
         if (response == null) {
-            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.NO_TUNING_CANDIDATE, "추천 가능한 상대가 현재 없습니다.", null));
+            return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.NO_TUNING_CANDIDATE.getCode(), ChannelResponseCode.NO_TUNING_CANDIDATE.getMessage(), null));
         }
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.TUNING_SUCCESS, "튜닝된 사용자가 정상적으로 조회되었습니다.", response)
+                new ResponseDto<>(ChannelResponseCode.TUNING_SUCCESS.getCode(), ChannelResponseCode.TUNING_SUCCESS.getMessage(), response)
         );
     }
 
@@ -61,9 +63,9 @@ public class ChannelController {
         ChannelListResponseDto response = channelService.getPersonalSignalRoomList(userId, page, size);
 
         if (response == null) {
-            return ResponseEntity.ok(new ResponseDto<>(ResponseCode.NO_CHANNEL_ROOM, "참여 중인 채널이 없습니다.", null));
+            return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.NO_CHANNEL_ROOM.getCode(), ChannelResponseCode.NO_CHANNEL_ROOM.getMessage(), null));
         }
-        return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_LIST_FETCHED, "채널방 목록이 정상적으로 조회되었습니다.", response));
+        return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.CHANNEL_ROOM_LIST_FETCHED.getCode(), ChannelResponseCode.CHANNEL_ROOM_LIST_FETCHED.getMessage(), response));
     }
 
     @GetMapping("/v1/channel-rooms/{channelRoomId}")
@@ -74,7 +76,7 @@ public class ChannelController {
                                                                                       @RequestParam(defaultValue = "20") int size) {
 
         ChannelRoomResponseDto response = channelService.getChannelRoom(channelRoomId, userId, page, size);
-        return ResponseEntity.ok(new ResponseDto<>("CHANNEL_ROOM_SUCCESS", "채널방이 정상적으로 조회되었습니다.", response));
+        return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.CHANNEL_ROOM_SUCCESS.getCode(), ChannelResponseCode.CHANNEL_ROOM_SUCCESS.getMessage(), response));
     }
 
     @PostMapping("/v1/channel-rooms/{channelRoomId}/messages")
@@ -86,35 +88,40 @@ public class ChannelController {
         channelService.sendChannelMessage(channelRoomId, userId, response);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new ResponseDto<>(ResponseCode.MESSAGE_CREATED, "메세지가 성공적으로 전송되었습니다.", null)
+                .body(new ResponseDto<>(ChannelResponseCode.MESSAGE_CREATED.getCode(), ChannelResponseCode.MESSAGE_CREATED.getMessage(), null)
         );
     }
 
 
     @PostMapping("/v2/matching/acceptances")
     @Operation(summary = "채널방 매칭 수락 API")
-    public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(@AuthenticationPrincipal Long userId,
-                                                                                     @RequestBody SignalMatchingRequestDto response) {
+    public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody SignalMatchingRequestDto response) {
 
         String matchingResult = channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.MATCHED);
 
-        return switch (matchingResult) {
-            case ResponseCode.MATCH_FAILED -> ResponseEntity
+        if (ChannelResponseCode.MATCH_FAILED.getCode().equals(matchingResult)) {
+            return ResponseEntity
                     .status(HttpStatus.CONFLICT)
-                    .body(new ResponseDto<>(ResponseCode.MATCH_FAILED, "상대방이 매칭을 거절했습니다.", null));
-            case ResponseCode.MATCH_SUCCESS -> ResponseEntity
+                    .body(new ResponseDto<>(ChannelResponseCode.MATCH_FAILED.getCode(), ChannelResponseCode.MATCH_FAILED.getMessage(), null));
+        } else if (ChannelResponseCode.MATCH_SUCCESS.getCode().equals(matchingResult)) {
+            return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(new ResponseDto<>(ResponseCode.MATCH_SUCCESS, "매칭이 성사되었습니다.", null));
-            case ResponseCode.MATCH_PENDING -> ResponseEntity
+                    .body(new ResponseDto<>(ChannelResponseCode.MATCH_SUCCESS.getCode(), ChannelResponseCode.MATCH_SUCCESS.getMessage(), null));
+        } else if (ChannelResponseCode.MATCH_PENDING.getCode().equals(matchingResult)) {
+            return ResponseEntity
                     .status(HttpStatus.ACCEPTED)
-                    .body(new ResponseDto<>(ResponseCode.MATCH_PENDING, "상대방의 응답을 기다리는 중입니다.", null));
-            case ResponseCode.USER_DEACTIVATED -> ResponseEntity
+                    .body(new ResponseDto<>(ChannelResponseCode.MATCH_PENDING.getCode(), ChannelResponseCode.MATCH_PENDING.getMessage(), null));
+        } else if (UserResponseCode.USER_DEACTIVATED.getCode().equals(matchingResult)) {
+            return ResponseEntity
                     .status(HttpStatus.GONE)
-                    .body(new ResponseDto<>(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다.", null));
-            default -> ResponseEntity
+                    .body(new ResponseDto<>(UserResponseCode.USER_DEACTIVATED.getCode(), UserResponseCode.USER_DEACTIVATED.getMessage(), null));
+        } else {
+            return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseDto<>(ResponseCode.INTERNAL_SERVER_ERROR, "알 수 없는 오류입니다.", null));
-        };
+                    .body(new ResponseDto<>(NewResponseCode.INTERNAL_SERVER_ERROR.getCode(), NewResponseCode.INTERNAL_SERVER_ERROR.getMessage(), null));
+        }
     }
 
 
@@ -127,7 +134,7 @@ public class ChannelController {
                     .status(HttpStatus.OK)
                     .body(new ResponseDto<>(
                             channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.UNMATCHED)
-                            , "매칭 거절이 완료되었습니다."
+                            , ChannelResponseCode.MATCH_REJECTION_SUCCESS.getMessage()
                             , null));
     }
 
@@ -136,6 +143,6 @@ public class ChannelController {
     public ResponseEntity<ResponseDto<Void>> leaveChannelRoom(@PathVariable Long channelRoomId,
                                                               @AuthenticationPrincipal Long userId) {
         channelService.leaveChannelRoom(channelRoomId, userId);
-        return ResponseEntity.ok(new ResponseDto<>(ResponseCode.CHANNEL_ROOM_EXIT_SUCCESS, "채널방에서 정상적으로 나갔습니다.", null));
+        return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.CHANNEL_ROOM_EXIT_SUCCESS.getCode(), ChannelResponseCode.CHANNEL_ROOM_EXIT_SUCCESS.getMessage(), null));
     }
 }
