@@ -14,12 +14,9 @@ import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryItemRepos
 import com.hertz.hertz_be.domain.interests.repository.InterestsCategoryRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.exception.UserException;
 import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.NewResponseCode;
-import com.hertz.hertz_be.global.common.ResponseCode;
-import com.hertz.hertz_be.global.exception.AiServerErrorException;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
