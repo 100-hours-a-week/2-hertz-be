@@ -18,6 +18,7 @@ import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -184,7 +185,11 @@ public class AlarmService {
                                 report.getCreatedAt().toString()
                         );
                     } else {
-                        throw new RuntimeException();
+                        throw new BusinessException(
+                                NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                                NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                                "알람 리스트 반환 중 예외 발생했습니다."
+                        );
                     }
                 })
                 .collect(Collectors.toList());
