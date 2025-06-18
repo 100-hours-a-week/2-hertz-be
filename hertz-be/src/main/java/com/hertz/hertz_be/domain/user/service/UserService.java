@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
+import com.hertz.hertz_be.domain.auth.exception.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
@@ -25,13 +26,13 @@ import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
-import com.hertz.hertz_be.domain.user.exception.UserException;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserOauthRepository;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReportUserReaction;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,17 +79,22 @@ public class UserService {
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
         if (redisValue == null) {
-            throw new UserException(ResponseCode.REFRESH_TOKEN_INVALID, "Refresh Token이 올바르지 않습니다.");
+            throw new BusinessException(
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
+                    AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
         }
 
         if (userOauthRepository.existsByProviderIdAndProvider(userInfoRequestDto.getProviderId(), userInfoRequestDto.getProvider())) {
-            throw new UserException(ResponseCode.DUPLICATE_USER, "이미 등록된 사용자입니다.");
+            throw new BusinessException(
+                    UserResponseCode.DUPLICATE_USER.getCode(),
+                    UserResponseCode.DUPLICATE_USER.getHttpStatus(),
+                    UserResponseCode.DUPLICATE_USER.getMessage());
         }
 
         String refreshTokenValue = redisValue.split(",")[0];
         LocalDateTime refreshTokenExpiredAt = LocalDateTime.parse(redisValue.split(",")[1]);
 
-        // 현재 시간과 refreshToken의 만료 일시까지를 계산 (cookie 만료 시간 설정 시 만료일자를 정할 수 없기 때문)
         long secondsUntilExpiry = Duration.between(LocalDateTime.now(), refreshTokenExpiredAt).getSeconds();
         int maxAge = (int) Math.max(0, secondsUntilExpiry);
 
@@ -142,14 +148,20 @@ public class UserService {
 
         while (true) {
             if (System.nanoTime() - startTime > TIMEOUT_NANOS) {
-                throw new UserException(ResponseCode.NICKNAME_GENERATION_TIMEOUT, "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다.");
+                throw new BusinessException(
+                        UserResponseCode.NICKNAME_GENERATION_TIMEOUT.getCode(),
+                        UserResponseCode.NICKNAME_GENERATION_TIMEOUT.getHttpStatus(),
+                        UserResponseCode.NICKNAME_GENERATION_TIMEOUT.getMessage());
             }
 
             String nickname;
             try {
                 nickname = callExternalNicknameApi();
             } catch (Exception e) {
-                throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 호출 실패");
+                throw new BusinessException(
+                        UserResponseCode.NICKNAME_API_FAILED.getCode(),
+                        UserResponseCode.NICKNAME_API_FAILED.getHttpStatus(),
+                        UserResponseCode.NICKNAME_API_FAILED.getMessage());
             }
 
             if (!userRepository.existsByNickname(nickname)) {
@@ -163,13 +175,19 @@ public class UserService {
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             return response.getBody().trim();
         }
-        throw new UserException(ResponseCode.NICKNAME_API_FAILED, "닉네임 생성 API 응답 실패");
+        throw new BusinessException(
+                UserResponseCode.NICKNAME_API_FAILED.getCode(),
+                UserResponseCode.NICKNAME_API_FAILED.getHttpStatus(),
+                UserResponseCode.NICKNAME_API_FAILED.getMessage());
     }
 
 
     public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
         User targetUser = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_DEACTIVATED, "상대방이 탈퇴한 사용자입니다."));
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_DEACTIVATED.getCode(),
+                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                        UserResponseCode.USER_DEACTIVATED.getMessage()));
 
         ObjectMapper objectMapper = new ObjectMapper();
 
@@ -214,7 +232,10 @@ public class UserService {
     @Transactional
     public void deleteUserById(Long userId) {
         User user = userRepository.findByIdWithSentSignalRooms(userId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()));
 
         List<SignalRoom> rooms = signalRoomRepository.findAllBySenderUserIdOrReceiverUserId(userId, userId);
 

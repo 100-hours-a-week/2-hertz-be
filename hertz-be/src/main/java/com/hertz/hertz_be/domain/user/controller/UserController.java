@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.user.controller;
 import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
+import com.hertz.hertz_be.domain.user.exception.UserResponseCode;
 import com.hertz.hertz_be.domain.user.service.UserService;
 import com.hertz.hertz_be.global.common.ResponseCode;
 import com.hertz.hertz_be.global.common.ResponseDto;
@@ -56,8 +57,8 @@ public class UserController {
 
         return ResponseEntity.ok(
                 new ResponseDto<>(
-                        ResponseCode.PROFILE_SAVED_SUCCESSFULLY,
-                        "개인정보가 정상적으로 저장되었습니다.",
+                        UserResponseCode.PROFILE_SAVED_SUCCESSFULLY.getCode(),
+                        UserResponseCode.PROFILE_SAVED_SUCCESSFULLY.getMessage(),
                         data
                 )
         );
@@ -73,7 +74,11 @@ public class UserController {
         String nickname = userService.fetchRandomNickname();
         Map<String, String> data = Map.of("nickname", nickname);
         return ResponseEntity.ok(
-                new ResponseDto<>(ResponseCode.NICKNAME_CREATED, "닉네임이 성공적으로 생성되었습니다.", data)
+                new ResponseDto<>(
+                        UserResponseCode.NICKNAME_CREATED.getCode(),
+                        UserResponseCode.NICKNAME_CREATED.getMessage(),
+                        data)
+
         );
     }
 
@@ -90,11 +95,17 @@ public class UserController {
 
         if("ME".equals(response.getRelationType())) {
             return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.USER_INFO_FETCH_SUCCESS, "사용자의 정보가 정상적으로 조회되었습니다.", response)
+                    new ResponseDto<>(
+                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getCode(),
+                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getMessage(),
+                            response)
             );
         } else {
             return ResponseEntity.ok(
-                    new ResponseDto<>(ResponseCode.OTHER_USER_INFO_FETCH_SUCCESS, "상대방의 정보가 정상적으로 조회되었습니다.", response)
+                    new ResponseDto<>(
+                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getCode(),
+                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getMessage(),
+                            response)
             );
         }
     }
