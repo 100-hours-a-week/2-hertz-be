@@ -24,16 +24,19 @@ public class ChannelRoomResponseDto {
     private String partnerProfileImage;
     private String partnerNickname;
     private String relationType;
+    private boolean hasPartnerExited;
     private MessagePage messages;
 
     public static ChannelRoomResponseDto of(Long roomId, User partner, String relationType,
-                                         List<MessageDto> messages, Page<SignalMessage> page) {
+                                            boolean hasPartnerExited,
+                                            List<MessageDto> messages, Page<SignalMessage> page) {
         return ChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .partnerId(partner.getId())
                 .partnerProfileImage(partner.getProfileImageUrl())
                 .partnerNickname(partner.getNickname())
                 .relationType(relationType)
+                .hasPartnerExited(hasPartnerExited)
                 .messages(new MessagePage(messages, page))
                 .build();
     }
