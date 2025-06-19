@@ -462,6 +462,8 @@ public class ChannelService {
             );
         }
 
+        boolean isPartnerExited = room.isPartnerExited(userId);
+
         Long partnerId = room.getPartnerUser(userId).getId();
 
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
@@ -498,7 +500,7 @@ public class ChannelService {
             }
         });
 
-        return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), messages, messagePage);
+        return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, messages, messagePage);
     }
 
     @Transactional
