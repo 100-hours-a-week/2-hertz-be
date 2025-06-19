@@ -124,5 +124,16 @@ public class SignalRoom {
             this.receiverExitedAt = LocalDateTime.now();
         }
     }
+
+    /**
+     * 현재 유저 id를 받아서 상대방이 나갔는지 여부를 반환
+     */
+    public boolean isPartnerExited(Long userId) {
+        boolean isSender = senderUser.getId().equals(userId);
+        if (isSender) {
+            return receiverExitedAt != null;
+        }
+        return senderExitedAt != null;
+    }
 }
 
