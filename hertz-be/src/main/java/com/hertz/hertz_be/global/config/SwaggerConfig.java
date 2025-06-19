@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${swagger.server-url}") // 환경에 따라 다르게 주입됨
+    @Value("${swagger.server-url}")
     private String swaggerServerUrl;
 
     @Bean
