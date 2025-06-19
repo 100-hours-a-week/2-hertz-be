@@ -11,7 +11,9 @@ public enum AuthResponseCode {
     ACCESS_TOKEN_REISSUED(HttpStatus.OK, "ACCESS_TOKEN_REISSUED", "Access Token이 재발급되었습니다."),
     REFRESH_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "REFRESH_TOKEN_INVALID", "Refresh Token이 유효하지 않거나 만료되었습니다. 다시 로그인 해주세요."),
     LOGOUT_SUCCESS(HttpStatus.OK, "LOGOUT_SUCCESS", "정상적으로 로그아웃되었습니다."),
-    USER_DELETE_SUCCESS(HttpStatus.OK, "USER_DELETE_SUCCESS", "사용자가 정상적으로 삭제되었습니다.");
+    USER_DELETE_SUCCESS(HttpStatus.OK, "USER_DELETE_SUCCESS", "사용자가 정상적으로 삭제되었습니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Access Token이 필요한 요청입니다."),
+    ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "ACCESS_TOKEN_EXPIRED" ,"Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
