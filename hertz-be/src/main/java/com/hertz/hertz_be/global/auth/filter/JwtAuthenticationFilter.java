@@ -1,8 +1,8 @@
 package com.hertz.hertz_be.global.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -24,6 +25,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    private static final List<String> EXCLUDE_PATHS = List.of(
+            "/api/v1/auth/token",
+            "/api/ping",
+            "/api/v1/users",
+            "/api/v1/nickname",
+            "/swagger-ui.html",
+            "/api/sse/subscribe"
+    );
+
+    private static final List<String> EXCLUDE_PREFIXES = List.of(
+            "/swagger-ui",
+            "/v3/api-docs",
+            "/swagger-resources",
+            "/webjars",
+            "/api/v1/oauth/",
+            "/api/test/"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -31,9 +50,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")
-                || path.startsWith("/swagger-resources") || path.startsWith("/webjars")
-                || path.equals("/swagger-ui.html")) {
+        boolean isExcluded = EXCLUDE_PATHS.contains(path) ||
+                EXCLUDE_PREFIXES.stream().anyMatch(path::startsWith);
+
+        if (isExcluded) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -41,28 +61,44 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = resolveToken(request);
 
-            if (token != null && jwtTokenProvider.validateToken(token)) {
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (token == null) {
+                throw new IllegalStateException();
             }
+
+            if (!jwtTokenProvider.validateToken(token)) {
+                sendErrorResponse(response, AuthResponseCode.ACCESS_TOKEN_EXPIRED.getCode(),
+                        AuthResponseCode.ACCESS_TOKEN_EXPIRED.getMessage(),
+                        HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+
+            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
-        } catch (ExpiredJwtException ex) {
-            // AccessToken 만료 시 응답
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("code", "ACCESS_TOKEN_EXPIRED");
-            errorResponse.put("message", "Access Token이 만료되었습니다. Refresh Token으로 재발급 요청이 필요합니다.");
-            errorResponse.put("data", null);
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+        } catch (IllegalStateException ex) {
+            sendErrorResponse(response, AuthResponseCode.UNAUTHORIZED.getCode(),
+                    AuthResponseCode.UNAUTHORIZED.getMessage(), HttpServletResponse.SC_UNAUTHORIZED);
+        } catch (Exception ex) {
+            sendErrorResponse(response, AuthResponseCode.ACCESS_TOKEN_EXPIRED.getCode(),
+                    AuthResponseCode.ACCESS_TOKEN_EXPIRED.getMessage(), HttpServletResponse.SC_UNAUTHORIZED);
         }
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, String code, String message, int status) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("code", code);
+        errorResponse.put("message", message);
+        errorResponse.put("data", null);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 
     private String resolveToken(HttpServletRequest request) {
