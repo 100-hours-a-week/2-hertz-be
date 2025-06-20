@@ -15,6 +15,6 @@ import lombok.experimental.SuperBuilder;
 @DiscriminatorValue("REPORT")
 public class AlarmReport extends Alarm{
 
-    @Column(nullable = false)
-    private int couple_count;
+    @Column(name = "couple_count", nullable = false)
+    private int coupleCount;
 }
