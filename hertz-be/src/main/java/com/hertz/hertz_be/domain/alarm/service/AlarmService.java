@@ -8,11 +8,8 @@ import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
 import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
 import com.hertz.hertz_be.domain.alarm.entity.*;
 import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
-import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
-import com.hertz.hertz_be.domain.alarm.repository.AlarmNotificationRepository;
+import com.hertz.hertz_be.domain.alarm.repository.*;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
-import com.hertz.hertz_be.domain.alarm.repository.AlarmRepository;
-import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -43,6 +40,7 @@ public class AlarmService {
     private EntityManager entityManager;
 
     private final AlarmNotificationRepository alarmNotificationRepository;
+    private final AlarmReportRepository alarmReportRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
     private final AlarmRepository alarmRepository;
     private final UserAlarmRepository userAlarmRepository;
@@ -143,6 +141,41 @@ public class AlarmService {
             }
         });
 
+    }
+
+    @Transactional
+    public void createTuningReportAlarm(String emailDomain, int coupleCount) {
+
+        String tuningReportAlarmTitle = createTuningReportMessage();
+
+        AlarmReport alarmReport = AlarmReport.builder()
+                .title(tuningReportAlarmTitle)
+                .coupleCount(coupleCount)
+                .build();
+
+        AlarmReport savedAlarm = alarmReportRepository.save(alarmReport);
+
+        List<User> allUsers = userRepository.findAllByEmailDomain(emailDomain);
+
+        List<UserAlarm> userAlarms = allUsers.stream()
+                .map(user -> UserAlarm.builder()
+                        .alarm(savedAlarm)
+                        .user(user)
+                        .build())
+                .toList();
+
+        userAlarmRepository.saveAll(userAlarms);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (User user : allUsers) {
+                    asyncAlarmService.updateAlarmNotification(user.getId());
+                }
+            }
+        });
     }
 
     @Transactional
