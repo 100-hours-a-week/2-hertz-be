@@ -19,12 +19,14 @@ public class TuningReportVisibilityWriter implements ItemWriter<TuningReport> {
     @Override
     @Transactional
     public void write(Chunk<? extends TuningReport> chunk) {
+        String emailDomain = chunk.getItems().getFirst().getEmailDomain();
+        int coupleCount = chunk.size();
+
         for (TuningReport report : chunk.getItems()) {
             report.setVisible();
             tuningReportRepository.save(report);
-
-            // 구현할 알람 서비스
-            // alarmService.sendTuningReportVisibleAlarm(report);
         }
+
+        alarmService.createTuningReportAlarm(emailDomain, coupleCount);
     }
 }
