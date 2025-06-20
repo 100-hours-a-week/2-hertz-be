@@ -1,4 +1,4 @@
-name: Backend Docker CI/CD
+name: CI/CD Backend (DOCKER)
 
 on:
   pull_request:
@@ -293,7 +293,7 @@ jobs:
               REDIRECT_URL="${{ secrets.REDIRECT_URL_DEV }}"
             fi
           else
-            REDIRECT_URL="${{ secrets.REDIRECT_URL_DEV }}"
+            REDIRECT_URL="${{ secrets.REDIRECT_URL_APP }}"
           fi
 
           aws ssm put-parameter \
