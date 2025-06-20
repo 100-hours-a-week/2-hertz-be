@@ -65,6 +65,7 @@ public class SecurityConfig {
                 "https://dev.hertz-tuning.com",
                 "https://local.hertz-tuning.com:3000",
                 "https://app.hertz-tuning.com",
+                "https://stage.hertz-tuning.com",
                 "https://app-prod.hertz-tuning.com"
         ));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
