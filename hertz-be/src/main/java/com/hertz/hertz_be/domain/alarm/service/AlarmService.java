@@ -94,11 +94,11 @@ public class AlarmService {
         String alarmTitleForUser;
         String alarmTitleForPartner;
         if (Objects.equals(room.getRelationType(), MatchingStatus.UNMATCHED.getValue())) {
-            alarmTitleForUser = createFailureMessage(partner.getNickname());
-            alarmTitleForPartner = createFailureMessage(user.getNickname());
+            alarmTitleForUser = createMatchingFailureMessage(partner.getNickname());
+            alarmTitleForPartner = createMatchingFailureMessage(user.getNickname());
         } else {
-            alarmTitleForUser = createSuccessMessage(partner.getNickname());
-            alarmTitleForPartner = createSuccessMessage(user.getNickname());
+            alarmTitleForUser = createMatchingSuccessMessage(partner.getNickname());
+            alarmTitleForPartner = createMatchingSuccessMessage(user.getNickname());
         }
 
         AlarmMatching alarmMatchingForUser = AlarmMatching.builder()
