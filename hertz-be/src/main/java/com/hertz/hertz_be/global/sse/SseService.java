@@ -25,7 +25,7 @@ public class SseService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenService;
 
-    private static final Long TIMEOUT = 0L;
+    private static final Long TIMEOUT = 120_000L;
 
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
