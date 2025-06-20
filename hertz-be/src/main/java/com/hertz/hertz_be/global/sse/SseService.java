@@ -35,7 +35,7 @@ public class SseService {
             throw new BusinessException(
                     UserResponseCode.USER_NOT_FOUND.getCode(),
                     UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                    "SSE 연결 요청한 사용자가 존재하지 않습니다."
+                    String.format("SSE 연결 요청한 사용자가(userId=%s) 존재하지 않습니다.", userId)
             );
         }
 
