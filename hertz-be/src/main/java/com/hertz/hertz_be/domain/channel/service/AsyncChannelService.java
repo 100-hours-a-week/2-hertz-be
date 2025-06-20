@@ -37,7 +37,7 @@ public class AsyncChannelService {
     private final long ONE_MESSAGE = 1L;
 
     //Todo: 2차 압데이트 전에 장확한 날짜로 수정
-    private static final LocalDateTime VERSION_2_UPDATE_DATE = LocalDateTime.of(2025, 5, 15, 0, 0);
+    private static final LocalDateTime VERSION_2_UPDATE_DATE = LocalDateTime.of(2025, 6, 20, 12, 0);
 
     @PersistenceContext
     private EntityManager entityManager;
