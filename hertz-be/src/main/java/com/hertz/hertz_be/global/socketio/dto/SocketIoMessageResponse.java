@@ -18,4 +18,13 @@ public record SocketIoMessageResponse(
                 message.getSendAt()
         );
     }
+
+    public static SocketIoMessageResponse from (SignalMessage message, String decryptMessage) {
+        return new SocketIoMessageResponse(
+                message.getSignalRoom().getId(),
+                message.getSenderUser().getId(),
+                decryptMessage,
+                message.getSendAt()
+        );
+    }
 }

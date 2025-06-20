@@ -10,11 +10,11 @@ import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
+import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 @Slf4j
@@ -23,12 +23,14 @@ public class SocketIoController {
     private final SocketIoService messageService;
     private final JwtTokenProvider jwtTokenProvider;
     private final SignalRoomRepository signalRoomRepository;
+    private final AESUtil aesUtil;
 
-    public SocketIoController(SocketIOServer server, SocketIoService messageService, JwtTokenProvider jwtTokenProvider, SignalRoomRepository signalRoomRepository) {
+    public SocketIoController(SocketIOServer server, SocketIoService messageService, JwtTokenProvider jwtTokenProvider, SignalRoomRepository signalRoomRepository, AESUtil aesUtil) {
         this.server = server;
         this.messageService = messageService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.signalRoomRepository = signalRoomRepository;
+        this.aesUtil = aesUtil;
 
         server.addConnectListener(listenConnected());
 
@@ -37,8 +39,13 @@ public class SocketIoController {
 
             log.info("[{}] 채널 {} 에게 메세지 : {}", senderId, data.roomId(), data.message());
 
-            SignalMessage savedMessage = messageService.saveMessage(data.roomId(), senderId, data.message());
-            server.getRoomOperations("room-" + data.roomId()).sendEvent("receive_message", SocketIoMessageResponse.from(savedMessage));
+            SignalMessage signalMessage = messageService.saveMessage(data.roomId(), senderId, data.message());
+
+            // 2. 복호화해서 DTO로 응답
+            String decryptMessage = aesUtil.decrypt(signalMessage.getMessage());
+            SocketIoMessageResponse socketIoResponse = SocketIoMessageResponse.from(signalMessage, decryptMessage);
+
+            server.getRoomOperations("room-" + data.roomId()).sendEvent("receive_message", socketIoResponse);
         });
 
         server.addEventListener("mark_as_read", SocketIoMessageMarkRequest.class, (client, data, ackSender) -> {
