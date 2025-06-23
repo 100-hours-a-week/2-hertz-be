@@ -51,4 +51,5 @@ public class SocketIoService {
     public void markMessageAsRead(Long roomId, Long userId) {
         signalMessageRepository.markUnreadMessagesAsRead(roomId, userId);
     }
+
 }
