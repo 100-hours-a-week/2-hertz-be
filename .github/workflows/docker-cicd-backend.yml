@@ -7,7 +7,7 @@ on:
       - main
       - develop
     paths-ignore:
-      - .github/workflows/cicd-backend.yml
+      - .github/workflows/**
 
   workflow_dispatch:
     inputs:
@@ -279,20 +279,18 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
           terraform version
 
-      # DEV 환경에서 FE 개발을 위한 Redirec URL 변경 로직
+      # STAGE 환경에서 FE 개발을 위한 Redirec URL 변경 로직
       - name: Update SSM parameter
-        if: env.ENV == 'DEV'
+        if: env.ENV == 'STAGE'
         run: |
 
           if [[ "${{ github.event_name }}" == 'workflow_dispatch' ]]; then
             if [[ "${{ github.event.inputs.redirect_url }}" == "local" ]]; then
               REDIRECT_URL="${{ secrets.REDIRECT_URL_LOCAL }}"
-            elif [[ "${{ github.event.inputs.redirect_url }}" == "dev" ]]; then
-              REDIRECT_URL="${{ secrets.REDIRECT_URL_DEV }}"
             elif [[ "${{ github.event.inputs.redirect_url }}" == "stage" ]]; then
               REDIRECT_URL="${{ secrets.REDIRECT_URL_APP }}"
             else
-              REDIRECT_URL="${{ secrets.REDIRECT_URL_DEV }}"
+              REDIRECT_URL="${{ secrets.REDIRECT_URL_APP }}"
             fi
           else
             REDIRECT_URL="${{ secrets.REDIRECT_URL_APP }}"
@@ -305,7 +303,7 @@ jobs:
             --overwrite
 
       - name: Check if backend_tg exists and fallback to full apply
-        if: env.ENV == 'DEV'
+        if: env.ENV == 'STAGE'
         working-directory: tf-code/terraform/gcp/environments/develop
         run: |
           terraform init -reconfigure
@@ -320,7 +318,7 @@ jobs:
           fi
 
       - name: Deploy to Dev Environment
-        if: env.ENV == 'DEV'
+        if: env.ENV == 'STAGE'
         working-directory: tf-code/terraform/gcp/environments/develop
         run: |
           terraform init -reconfigure
@@ -339,7 +337,7 @@ jobs:
           terraform output -json
 
       - name: Check MIG Health (Dev)
-        if: env.ENV == 'DEV'
+        if: env.ENV == 'STAGE'
         env:
           REGION: asia-east1 # DEV 환경에 맞게 수정
         run: |
