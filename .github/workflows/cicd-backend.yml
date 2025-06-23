@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [closed] # PR이 닫혔을 때 (병합 포함)
     branches:
-      - main # main 브랜치로 Merge 시 -> PROD 환경에 배포
+      # - main # main 브랜치로 Merge 시 -> PROD 환경에 배포
       - develop # develop 브랜치로 Merge 시 -> DEV 환경에 배포
     paths-ignore:
       - .github/workflows/** # 워크플로우 파일 변경은 배포 트리거하지 않음
@@ -19,7 +19,7 @@ on:
         type: choice
         options:
           - DEV
-          - PROD
+          # - PROD
 
 jobs:
   backend-cd:
@@ -61,6 +61,8 @@ jobs:
           BRANCH="${{ github.ref_name }}"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           if [[ "$BRANCH" == "main" ]]; then
+            echo "⚠️ 해당 스크립트에서 사용하는 PROD는 SSH 서버로 더 이상 사용하지 않습니다."
+            exit 1
             echo "ENV=PROD" >> $GITHUB_ENV
             load_param "/global/gcp/PROD_GCP_HOST" HOST
             load_param "/global/gcp/PROD_GCP_INSTANCE" INSTANCE
