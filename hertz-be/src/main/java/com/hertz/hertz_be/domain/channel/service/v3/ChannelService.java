@@ -1,10 +1,14 @@
 package com.hertz.hertz_be.domain.channel.service.v3;
 
+import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
+import com.hertz.hertz_be.domain.channel.dto.response.v3.SendSignalResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelSummaryDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
@@ -20,6 +24,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -132,5 +137,85 @@ public class ChannelService {
         });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, String.valueOf(room.getCategory()), messages, messagePage);
+    }
+
+    @Transactional
+    public SendSignalResponseDto sendSignal(Long senderUserId, SendSignalRequestDto dto) {
+        User sender = userRepository.findById(senderUserId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        "시그널 보내기 요청한 사용자가 존재하지 않습니다."
+                ));
+
+        User receiver = userRepository.findById(dto.getReceiverUserId())
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_DEACTIVATED.getCode(),
+                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                        UserResponseCode.USER_DEACTIVATED.getMessage()
+                ));
+
+
+        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
+        Optional<SignalRoom> existingRoom = signalRoomRepository.findByUserPairSignal(userPairSignal);
+        if (existingRoom.isPresent()) {
+            throw new BusinessException(
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getCode(),
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getHttpStatus(),
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getMessage()
+            );
+        } else if (Objects.equals(sender.getId(), receiver.getId())) {
+            throw new BusinessException(
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getCode(),
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getHttpStatus(),
+                    "자기 자신에게는 시그널을 보낼 수 없습니다."
+            );
+        }
+
+        SignalRoom signalRoom = SignalRoom.builder()
+                .senderUser(sender)
+                .receiverUser(receiver)
+                .category(dto.getCategory())
+                .senderMatchingStatus(MatchingStatus.SIGNAL)
+                .receiverMatchingStatus(MatchingStatus.SIGNAL)
+                .userPairSignal(userPairSignal)
+                .build();
+
+        try {
+            signalRoomRepository.save(signalRoom);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getCode(),
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getHttpStatus(),
+                    ChannelResponseCode.ALREADY_IN_CONVERSATION.getMessage()
+            );
+        }
+
+        String encryptMessage = aesUtil.encrypt(dto.getMessage());
+
+        SignalMessage signalMessage = SignalMessage.builder()
+                .signalRoom(signalRoom)
+                .senderUser(sender)
+                .message(encryptMessage)
+                .isRead(false)
+                .build();
+        signalMessageRepository.save(signalMessage);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiver.getId(), true);
+            }
+        });
+
+        return new SendSignalResponseDto(signalRoom.getId());
+    }
+
+    public static String generateUserPairSignal(Long userId1, Long userId2) {
+        Long min = Math.min(userId1, userId2);
+        Long max = Math.max(userId1, userId2);
+        return min + "_" + max;
     }
 }

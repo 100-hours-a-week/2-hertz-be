@@ -1,5 +1,7 @@
 package com.hertz.hertz_be.domain.channel.controller.v3;
 
+import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
+import com.hertz.hertz_be.domain.channel.dto.response.v3.SendSignalResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.responsecode.ChannelResponseCode;
@@ -8,6 +10,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,5 +48,16 @@ public class ChannelController {
 
         ChannelRoomResponseDto response = channelService.getChannelRoom(channelRoomId, userId, page, size);
         return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.CHANNEL_ROOM_SUCCESS.getCode(), ChannelResponseCode.CHANNEL_ROOM_SUCCESS.getMessage(), response));
+    }
+
+    @PostMapping("/tuning/signal")
+    @Operation(summary = "시그널 보내기 API")
+    public ResponseEntity<ResponseDto<SendSignalResponseDto>> sendSignal(@RequestBody @Valid SendSignalRequestDto requestDTO,
+                                                                         @AuthenticationPrincipal Long userId) {
+        SendSignalResponseDto response = channelService.sendSignal(userId, requestDTO);
+        return ResponseEntity.status(201).body(
+                new ResponseDto<>(ChannelResponseCode.SIGNAL_ROOM_CREATED.getCode(), ChannelResponseCode.SIGNAL_ROOM_CREATED.getMessage(), response)
+        );
+
     }
 }
