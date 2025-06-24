@@ -41,7 +41,7 @@ public class UserInfoRequestDto {
     private String oneLineIntroduction;
 
     @NotNull
-    private int authCode;
+    private int invitationCode;
 
     @NotNull
     private boolean friendAllowed;
