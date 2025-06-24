@@ -30,6 +30,7 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
         sr.receiver_user_id AS receiverUserId,
         sr.sender_exited_at AS senderExitedAt,
         sr.receiver_exited_at AS receiverExitedAt,
+        sr.category AS category,
         CASE
             WHEN sm.sender_user_id = :userId THEN 'true'
             WHEN sm.sender_user_id != :userId AND sm.is_read = true THEN 'true'

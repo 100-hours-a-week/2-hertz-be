@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.channel.dto.response;
+package com.hertz.hertz_be.domain.channel.dto.response.v3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
@@ -18,9 +18,10 @@ public class ChannelSummaryDto {
     private LocalDateTime lastMessageTime;
     @JsonProperty("isRead")
     private boolean isRead;
+    private String category;
     private String relationType;
 
-    public static ChannelSummaryDto fromProjectionWithDecrypt(ChannelRoomProjection p, AESUtil aesUtil) {
+    public static com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelSummaryDto fromProjectionWithDecrypt(ChannelRoomProjection p, AESUtil aesUtil) {
         String decryptedMessage;
         try {
             decryptedMessage = aesUtil.decrypt(p.getLastMessage());
@@ -35,6 +36,7 @@ public class ChannelSummaryDto {
                 decryptedMessage,
                 p.getLastMessageTime(),
                 p.getIsRead(),
+                p.getCategory(),
                 p.getRelationType()
         );
     }

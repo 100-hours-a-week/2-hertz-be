@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.channel.dto.response;
+package com.hertz.hertz_be.domain.channel.dto.response.v1;
 
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import java.util.List;

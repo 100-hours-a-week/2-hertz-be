@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.channel.dto.response;
+package com.hertz.hertz_be.domain.channel.dto.response.v3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
@@ -25,11 +25,13 @@ public class ChannelRoomResponseDto {
     private String partnerNickname;
     private String relationType;
     private boolean hasPartnerExited;
-    private MessagePage messages;
+    private String category;
+    private com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessagePage messages;
 
-    public static ChannelRoomResponseDto of(Long roomId, User partner, String relationType,
-                                            boolean hasPartnerExited,
-                                            List<MessageDto> messages, Page<SignalMessage> page) {
+    public static com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto of(Long roomId, User partner, String relationType,
+                                                                                              boolean hasPartnerExited,
+                                                                                              String category,
+                                                                                              List<com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessageDto> messages, Page<SignalMessage> page) {
         return ChannelRoomResponseDto.builder()
                 .channelRoomId(roomId)
                 .partnerId(partner.getId())
@@ -37,7 +39,8 @@ public class ChannelRoomResponseDto {
                 .partnerNickname(partner.getNickname())
                 .relationType(relationType)
                 .hasPartnerExited(hasPartnerExited)
-                .messages(new MessagePage(messages, page))
+                .category(category)
+                .messages(new com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessagePage(messages, page))
                 .build();
     }
 
@@ -49,7 +52,7 @@ public class ChannelRoomResponseDto {
         private String messageContents;
         private String messageSendAt;
 
-        public static MessageDto fromProjectionWithDecrypt(SignalMessage msg, AESUtil aesUtil) {
+        public static com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessageDto fromProjectionWithDecrypt(SignalMessage msg, AESUtil aesUtil) {
             String decryptedMessage;
             try {
                 decryptedMessage = aesUtil.decrypt(msg.getMessage());
@@ -57,7 +60,7 @@ public class ChannelRoomResponseDto {
                 decryptedMessage = "메세지를 표시할 수 없습니다.";
             }
 
-            return new MessageDto(
+            return new com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessageDto(
                     msg.getId(),
                     msg.getSenderUser().getId(),
                     decryptedMessage,
@@ -69,12 +72,12 @@ public class ChannelRoomResponseDto {
     @Getter
     @AllArgsConstructor
     public static class MessagePage {
-        private List<MessageDto> list;
-        private PageableInfo pageable;
+        private List<com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessageDto> list;
+        private com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.PageableInfo pageable;
 
-        public MessagePage(List<MessageDto> list, Page<?> page) {
+        public MessagePage(List<com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.MessageDto> list, Page<?> page) {
             this.list = list;
-            this.pageable = new PageableInfo(page);
+            this.pageable = new com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto.PageableInfo(page);
         }
     }
 
