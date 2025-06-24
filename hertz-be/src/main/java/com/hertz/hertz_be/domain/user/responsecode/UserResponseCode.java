@@ -16,6 +16,7 @@ public enum UserResponseCode {
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "DUPLICATE_NICKNAME", "이미 사용 중인 닉네임입니다."),
     NICKNAME_API_FAILED(HttpStatus.BAD_GATEWAY, "NICKNAME_API_FAILED", "닉네임 생성 API 호출 실패"),
     NICKNAME_GENERATION_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "NICKNAME_GENERATION_TIMEOUT", "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다."),
+    WRONG_INVITATION_CODE(HttpStatus.BAD_REQUEST, "WRONG_INVITATION_CODE", "유효하지 않은 초대코드입니다."),
 
     // 성공 응답 코드
     USER_INFO_FETCH_SUCCESS(HttpStatus.OK, "USER_INFO_FETCH_SUCCESS", "사용자의 정보가 정상적으로 조회되었습니다."),
