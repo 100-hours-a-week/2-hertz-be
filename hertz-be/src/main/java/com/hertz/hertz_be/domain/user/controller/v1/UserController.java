@@ -1,10 +1,9 @@
-package com.hertz.hertz_be.domain.user.controller;
+package com.hertz.hertz_be.domain.user.controller.v1;
 
-import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
-import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
-import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
+import com.hertz.hertz_be.domain.user.dto.request.v1.UserInfoRequestDto;
+import com.hertz.hertz_be.domain.user.dto.response.v1.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
-import com.hertz.hertz_be.domain.user.service.UserService;
+import com.hertz.hertz_be.domain.user.service.v1.UserService;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,16 +12,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RestController
+@RestController("userControllerV1")
 @RequestMapping("/api")
 @RequiredArgsConstructor
-@Tag(name = "사용자 관련 API")
+@Tag(name = "사용자 관련 V1 API")
 public class UserController {
 
     @Value("${is.local}")
@@ -79,33 +77,5 @@ public class UserController {
                         data)
 
         );
-    }
-
-
-    /**
-     * 사용자 정보 조회 (마이페이지, 상대방 상세 조회 페이지)
-     * @author daisy.lee
-     */
-    @GetMapping("/v2/users/{userId}")
-    @Operation(summary = "사용자 정보 조회")
-    public ResponseEntity<ResponseDto<UserProfileDTO>> getUserProfile(@PathVariable Long userId,
-                                                                      @AuthenticationPrincipal Long id) {
-        UserProfileDTO response = userService.getUserProfile(userId, id);
-
-        if("ME".equals(response.getRelationType())) {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(
-                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getCode(),
-                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getMessage(),
-                            response)
-            );
-        } else {
-            return ResponseEntity.ok(
-                    new ResponseDto<>(
-                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getCode(),
-                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getMessage(),
-                            response)
-            );
-        }
     }
 }

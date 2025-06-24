@@ -40,10 +40,19 @@ public class UserInfoRequestDto {
     @NotBlank
     private String oneLineIntroduction;
 
+    @NotNull
+    private int authCode;
+
+    @NotNull
+    private boolean friendAllowed;
+
+    @NotNull
+    private boolean coupleAllowed;
+
 
     // Todo. FE 개발용 테스트 필드 (추후 삭제 필요)
     @JsonProperty("isTest")
-    private boolean isTest;
+    private boolean test;
 
 
 }

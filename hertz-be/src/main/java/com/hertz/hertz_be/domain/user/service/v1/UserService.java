@@ -1,6 +1,5 @@
-package com.hertz.hertz_be.domain.user.service;
+package com.hertz.hertz_be.domain.user.service.v1;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmMatching;
 import com.hertz.hertz_be.domain.alarm.entity.AlarmNotification;
 import com.hertz.hertz_be.domain.alarm.repository.AlarmMatchingRepository;
@@ -19,11 +18,8 @@ import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
-import com.hertz.hertz_be.domain.user.dto.request.UserInfoRequestDto;
-import com.hertz.hertz_be.domain.user.dto.response.InterestsDTO;
-import com.hertz.hertz_be.domain.user.dto.response.KeywordsDTO;
-import com.hertz.hertz_be.domain.user.dto.response.UserInfoResponseDto;
-import com.hertz.hertz_be.domain.user.dto.response.UserProfileDTO;
+import com.hertz.hertz_be.domain.user.dto.request.v1.UserInfoRequestDto;
+import com.hertz.hertz_be.domain.user.dto.response.v1.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
@@ -46,7 +42,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
-@Service
+@Service("userServiceV1")
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
@@ -179,54 +175,6 @@ public class UserService {
                 UserResponseCode.NICKNAME_API_FAILED.getCode(),
                 UserResponseCode.NICKNAME_API_FAILED.getHttpStatus(),
                 UserResponseCode.NICKNAME_API_FAILED.getMessage());
-    }
-
-
-    public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
-        User targetUser = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
-                .orElseThrow(() -> new BusinessException(
-                        UserResponseCode.USER_DEACTIVATED.getCode(),
-                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
-                        UserResponseCode.USER_DEACTIVATED.getMessage()));
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        Map<String, String> keywordsMap = interestsService.getUserKeywords(targetUser.getId());
-        Map<String, List<String>> currentUserInterestsMap = interestsService.getUserInterests(userId);
-
-        KeywordsDTO keywordsDto = objectMapper.convertValue(keywordsMap, KeywordsDTO.class);
-        InterestsDTO currentUserDto = objectMapper.convertValue(currentUserInterestsMap, InterestsDTO.class);
-
-
-        if(Objects.equals(targetUser.getId(), userId)) { // 마이페이지 조회
-            return new UserProfileDTO(
-                    targetUser.getProfileImageUrl(),
-                    targetUser.getNickname(),
-                    targetUser.getGender(),
-                    targetUser.getOneLineIntroduction(),
-                    "ME",
-                    keywordsDto,
-                    currentUserDto,
-                    null
-            );
-        } else { // 상대방 페이지 조회
-            String relationType = userRepository.findRelationTypeBetweenUsers(userId, targetUser.getId());
-
-            Map<String, List<String>> targetInterestsMap = interestsService.getUserInterests(targetUser.getId());
-            Map<String, List<String>> sameInterestsMap = interestsService.extractSameInterests(targetInterestsMap, currentUserInterestsMap);
-            InterestsDTO sameInterestsDto = objectMapper.convertValue(sameInterestsMap, InterestsDTO.class);
-
-            return new UserProfileDTO(
-                    targetUser.getProfileImageUrl(),
-                    targetUser.getNickname(),
-                    targetUser.getGender(),
-                    targetUser.getOneLineIntroduction(),
-                    relationType,
-                    keywordsDto,
-                    currentUserDto,
-                    sameInterestsDto
-            );
-        }
     }
 
     @Transactional
