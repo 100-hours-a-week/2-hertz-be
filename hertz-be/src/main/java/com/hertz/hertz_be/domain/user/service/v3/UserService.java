@@ -25,96 +25,116 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final String KAKAOTECH_DOMAIN = "@kakaotech.com";
+    private static final String OUTSIDE_DOMAIN = "@outside.com";
+
     private final UserOauthRepository userOauthRepository;
     private final OAuthRedisRepository oauthRedisRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
+    @Value("${invitation.code.kakaotech}")
+    private int kakaotechInvitationCode;
+
+    @Value("${invitation.code.outside}")
+    private int outsideInvitationCode;
+
     @Value("${max.age.seconds}")
     private long maxAgeSeconds;
 
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
+        validateRedisValue(redisValue);
+        validateDuplicateUser(userInfoRequestDto);
+        validateInvitationCode(userInfoRequestDto.getInvitationCode());
+
+        String[] parts = redisValue.split(",");
+        String redisRefreshToken = parts[0];
+        LocalDateTime redisRefreshTokenExpiredAt = LocalDateTime.parse(parts[1]);
+
+        long secondsUntilExpiry = Duration.between(LocalDateTime.now(), redisRefreshTokenExpiredAt).getSeconds();
+        int maxAge = (int) Math.max(0, secondsUntilExpiry);
+
+        // TODO: FE 개발용 테스트 로직 -> 추후 제거
+        if (userInfoRequestDto.isTest()) {
+            return buildUserInfoResponse(-1L, redisRefreshToken, maxAge);
+        }
+
+        String userDomain = resolveUserDomain(userInfoRequestDto.getInvitationCode());
+
+        User user = buildUser(userInfoRequestDto, userDomain);
+        UserOauth userOauth = buildUserOauth(userInfoRequestDto, redisRefreshToken, redisRefreshTokenExpiredAt, user);
+        user.setUserOauth(userOauth);
+
+        User savedUser = userRepository.save(user);
+
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
+        refreshTokenRepository.saveRefreshToken(savedUser.getId(), newRefreshToken, maxAgeSeconds);
+
+        return buildUserInfoResponse(savedUser.getId(), newRefreshToken, maxAge);
+    }
+
+    private void validateRedisValue(String redisValue) {
         if (redisValue == null) {
             throw new BusinessException(
                     AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
                     AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
                     AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
         }
+    }
 
-        if (userOauthRepository.existsByProviderIdAndProvider(userInfoRequestDto.getProviderId(), userInfoRequestDto.getProvider())) {
+    private void validateDuplicateUser(UserInfoRequestDto dto) {
+        if (userOauthRepository.existsByProviderIdAndProvider(dto.getProviderId(), dto.getProvider())) {
             throw new BusinessException(
                     UserResponseCode.DUPLICATE_USER.getCode(),
                     UserResponseCode.DUPLICATE_USER.getHttpStatus(),
                     UserResponseCode.DUPLICATE_USER.getMessage());
         }
+    }
 
-        int invitationCode = userInfoRequestDto.getInvitationCode();
-        if (invitationCode != 2502 && invitationCode != 6739) {
+    private void validateInvitationCode(int code) {
+        if (code != kakaotechInvitationCode && code != outsideInvitationCode) {
             throw new BusinessException(
                     UserResponseCode.WRONG_INVITATION_CODE.getCode(),
                     UserResponseCode.WRONG_INVITATION_CODE.getHttpStatus(),
                     UserResponseCode.WRONG_INVITATION_CODE.getMessage());
         }
+    }
 
-        String refreshTokenValue = redisValue.split(",")[0];
-        LocalDateTime refreshTokenExpiredAt = LocalDateTime.parse(redisValue.split(",")[1]);
+    private String resolveUserDomain(int invitationCode) {
+        return invitationCode == kakaotechInvitationCode ? KAKAOTECH_DOMAIN : OUTSIDE_DOMAIN;
+    }
 
-        long secondsUntilExpiry = Duration.between(LocalDateTime.now(), refreshTokenExpiredAt).getSeconds();
-        int maxAge = (int) Math.max(0, secondsUntilExpiry);
-
-        // Todo. FE 개발용 테스트 로직 (추후 삭제 필요)
-        if(userInfoRequestDto.isTest()) {
-            Long fakeUserId = -1L;
-
-            return UserInfoResponseDto.builder()
-                    .userId(fakeUserId)
-                    .accessToken(jwtTokenProvider.createAccessToken(fakeUserId))
-                    .refreshToken(refreshTokenValue)
-                    .refreshSecondsUntilExpiry(maxAge)
-                    .build();
-        }
-
-        String userDomain;
-        if (invitationCode == 2502) {
-            userDomain = "@kakaotech.com";
-        } else {
-            userDomain = "@outside.com";
-        }
-
-        User user = User.builder()
-                .ageGroup(userInfoRequestDto.getAgeGroup())
-                .profileImageUrl(userInfoRequestDto.getProfileImage())
-                .nickname(userInfoRequestDto.getNickname())
-                .email(userInfoRequestDto.getProviderId() + userDomain) //
-                .gender(userInfoRequestDto.getGender())
-                .oneLineIntroduction(userInfoRequestDto.getOneLineIntroduction())
-                .isCoupleAllowed(userInfoRequestDto.isCoupleAllowed())
-                .isFriendAllowed(userInfoRequestDto.isFriendAllowed())
+    private User buildUser(UserInfoRequestDto dto, String userDomain) {
+        return User.builder()
+                .ageGroup(dto.getAgeGroup())
+                .profileImageUrl(dto.getProfileImage())
+                .nickname(dto.getNickname())
+                .email(dto.getProviderId() + userDomain)
+                .gender(dto.getGender())
+                .oneLineIntroduction(dto.getOneLineIntroduction())
+                .isCoupleAllowed(dto.isCoupleAllowed())
+                .isFriendAllowed(dto.isFriendAllowed())
                 .build();
+    }
 
-        UserOauth userOauth = UserOauth.builder()
-                .provider(userInfoRequestDto.getProvider())
-                .providerId(userInfoRequestDto.getProviderId())
-                .refreshToken(refreshTokenValue)
-                .refreshTokenExpiresAt(refreshTokenExpiredAt)
+    private UserOauth buildUserOauth(UserInfoRequestDto dto, String refreshToken, LocalDateTime expiresAt, User user) {
+        return UserOauth.builder()
+                .provider(dto.getProvider())
+                .providerId(dto.getProviderId())
+                .refreshToken(refreshToken)
+                .refreshTokenExpiresAt(expiresAt)
                 .user(user)
                 .build();
+    }
 
-        user.setUserOauth(userOauth);
-
-        User savedUser = userRepository.save(user);
-
-        String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
-        refreshTokenRepository.saveRefreshToken(user.getId(), refreshToken, maxAgeSeconds);
-
+    private UserInfoResponseDto buildUserInfoResponse(Long userId, String refreshToken, int secondsUntilExpiry) {
         return UserInfoResponseDto.builder()
-                .userId(savedUser.getId())
-                .accessToken(jwtTokenProvider.createAccessToken(savedUser.getId()))
+                .userId(userId)
+                .accessToken(jwtTokenProvider.createAccessToken(userId))
                 .refreshToken(refreshToken)
-                .refreshSecondsUntilExpiry(maxAge)
+                .refreshSecondsUntilExpiry(secondsUntilExpiry)
                 .build();
-
     }
 }
