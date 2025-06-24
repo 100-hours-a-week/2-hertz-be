@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.user.dto.request;
+package com.hertz.hertz_be.domain.user.dto.request.v1;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;

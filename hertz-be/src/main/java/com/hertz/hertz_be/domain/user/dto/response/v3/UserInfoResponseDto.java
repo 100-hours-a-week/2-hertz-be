@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.user.dto.response;
+package com.hertz.hertz_be.domain.user.dto.response.v3;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

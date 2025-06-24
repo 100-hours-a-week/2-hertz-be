@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.domain.user.dto.response;
+package com.hertz.hertz_be.domain.user.dto.response.v2;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
