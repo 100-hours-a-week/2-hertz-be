@@ -45,7 +45,6 @@ public class UserController {
                 isLocal
         );
 
-        // ✅ 응답 바디 구성
         Map<String, Object> data = new HashMap<>();
         data.put("userId", userInfoResponseDto.getUserId());
         data.put("accessToken", userInfoResponseDto.getAccessToken());
