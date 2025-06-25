@@ -12,6 +12,7 @@ import com.hertz.hertz_be.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final InterestsService interestsService;
 
+    @Transactional(readOnly = true)
     public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
         User targetUser = userRepository.findByIdAndDeletedAtIsNull(targetUserId)
                 .orElseThrow(() -> new BusinessException(

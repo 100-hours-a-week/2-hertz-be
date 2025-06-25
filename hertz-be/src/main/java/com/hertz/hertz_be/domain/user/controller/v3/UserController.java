@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.controller.v3;
 
+import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
@@ -9,19 +10,18 @@ import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController("userControllerV3")
-@RequestMapping("/api")
+@RequestMapping("/api/v3")
 @RequiredArgsConstructor
 @Tag(name = "사용자 관련 V3 API")
 public class UserController {
@@ -31,10 +31,10 @@ public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/v3/users")
+    @PostMapping("/users")
     @Operation(summary = "개인정보 등록 API")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
-            @RequestBody UserInfoRequestDto userInfoRequestDto,
+            @RequestBody @Valid UserInfoRequestDto userInfoRequestDto,
             HttpServletResponse response) {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);
@@ -54,6 +54,23 @@ public class UserController {
                         UserResponseCode.PROFILE_SAVED_SUCCESSFULLY.getCode(),
                         UserResponseCode.PROFILE_SAVED_SUCCESSFULLY.getMessage(),
                         data
+                )
+        );
+    }
+
+    @PatchMapping("/users/category")
+    @Operation(summary = "시그널 받고 싶지 않은 카테고리 수정 API")
+    public ResponseEntity<ResponseDto<Void>> changeRejectCategory(
+            @RequestBody @Valid RejectCategoryChangeRequestDto requestDto,
+            @AuthenticationPrincipal Long userId) {
+
+        userService.changeRejectCategory(userId, requestDto);
+
+        return  ResponseEntity.ok(
+                new ResponseDto<>(
+                        UserResponseCode.CATEGORY_UPDATED_SUCCESSFULLY.getCode(),
+                        UserResponseCode.CATEGORY_UPDATED_SUCCESSFULLY.getMessage(),
+                        null
                 )
         );
     }

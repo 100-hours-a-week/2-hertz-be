@@ -8,6 +8,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,7 +36,7 @@ public class InterestsController {
      */
     @PostMapping("/users/interests")
     @Operation(summary = "취향 등록 API")
-    public ResponseEntity<ResponseDto<UserInterestsResponseDto>> createUser(@RequestBody UserInterestsRequestDto userInterestsRequestDto,
+    public ResponseEntity<ResponseDto<UserInterestsResponseDto>> createUser(@RequestBody @Valid UserInterestsRequestDto userInterestsRequestDto,
                                                                             @AuthenticationPrincipal Long userId) throws Exception {
         interestsService.saveUserInterests(userInterestsRequestDto, userId);
 

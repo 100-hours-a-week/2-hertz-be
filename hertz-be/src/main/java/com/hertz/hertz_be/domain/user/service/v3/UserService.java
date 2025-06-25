@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.user.service.v3;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
+import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -43,6 +45,7 @@ public class UserService {
     @Value("${max.age.seconds}")
     private long maxAgeSeconds;
 
+    @Transactional
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
         validateRedisValue(redisValue);
@@ -136,5 +139,19 @@ public class UserService {
                 .refreshToken(refreshToken)
                 .refreshSecondsUntilExpiry(secondsUntilExpiry)
                 .build();
+    }
+
+    @Transactional
+    public void changeRejectCategory(Long userId, RejectCategoryChangeRequestDto requestDto) {
+        User user = getUserWithSentSignalRoomsOrThrow(userId);
+        user.changeRejectCategory(requestDto.getCategory(), requestDto.isFlag());
+    }
+
+    private User getUserWithSentSignalRoomsOrThrow(Long userId) {
+        return userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()));
     }
 }
