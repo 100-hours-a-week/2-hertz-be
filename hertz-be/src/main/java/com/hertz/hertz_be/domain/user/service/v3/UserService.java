@@ -3,6 +3,9 @@ package com.hertz.hertz_be.domain.user.service.v3;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
+import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
+import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Service("userServiceV3")
@@ -35,6 +39,8 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TuningResultRepository tuningResultRepository;
+    private final TuningRepository tuningRepository;
 
     @Value("${invitation.code.kakaotech}")
     private int kakaotechInvitationCode;
@@ -145,6 +151,11 @@ public class UserService {
     public void changeRejectCategory(Long userId, RejectCategoryChangeRequestDto requestDto) {
         User user = getUserWithSentSignalRoomsOrThrow(userId);
         user.changeRejectCategory(requestDto.getCategory(), requestDto.isFlag());
+
+        if (!requestDto.isFlag()) {
+            tuningRepository.findByUserAndCategory(user, requestDto.getCategory())
+                    .ifPresent(tuningResultRepository::deleteAllByTuning);
+        }
     }
 
     private User getUserWithSentSignalRoomsOrThrow(Long userId) {
