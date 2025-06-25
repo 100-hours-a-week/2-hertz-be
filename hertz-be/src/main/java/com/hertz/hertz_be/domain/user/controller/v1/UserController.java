@@ -9,6 +9,7 @@ import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -36,7 +37,7 @@ public class UserController {
     @PostMapping("/v1/users")
     @Operation(summary = "개인정보 등록 API")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
-            @RequestBody UserInfoRequestDto userInfoRequestDto,
+            @RequestBody @Valid UserInfoRequestDto userInfoRequestDto,
             HttpServletResponse response) {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);

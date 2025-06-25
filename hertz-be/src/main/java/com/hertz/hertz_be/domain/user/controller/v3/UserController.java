@@ -34,7 +34,7 @@ public class UserController {
     @PostMapping("/users")
     @Operation(summary = "개인정보 등록 API")
     public ResponseEntity<ResponseDto<Map<String, Object>>> createUser(
-            @RequestBody UserInfoRequestDto userInfoRequestDto,
+            @RequestBody @Valid UserInfoRequestDto userInfoRequestDto,
             HttpServletResponse response) {
 
         UserInfoResponseDto userInfoResponseDto = userService.createUser(userInfoRequestDto);

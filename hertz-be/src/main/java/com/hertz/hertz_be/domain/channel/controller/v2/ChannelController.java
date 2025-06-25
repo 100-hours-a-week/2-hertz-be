@@ -11,6 +11,7 @@ import com.hertz.hertz_be.global.common.ResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class ChannelController {
     @Operation(summary = "채널방 매칭 수락 API")
     public ResponseEntity<ResponseDto<Void>> channelMatchingAccept(
             @AuthenticationPrincipal Long userId,
-            @RequestBody SignalMatchingRequestDto response) {
+            @RequestBody @Valid SignalMatchingRequestDto response) {
 
         String matchingResult = channelService.channelMatchingStatusUpdate(userId, response, MatchingStatus.MATCHED);
 
@@ -61,7 +62,7 @@ public class ChannelController {
     @PostMapping("/matching/rejections")
     @Operation(summary = "채널방 매칭 거절 API")
     public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> channelMatchingReject(@AuthenticationPrincipal Long userId,
-                                                                                     @RequestBody SignalMatchingRequestDto response) {
+                                                                                     @RequestBody @Valid SignalMatchingRequestDto response) {
 
         return ResponseEntity
                 .status(HttpStatus.OK)

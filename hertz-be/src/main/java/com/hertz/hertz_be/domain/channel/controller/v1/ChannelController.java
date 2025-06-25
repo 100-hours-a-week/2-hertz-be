@@ -79,7 +79,7 @@ public class ChannelController {
     @Operation(summary = "채널방 메세지 전송 API")
     public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> sendChannelMessage(@PathVariable Long channelRoomId,
                                                                                   @AuthenticationPrincipal Long userId,
-                                                                                  @RequestBody SendSignalRequestDto response) {
+                                                                                  @RequestBody @Valid SendSignalRequestDto response) {
 
         channelService.sendChannelMessage(channelRoomId, userId, response);
         return ResponseEntity
