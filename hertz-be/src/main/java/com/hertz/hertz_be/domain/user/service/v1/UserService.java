@@ -72,6 +72,7 @@ public class UserService {
     @Value("${max.age.seconds}")
     private long maxAgeSeconds;
 
+    @Transactional
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
         if (redisValue == null) {
@@ -139,6 +140,7 @@ public class UserService {
 
     }
 
+    @Transactional
     public String fetchRandomNickname() {
         final long startTime = System.nanoTime();
 

@@ -178,7 +178,7 @@ public class AlarmService {
         });
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public AlarmListResponseDto getAlarmList(int page, int size, Long userId) {
         PageRequest pageRequest = PageRequest.of(page, size);
         LocalDateTime thresholdDate = LocalDateTime.now().minusDays(30);

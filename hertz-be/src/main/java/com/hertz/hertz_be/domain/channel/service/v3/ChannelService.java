@@ -53,6 +53,7 @@ public class ChannelService {
     private final AsyncChannelService asyncChannelService;
     private final AESUtil aesUtil;
 
+    @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
@@ -73,7 +74,7 @@ public class ChannelService {
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public ChannelRoomResponseDto getChannelRoom(Long roomId, Long userId, int page, int size) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(

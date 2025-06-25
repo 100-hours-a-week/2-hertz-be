@@ -45,6 +45,7 @@ public class UserService {
     @Value("${max.age.seconds}")
     private long maxAgeSeconds;
 
+    @Transactional
     public UserInfoResponseDto createUser(UserInfoRequestDto userInfoRequestDto) {
         String redisValue = oauthRedisRepository.get(userInfoRequestDto.getProviderId());
         validateRedisValue(redisValue);
