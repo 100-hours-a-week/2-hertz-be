@@ -41,10 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service("channelServiceV3")
@@ -279,6 +276,7 @@ public class ChannelService {
 
     private boolean fetchAndSaveTuningResultsFromAiServer(Long userId, Tuning tuning, String category) {
         Map<String, Object> responseMap = tuningAiClient.requestTuningByCategory(userId, category);
+//        Map<String, Object> responseMap = requestTuningByCategory(userId, category);
         String code = (String) responseMap.get("code");
 
         if (ChannelResponseCode.TUNING_SUCCESS_BUT_NO_MATCH.getCode().equals(code)) {
@@ -337,6 +335,22 @@ public class ChannelService {
         }
     }
 
+// Todo: 머지전에 삭제
+//    public Map<String, Object> requestTuningByCategory(Long userId, String category) {
+//        Map<String, Object> response = new HashMap<>();
+//
+//        response.put("code", "TUNING_SUCCESS");
+//
+//        Map<String, Object> data = new HashMap<>();
+//        List<Integer> userIdList = List.of(2, 4, 6, 782);  // 튜닝 결과 더미 데이터
+//        data.put("userIdList", userIdList);
+//
+//        response.put("data", data);
+//
+//        return response;
+//    }
+
+
     private Tuning getOrCreateTuning(User user, String category) {
         Category enumCategory = convertToCategory(category);
 
@@ -344,7 +358,7 @@ public class ChannelService {
                 .orElseGet(() -> tuningRepository.save(
                         Tuning.builder()
                                 .user(user)
-                                .category(Category.FRIEND)
+                                .category(enumCategory)
                                 .build()));
     }
 

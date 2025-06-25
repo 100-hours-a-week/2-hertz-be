@@ -4,6 +4,7 @@ import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -153,8 +155,15 @@ public class UserService {
         user.changeRejectCategory(requestDto.getCategory(), requestDto.isFlag());
 
         if (!requestDto.isFlag()) {
-            tuningRepository.findByUserAndCategory(user, requestDto.getCategory())
-                    .ifPresent(tuningResultRepository::deleteAllByTuning);
+            List<Tuning> tuningList = tuningRepository.findAllByCategory(requestDto.getCategory());
+            for (Tuning tuning : tuningList) {
+                List<TuningResult> toRemove = tuning.getTuningResults().stream()
+                        .filter(result -> result.getMatchedUser().equals(user))
+                        .toList();
+                if (!toRemove.isEmpty()) {
+                    tuning.getTuningResults().removeAll(toRemove);
+                }
+            }
         }
     }
 
