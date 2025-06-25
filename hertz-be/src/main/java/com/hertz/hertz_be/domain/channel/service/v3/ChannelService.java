@@ -370,9 +370,10 @@ public class ChannelService {
             if (!hasSelectedInterests(matchedUser)) {
                 continue;
             }
-
+            if (!matchedUser.isCategoryAllowed(enumCategory)) {
+                continue;
+            }
             boolean alreadyExists = signalRoomRepository.existsByUserPairAndCategory(requester, matchedUser, enumCategory);
-
             if (alreadyExists) continue;
 
             tuningResultRepository.save(
