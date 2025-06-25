@@ -168,6 +168,14 @@ public class ChannelService {
                         UserResponseCode.USER_DEACTIVATED.getMessage()
                 ));
 
+        if (!receiver.isCategoryAllowed(dto.getCategory())) {
+            throw new BusinessException(
+                    UserResponseCode.CATEGORY_IS_REJECTED.getCode(),
+                    UserResponseCode.CATEGORY_IS_REJECTED.getHttpStatus(),
+                    UserResponseCode.CATEGORY_IS_REJECTED.getMessage()
+            );
+        }
+
         boolean alreadyExists = signalRoomRepository.existsByUserPairAndCategory(sender, receiver, dto.getCategory());
         if (alreadyExists) {
             throw new BusinessException(
@@ -183,7 +191,7 @@ public class ChannelService {
             );
         }
 
-        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
+        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId(), dto.getCategory());
 
         SignalRoom signalRoom = SignalRoom.builder()
                 .senderUser(sender)
@@ -226,10 +234,10 @@ public class ChannelService {
         return new SendSignalResponseDto(signalRoom.getId());
     }
 
-    public static String generateUserPairSignal(Long userId1, Long userId2) {
+    public static String generateUserPairSignal(Long userId1, Long userId2, Category category) {
         Long min = Math.min(userId1, userId2);
         Long max = Math.max(userId1, userId2);
-        return min + "_" + max;
+        return min + "_" + max + "_" + category;
     }
 
     @Transactional
