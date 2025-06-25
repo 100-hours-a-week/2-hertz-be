@@ -168,10 +168,8 @@ public class ChannelService {
                         UserResponseCode.USER_DEACTIVATED.getMessage()
                 ));
 
-
-        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
-        Optional<SignalRoom> existingRoom = signalRoomRepository.findByUserPairSignal(userPairSignal);
-        if (existingRoom.isPresent()) {
+        boolean alreadyExists = signalRoomRepository.existsByUserPairAndCategory(sender, receiver, dto.getCategory());
+        if (alreadyExists) {
             throw new BusinessException(
                     ChannelResponseCode.ALREADY_IN_CONVERSATION.getCode(),
                     ChannelResponseCode.ALREADY_IN_CONVERSATION.getHttpStatus(),
@@ -184,6 +182,8 @@ public class ChannelService {
                     "자기 자신에게는 시그널을 보낼 수 없습니다."
             );
         }
+
+        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
 
         SignalRoom signalRoom = SignalRoom.builder()
                 .senderUser(sender)
