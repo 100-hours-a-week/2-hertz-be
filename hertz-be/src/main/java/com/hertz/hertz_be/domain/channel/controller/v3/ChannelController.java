@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.channel.controller.v3;
 
 import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
+import com.hertz.hertz_be.domain.channel.dto.response.v3.TuningResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.SendSignalResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto;
@@ -59,5 +60,19 @@ public class ChannelController {
                 new ResponseDto<>(ChannelResponseCode.SIGNAL_ROOM_CREATED.getCode(), ChannelResponseCode.SIGNAL_ROOM_CREATED.getMessage(), response)
         );
 
+    }
+
+    @GetMapping("/tuning")
+    @Operation(summary = "튜닝된 상대 반환 API")
+    public ResponseEntity<ResponseDto<TuningResponseDto>> getTunedUser(@AuthenticationPrincipal Long userId,
+                                                                       @RequestParam String category) {
+
+        TuningResponseDto response = channelService.getTunedUser(userId, category);
+        if (response == null) {
+            return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.NO_TUNING_CANDIDATE.getCode(), ChannelResponseCode.NO_TUNING_CANDIDATE.getMessage(), null));
+        }
+        return ResponseEntity.ok(
+                new ResponseDto<>(ChannelResponseCode.TUNING_SUCCESS.getCode(), ChannelResponseCode.TUNING_SUCCESS.getMessage(), response)
+        );
     }
 }
