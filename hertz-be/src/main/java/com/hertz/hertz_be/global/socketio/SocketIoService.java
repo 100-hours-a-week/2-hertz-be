@@ -2,18 +2,19 @@ package com.hertz.hertz_be.global.socketio;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
-import com.hertz.hertz_be.domain.channel.responsecode.ChannelNotFoundException;
-import com.hertz.hertz_be.domain.channel.responsecode.ForbiddenChannelException;
+import com.hertz.hertz_be.domain.channel.responsecode.ChannelResponseCode;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
-import com.hertz.hertz_be.domain.user.responsecode.UserException;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.common.ResponseCode;
+import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
+import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
 import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -25,16 +26,20 @@ public class SocketIoService {
     private final AESUtil aesUtil;
 
     @Transactional
-    public SignalMessage saveMessage(Long roomId, Long userId, String plainText) {
+    public SignalMessage saveMessage(Long roomId, Long senderId, String plainText) {
         SignalRoom room = signalRoomRepository.findById(roomId)
-                .orElseThrow(ChannelNotFoundException::new);
+                .orElseThrow(() -> new BusinessException(
+                        ChannelResponseCode.CHANNEL_NOT_FOUND.getCode(),
+                        ChannelResponseCode.CHANNEL_NOT_FOUND.getHttpStatus(),
+                        ChannelResponseCode.CHANNEL_NOT_FOUND.getMessage()
+                ));
 
-        if (!room.isParticipant(userId)) {
-            throw new ForbiddenChannelException();
-        }
-
-        User sender = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ResponseCode.USER_NOT_FOUND, "사용자 없음"));
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                ));
 
         String encrypted = aesUtil.encrypt(plainText);
 
@@ -47,9 +52,14 @@ public class SocketIoService {
         return signalMessageRepository.save(message);
     }
 
+    public SocketIoMessageResponse processAndRespond(Long roomId, Long senderId, String plainText) {
+        SignalMessage saved = saveMessage(roomId, senderId, plainText);
+        String decrypted = aesUtil.decrypt(saved.getMessage());
+        return SocketIoMessageResponse.from(saved, decrypted);
+    }
+
     @Transactional
     public void markMessageAsRead(Long roomId, Long userId) {
         signalMessageRepository.markUnreadMessagesAsRead(roomId, userId);
     }
-
 }
