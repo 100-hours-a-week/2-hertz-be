@@ -1,24 +1,29 @@
 package com.hertz.hertz_be.domain.channel.service.v3;
 
 import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
-import com.hertz.hertz_be.domain.channel.dto.response.v3.SendSignalResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelListResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelRoomResponseDto;
-import com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelSummaryDto;
+import com.hertz.hertz_be.domain.channel.dto.response.v3.*;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
+import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
+import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.channel.repository.projection.RoomWithLastSenderProjection;
 import com.hertz.hertz_be.domain.channel.responsecode.ChannelResponseCode;
 import com.hertz.hertz_be.domain.channel.service.AsyncChannelService;
+import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
+import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.infra.ai.client.TuningAiClient;
 import com.hertz.hertz_be.global.util.AESUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -36,9 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service("channelServiceV3")
@@ -50,8 +53,14 @@ public class ChannelService {
     private final UserRepository userRepository;
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
+    private final TuningResultRepository tuningResultRepository;
+    private final TuningRepository tuningRepository;
+    private final InterestsService interestsService;
+    private final UserInterestsRepository userInterestsRepository;
     private final AsyncChannelService asyncChannelService;
     private final AESUtil aesUtil;
+    private final TuningAiClient tuningAiClient;
+
 
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
@@ -156,10 +165,16 @@ public class ChannelService {
                         UserResponseCode.USER_DEACTIVATED.getMessage()
                 ));
 
+        if (!receiver.isCategoryAllowed(dto.getCategory())) {
+            throw new BusinessException(
+                    UserResponseCode.CATEGORY_IS_REJECTED.getCode(),
+                    UserResponseCode.CATEGORY_IS_REJECTED.getHttpStatus(),
+                    UserResponseCode.CATEGORY_IS_REJECTED.getMessage()
+            );
+        }
 
-        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId());
-        Optional<SignalRoom> existingRoom = signalRoomRepository.findByUserPairSignal(userPairSignal);
-        if (existingRoom.isPresent()) {
+        boolean alreadyExists = signalRoomRepository.existsByUserPairAndCategory(sender, receiver, dto.getCategory());
+        if (alreadyExists) {
             throw new BusinessException(
                     ChannelResponseCode.ALREADY_IN_CONVERSATION.getCode(),
                     ChannelResponseCode.ALREADY_IN_CONVERSATION.getHttpStatus(),
@@ -172,6 +187,8 @@ public class ChannelService {
                     "자기 자신에게는 시그널을 보낼 수 없습니다."
             );
         }
+
+        String userPairSignal = generateUserPairSignal(sender.getId(), receiver.getId(), dto.getCategory());
 
         SignalRoom signalRoom = SignalRoom.builder()
                 .senderUser(sender)
@@ -214,9 +231,193 @@ public class ChannelService {
         return new SendSignalResponseDto(signalRoom.getId());
     }
 
-    public static String generateUserPairSignal(Long userId1, Long userId2) {
+    public static String generateUserPairSignal(Long userId1, Long userId2, Category category) {
         Long min = Math.min(userId1, userId2);
         Long max = Math.max(userId1, userId2);
-        return min + "_" + max;
+        return min + "_" + max + "_" + category;
+    }
+
+    @Transactional
+    public TuningResponseDto getTunedUser(Long userId, String category) {
+        User requester = getUserById(userId);
+
+        if (!hasSelectedInterests(requester)) {
+            throw new BusinessException(
+                    ChannelResponseCode.USER_INTERESTS_NOT_SELECTED.getCode(),
+                    ChannelResponseCode.USER_INTERESTS_NOT_SELECTED.getHttpStatus(),
+                    ChannelResponseCode.USER_INTERESTS_NOT_SELECTED.getMessage()
+            );
+        }
+
+        Tuning tuning = getOrCreateTuning(requester, category);
+
+        if (!tuningResultRepository.existsByTuning(tuning)) {
+            boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning, category);
+            if (!saved) return null;
+        }
+
+        Optional<TuningResult> optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
+        if (optionalResult.isEmpty()) {
+            boolean saved = fetchAndSaveTuningResultsFromAiServer(userId, tuning, category);
+            if (!saved) return null;
+
+            optionalResult = tuningResultRepository.findFirstByTuningOrderByLineupAsc(tuning);
+            if (optionalResult.isEmpty()) return null;
+        }
+
+        TuningResult topResult = optionalResult.get();
+        tuningResultRepository.delete(topResult);
+
+        User matchedUser = topResult.getMatchedUser();
+        if (matchedUser == null || matchedUser.getId() == null) return null;
+
+        return buildTuningResponseDTO(userId, matchedUser);
+    }
+
+    private boolean fetchAndSaveTuningResultsFromAiServer(Long userId, Tuning tuning, String category) {
+        Map<String, Object> responseMap = tuningAiClient.requestTuningByCategory(userId, category);
+        String code = (String) responseMap.get("code");
+
+        if (ChannelResponseCode.TUNING_SUCCESS_BUT_NO_MATCH.getCode().equals(code)) {
+            return false;
+
+        } else if (ChannelResponseCode.TUNING_BAD_REQUEST.getCode().equals(code)) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "AI 서버에서 bad request 발생했습니다."
+            );
+
+        } else if (ChannelResponseCode.TUNING_NOT_FOUND_USER.getCode().equals(code)) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "AI 서버에서 사용자를 찾을 수 없습니다."
+            );
+
+        } else if (ChannelResponseCode.TUNING_INTERNAL_SERVER_ERROR.getCode().equals(code)) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "튜닝 과정에서 AI 서버 오류 발생했습니다."
+            );
+
+        } else if (ChannelResponseCode.TUNING_SUCCESS.getCode().equals(code)) {
+            Object dataObj = responseMap.get("data");
+            if (!(dataObj instanceof Map)) {
+                throw new BusinessException(
+                        NewResponseCode.AI_SERVER_ERROR.getCode(),
+                        NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                        "튜닝 과정에서 AI 서버 오류 발생했습니다."
+                );
+            }
+
+            Map<?, ?> data = (Map<?, ?>) dataObj;
+            List<Integer> userIdList = (List<Integer>) data.get("userIdList");
+            if (userIdList == null || userIdList.isEmpty()) {
+                throw new BusinessException(
+                        NewResponseCode.AI_SERVER_ERROR.getCode(),
+                        NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                        "튜닝 과정에서 AI 서버 오류 발생했습니다."
+                );
+            }
+
+            saveTuningResults(userIdList, tuning, category);
+            return true;
+
+        } else {
+            throw new BusinessException(
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                    "튜닝 과정에서 BE 서버 오류 발생했습니다."
+            );
+        }
+    }
+
+    private Tuning getOrCreateTuning(User user, String category) {
+        Category enumCategory = convertToCategory(category);
+
+        return tuningRepository.findByUserAndCategory(user, enumCategory)
+                .orElseGet(() -> tuningRepository.save(
+                        Tuning.builder()
+                                .user(user)
+                                .category(enumCategory)
+                                .build()));
+    }
+
+    private Category convertToCategory(String category) {
+        return switch (category.toLowerCase()) {
+            case "friend" -> Category.FRIEND;
+            case "couple" -> Category.COUPLE;
+            default -> throw new BusinessException(
+                    NewResponseCode.BAD_REQUEST.getCode(),
+                    NewResponseCode.BAD_REQUEST.getHttpStatus(),
+                    "유효하지 않은 category: " + category
+            );
+        };
+    }
+
+    private void saveTuningResults(List<Integer> userIdList, Tuning tuning, String category) {
+        int lineup = 1;
+        User requester = tuning.getUser();
+        Category enumCategory = convertToCategory(category);
+
+        for (Integer matchedUserId : userIdList) {
+            Long matchedId = Long.valueOf(matchedUserId);
+
+            User matchedUser = userRepository.findById(matchedId)
+                    .orElseThrow(() -> new BusinessException(
+                            UserResponseCode.USER_DEACTIVATED.getCode(),
+                            UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                            "BE 서버에 없는 사용자 id가 AI 서버로부터 넘어왔습니다."
+                    ));
+
+            if (!hasSelectedInterests(matchedUser)) {
+                continue;
+            }
+            if (!matchedUser.isCategoryAllowed(enumCategory)) {
+                continue;
+            }
+            boolean alreadyExists = signalRoomRepository.existsByUserPairAndCategory(requester, matchedUser, enumCategory);
+            if (alreadyExists) continue;
+
+            tuningResultRepository.save(
+                    TuningResult.builder()
+                            .tuning(tuning)
+                            .matchedUser(matchedUser)
+                            .lineup(lineup++)
+                            .build()
+            );
+        }
+    }
+
+    private TuningResponseDto buildTuningResponseDTO(Long requesterId, User target) {
+        Map<String, String> keywords = interestsService.getUserKeywords(target.getId());
+        Map<String, List<String>> requesterInterests = interestsService.getUserInterests(requesterId);
+        Map<String, List<String>> targetInterests = interestsService.getUserInterests(target.getId());
+        Map<String, List<String>> sameInterests = interestsService.extractSameInterests(requesterInterests, targetInterests);
+
+        return new TuningResponseDto(
+                target.getId(),
+                target.getProfileImageUrl(),
+                target.getNickname(),
+                target.getGender(),
+                target.getOneLineIntroduction(),
+                keywords,
+                sameInterests
+        );
+    }
+
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()
+                ));
+    }
+
+    public boolean hasSelectedInterests(User user) {
+        return userInterestsRepository.existsByUser(user);
     }
 }

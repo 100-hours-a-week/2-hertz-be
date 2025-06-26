@@ -115,4 +115,11 @@ public class User {
         }
     }
 
+    public boolean isCategoryAllowed(Category category) {
+        return switch (category) {
+            case FRIEND -> isFriendAllowed;
+            case COUPLE -> isCoupleAllowed;
+        };
+    }
+
 }

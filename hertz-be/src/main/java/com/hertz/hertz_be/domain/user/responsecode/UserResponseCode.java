@@ -18,6 +18,7 @@ public enum UserResponseCode {
     NICKNAME_GENERATION_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "NICKNAME_GENERATION_TIMEOUT", "5초 내에 중복되지 않은 닉네임을 찾지 못했습니다."),
     WRONG_INVITATION_CODE(HttpStatus.BAD_REQUEST, "WRONG_INVITATION_CODE", "유효하지 않은 초대코드입니다."),
     CATEGORY_UPDATED_SUCCESSFULLY(HttpStatus.OK, "CATEGORY_UPDATED_SUCCESSFULLY", "사용자의 카테고리가 정상적으로 수정되었습니다."),
+    CATEGORY_IS_REJECTED(HttpStatus.BAD_REQUEST, "CATEGORY_IS_REJECTED", "상대방이 시그널을 받고 싶지 않은 카테고리입나다."),
 
     // 성공 응답 코드
     USER_INFO_FETCH_SUCCESS(HttpStatus.OK, "USER_INFO_FETCH_SUCCESS", "사용자의 정보가 정상적으로 조회되었습니다."),
