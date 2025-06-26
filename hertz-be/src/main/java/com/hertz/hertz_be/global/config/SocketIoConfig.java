@@ -31,7 +31,6 @@ public class SocketIoConfig {
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         config.setHostname(hostname);
         config.setPort(port);
-        config.setOrigin("http://localhost:5500");
         config.setAllowCustomRequests(true);
         config.setTransports(Transport.WEBSOCKET, Transport.POLLING);
 
