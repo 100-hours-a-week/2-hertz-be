@@ -37,6 +37,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -545,12 +546,6 @@ public class ChannelService {
                 .build();
 
         signalMessageRepository.save(signalMessage);
-
-        // 2. 메세지 WebSocket 전송
-        String roomKey = "room-" + roomId;
-        socketIOServer.getRoomOperations(roomKey)
-                        .sendEvent("receive_message", SocketIoMessageResponse.from(signalMessage));
-
         entityManager.flush();
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

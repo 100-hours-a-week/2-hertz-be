@@ -1,105 +1,155 @@
 package com.hertz.hertz_be.global.socketio;
 
+import com.corundumstudio.socketio.AckRequest;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
+import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageMarkRequest;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageRequest;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
-import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
-import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
-import com.hertz.hertz_be.global.util.AESUtil;
+import com.hertz.hertz_be.global.util.SocketIoTokenUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class SocketIoController {
     private final SocketIOServer server;
     private final SocketIoService messageService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final SocketIoTokenUtil socketIoTokenUtil;
     private final SignalRoomRepository signalRoomRepository;
-    private final AESUtil aesUtil;
+    private final Map<Long, UUID> connectedUsers = new ConcurrentHashMap<>();
 
-    public SocketIoController(SocketIOServer server, SocketIoService messageService, JwtTokenProvider jwtTokenProvider, SignalRoomRepository signalRoomRepository, AESUtil aesUtil) {
-        this.server = server;
-        this.messageService = messageService;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.signalRoomRepository = signalRoomRepository;
-        this.aesUtil = aesUtil;
-
-        server.addConnectListener(listenConnected());
-
-        server.addEventListener("send_message", SocketIoMessageRequest.class, (client, data, ackSender) -> {
-            Long senderId = getUserIdFromClient(client);
-
-            log.info("[{}] 채널 {} 에게 메세지 : {}", senderId, data.roomId(), data.message());
-
-            SignalMessage signalMessage = messageService.saveMessage(data.roomId(), senderId, data.message());
-
-            // 2. 복호화해서 DTO로 응답
-            String decryptMessage = aesUtil.decrypt(signalMessage.getMessage());
-            SocketIoMessageResponse socketIoResponse = SocketIoMessageResponse.from(signalMessage, decryptMessage);
-
-            server.getRoomOperations("room-" + data.roomId()).sendEvent("receive_message", socketIoResponse);
-
-        });
-
-        server.addEventListener("mark_as_read", SocketIoMessageMarkRequest.class, (client, data, ackSender) -> {
-            Long userId = getUserIdFromClient(client);
-            messageService.markMessageAsRead(data.roomId(), userId);
-        });
+    @EventListener(ApplicationReadyEvent.class)
+    public void init() {
+        server.addConnectListener(onConnected());
+        server.addEventListener("send_message", SocketIoMessageRequest.class, this::handleSendMessage);
+        server.addEventListener("mark_as_read", SocketIoMessageMarkRequest.class, this::handleMarkAsRead);
+        server.addDisconnectListener(onDisconnected());
     }
 
-    private Long getUserIdFromClient(SocketIOClient client) {
-        List<String> tokens = client.getHandshakeData().getUrlParams().get("token"); // 토큰 불러옴
-
-        return jwtTokenProvider.getUserIdFromToken(tokens.get(0));
-    }
-
-    public ConnectListener listenConnected() {
-        return (client) -> {
+    private ConnectListener onConnected() {
+        return client -> {
             try {
-                String token = client.getHandshakeData().getUrlParams().get("token").get(0);
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
+                log.info("🍪 쿠키: {}", cookie);
 
-                log.info(":: SocketIo Connect - userId : {} ", userId);
+                String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
+                log.info("🔐 추출된 리프레시 토큰: {}", refreshToken);
 
-                List<Long> joinedRoomIds = signalRoomRepository.findRoomIdsByUserId(userId);
-
-                for(Long roomId: joinedRoomIds) {
-                    String roomKey = "room-" + roomId;
-                    client.joinRoom(roomKey);
-                    log.info("# user {} → {}", userId, roomKey);
+                if (refreshToken == null) {
+                    log.warn("❗ refreshToken 없음, 연결 종료");
+                    client.disconnect();
+                    return;
                 }
 
+                Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
                 client.set("userId", userId);
+                client.sendEvent("init_user", userId);
+
+                List<Long> roomIds = signalRoomRepository.findRoomIdsByUserId(userId);
+                for (Long roomId : roomIds) {
+                    client.joinRoom("room-" + roomId);
+                    log.info("🚀 userId={} → room-{} 참가", userId, roomId);
+                }
+
+                connectedUsers.put(userId, client.getSessionId());
+                log.info("✅ userId [{}] 접속 , 현재 접속자 수={}", userId, getConnectedUserCount());
             } catch (Exception e) {
-                log.warn("⚠️ JWT 토큰 검증 실패 - 연결 거부: {}", e.getMessage());
+                log.error("❌ 연결 중 예외 발생: {}", e.getMessage(), e);
                 client.disconnect();
             }
 
         };
+//        return client -> {
+//            String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
+//            String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
+//
+//            if (refreshToken == null) { // null만 체크
+//                client.disconnect();
+//                return;
+//            }
+//
+//            try {
+//                Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+//                client.set("userId", userId);
+//                client.sendEvent("init_user", userId); // 클라이언트에게 userId 전달
+//
+//                // 사용자가 속한 채팅방 목록 조회 (예: DB에서)
+//                List<Long> userRoomIds = signalRoomRepository.findRoomIdsByUserId(userId);
+//
+//                for (Long roomId : userRoomIds) {
+//                    client.joinRoom("room-" + roomId);
+//                    log.info("🚀 userId={} → room-{} 참가", userId, roomId);
+//                }
+//
+//                connectedUsers.put(userId, client.getSessionId());
+//                log.info("✅ userId [{}] 접속 , 현재 접속자 수={}", userId, getConnectedUserCount());
+//            } catch (Exception e) {
+//                log.error("Socket 연결 실패: 토큰 파싱 중 예외 발생. error={}", e.getMessage(), e);
+//                client.disconnect();
+//            }
+//        };
     }
 
-    public DisconnectListener listenDisconnected() {
-        return (client) -> {
+    private DisconnectListener onDisconnected() {
+        return client -> {
+            Long userId = getUserIdFromClient(client);
             String sessionId = client.getSessionId().toString();
-            log.info(":: SocketIo Disconnect - " + sessionId + " ::");
+            log.warn("🔌 disconnect 발생! sessionId={}, userId={}", sessionId, userId);
 
-            Long userId = client.get("userId");
-
-            for(String room : client.getAllRooms()) {
-                client.leaveRoom(room);
-                log.info("# user {} → {}", userId, room);
+            if (userId != null) {
+                connectedUsers.remove(userId);
+                log.info("❌ userId [{}] 연결 종료, 현재 접속자 수={}", userId, getConnectedUserCount());
             }
-
-            client.disconnect();
         };
     }
+
+    // 메세지 수신
+    private void handleSendMessage(SocketIOClient client, SocketIoMessageRequest data, AckRequest ackSender) {
+        Long senderId = getUserIdFromClient(client);
+        log.info("📨 메시지 수신: [{}] → 방 {}: {}", senderId, data.roomId(), data.message());
+
+        // 저장 + 복호화 응답 생성
+        SocketIoMessageResponse response = messageService.processAndRespond(data.roomId(), senderId, data.message());
+
+        String roomKey = "room-" + data.roomId();
+        server.getRoomOperations(roomKey).sendEvent("receive_message", response);
+    }
+
+    // 메세지 읽음 처리
+    private void handleMarkAsRead(SocketIOClient client, SocketIoMessageMarkRequest data, AckRequest ackSender) {
+        Long userId = getUserIdFromClient(client);
+        messageService.markMessageAsRead(data.roomId(), userId);
+    }
+
+
+
+    public int getConnectedUserCount() {
+        return connectedUsers.size();
+    }
+
+    private Long getUserIdFromClient(SocketIOClient client) {
+        Object attr = client.get("userId");
+        if (attr instanceof Long userId) {
+            return userId;
+        } else {
+            log.warn("userId 속성이 존재하지 않거나 잘못된 타입: {}", attr);
+            return null;
+        }
+    }
+
 }
