@@ -39,10 +39,9 @@ public class SseAuthenticationFilter extends OncePerRequestFilter {
 
             String refreshToken = extractRefreshTokenFromCookie(request);
             if (refreshToken == null) {
-                throw new BusinessException(
-                        AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
-                        AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
                         AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
+                return;
             }
 
             Long userId = jwtTokenProvider.getUserIdFromRefreshToken(refreshToken);

@@ -25,13 +25,6 @@ public class SseController {
     public SseEmitter subscribe(HttpServletRequest request) {
 
         String refreshToken = extractRefreshTokenFromCookie(request);
-        if (refreshToken == null) {
-            throw new BusinessException(
-                    AuthResponseCode.REFRESH_TOKEN_INVALID.getCode(),
-                    AuthResponseCode.REFRESH_TOKEN_INVALID.getHttpStatus(),
-                    AuthResponseCode.REFRESH_TOKEN_INVALID.getMessage());
-        }
-
         Long userId = jwtTokenProvider.getUserIdFromRefreshToken(refreshToken);
         return sseService.subscribe(userId);
     }

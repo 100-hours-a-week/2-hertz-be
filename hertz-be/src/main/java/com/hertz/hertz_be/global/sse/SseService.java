@@ -2,10 +2,9 @@ package com.hertz.hertz_be.global.sse;
 
 import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
-import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
-import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.common.NewResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,12 +30,22 @@ public class SseService {
 
     @Transactional(readOnly = true)
     public SseEmitter subscribe(Long userId) {
+        SseEmitter emitter = new SseEmitter(TIMEOUT);
+
         if (!userRepository.existsById(userId)) {
-            throw new BusinessException(
-                    UserResponseCode.USER_NOT_FOUND.getCode(),
-                    UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                    String.format("SSE 연결 요청한 사용자가(userId=%s) 존재하지 않습니다.", userId)
-            );
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data(Map.of(
+                                "code", NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                                "message", String.format("SSE 연결 요청한 사용자가(userId=%s) 존재하지 않습니다.", userId)
+                        )));
+            } catch (IOException ignored) {
+                // 전송 실패해도 무시
+            } finally {
+                emitter.complete();
+            }
+            return emitter;
         }
 
         // 이미 연결되어 있으면 기존 emitter 종료
@@ -45,7 +54,6 @@ public class SseService {
             emitters.remove(userId);
         }
 
-        SseEmitter emitter = new SseEmitter(TIMEOUT);
         emitters.put(userId, emitter);
 
         // 연결 정상 종료

@@ -6,7 +6,7 @@ import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.service.AuthService;
 import com.hertz.hertz_be.domain.auth.dto.request.TestLoginRequestDto;
-import com.hertz.hertz_be.domain.user.service.UserService;
+import com.hertz.hertz_be.domain.user.service.v1.UserService;
 import com.hertz.hertz_be.global.auth.token.JwtTokenProvider;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import com.hertz.hertz_be.global.exception.BusinessException;
@@ -71,7 +71,7 @@ public class AuthController {
 
     @PostMapping("/test/login")
     @Operation(summary = "사용자 Id로 AT와 RT를 반환하는 API(테스트용)", description = "회원가입 안된 임의의 사용자의 Id도 사용 가능")
-    public ResponseEntity<?> login(@Valid @RequestBody TestLoginRequestDto request, HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody @Valid TestLoginRequestDto request, HttpServletResponse response) {
         Long userId = request.getUserId();
 
         String accessToken = jwtTokenProvider.createAccessToken(userId);

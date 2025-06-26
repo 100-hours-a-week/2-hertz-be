@@ -6,7 +6,7 @@ import com.hertz.hertz_be.domain.auth.dto.response.OAuthLoginResult;
 import com.hertz.hertz_be.domain.auth.dto.response.OAuthSignupResponseDto;
 import com.hertz.hertz_be.domain.auth.responsecode.OAuthResponseCode;
 import com.hertz.hertz_be.domain.auth.service.OAuthService;
-import com.hertz.hertz_be.domain.channel.service.ChannelService;
+import com.hertz.hertz_be.domain.channel.service.v1.ChannelService;
 import com.hertz.hertz_be.global.common.ResponseDto;
 import com.hertz.hertz_be.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;

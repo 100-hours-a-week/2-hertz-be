@@ -7,16 +7,12 @@ import com.hertz.hertz_be.domain.user.entity.User;
 
 public record AiSignalRoomDto(
         Long id,
-        Category category,
-        Long senderUserId,
-        Long receiverUserId
+        Category category
 ) {
     public static AiSignalRoomDto from(SignalRoom room) {
         return new AiSignalRoomDto(
                 room.getId(),
-                room.getCategory(),
-                room.getSenderUser().getId(),
-                room.getReceiverUser().getId()
+                room.getCategory()
         );
     }
 
@@ -24,8 +20,6 @@ public record AiSignalRoomDto(
         return SignalRoom.builder()
                 .id(id)
                 .category(category)
-                .senderUser(sender)
-                .receiverUser(receiver)
                 .build();
     }
 }

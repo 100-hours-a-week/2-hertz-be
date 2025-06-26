@@ -4,6 +4,7 @@ import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
 import com.hertz.hertz_be.domain.user.entity.User;
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import io.lettuce.core.dynamic.annotation.Param;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -17,7 +18,20 @@ import java.util.Optional;
 
 public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     boolean existsBySenderUserAndReceiverUser(User sender, User receiver);
+
     Optional<SignalRoom> findByUserPairSignal(String userPairSignal);
+
+    @Query("""
+    SELECT CASE WHEN COUNT(sr) > 0 THEN true ELSE false END 
+    FROM SignalRoom sr 
+    WHERE 
+        ((sr.senderUser = :user1 AND sr.receiverUser = :user2) 
+        OR (sr.senderUser = :user2 AND sr.receiverUser = :user1))
+        AND sr.category = :category
+""")
+    boolean existsByUserPairAndCategory(@Param("user1") User user1,
+                                        @Param("user2") User user2,
+                                        @Param("category") Category category);
 
     @Query(value = """
     SELECT 
@@ -30,6 +44,7 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
         sr.receiver_user_id AS receiverUserId,
         sr.sender_exited_at AS senderExitedAt,
         sr.receiver_exited_at AS receiverExitedAt,
+        sr.category AS category,
         CASE
             WHEN sm.sender_user_id = :userId THEN 'true'
             WHEN sm.sender_user_id != :userId AND sm.is_read = true THEN 'true'
