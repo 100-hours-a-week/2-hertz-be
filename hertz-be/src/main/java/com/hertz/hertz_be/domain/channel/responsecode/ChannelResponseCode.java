@@ -22,6 +22,7 @@ public enum ChannelResponseCode {
     NO_TUNING_CANDIDATE(HttpStatus.OK, "NO_TUNING_CANDIDATE", "추천할 튜닝 후보자가 없습니다."),
     TUNING_SUCCESS_BUT_NO_MATCH(HttpStatus.OK, "TUNING_SUCCESS_BUT_NO_MATCH", "튜닝은 성공했으나 매칭 상대가 없습니다."),
     MESSAGE_REPORTED(HttpStatus.OK, "MESSAGE_REPORTED", "신고가 정상적으로 접수되었습니다."),
+    CENSORED_SUCCESS(HttpStatus.OK, "CENSORED_SUCCESS", "메세지 신고 검열이 성공적으로 완료되었습니다."),
 
     // 예외 응답 코드
     CHANNEL_NOT_FOUND(HttpStatus.GONE, "CHANNEL_NOT_FOUND", "찾을 수 없는 채팅방입니다."),
@@ -31,7 +32,9 @@ public enum ChannelResponseCode {
     MATCH_FAILED(HttpStatus.CONFLICT, "MATCH_FAILED", "매칭에 실패했습니다."),
     TUNING_BAD_REQUEST(HttpStatus.BAD_REQUEST, "TUNING_BAD_REQUEST", "AI 서버에서 bad request 발생했습니다."),
     TUNING_NOT_FOUND_USER(HttpStatus.BAD_REQUEST, "TUNING_NOT_FOUND_USER", "AI 서버에서 사용자를 찾지 못했습니다."),
-    TUNING_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "TUNING_INTERNAL_SERVER_ERROR", "AI 서버 오류 발생했습니다.");
+    TUNING_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "TUNING_INTERNAL_SERVER_ERROR", "AI 서버 오류 발생했습니다."),
+    CENSORED_BAD_REQUEST(HttpStatus.BAD_REQUEST, "CENSORED_BAD_REQUEST", "올바르지 않은 메세지 신고 요청입니다."),
+    CENSORED_INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CENSORED_INTERNAL_SERVER_ERROR", "메세지 신고 요청 과정에서 AI 서버 오류 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
