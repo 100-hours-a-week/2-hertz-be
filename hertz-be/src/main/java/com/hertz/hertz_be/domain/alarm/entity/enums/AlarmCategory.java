@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 public enum AlarmCategory {
     NOTICE("공지 알림", "NOTICE"),
     REPORT("리포트 알림", "REPORT"),
-    MATCHING("매칭 결과 알림", "MATCHING");
+    MATCHING("매칭 결과 알림", "MATCHING"),
+    ALERT("경고 알람", "ALERT");
 
     private final String label;
     private final String value;
