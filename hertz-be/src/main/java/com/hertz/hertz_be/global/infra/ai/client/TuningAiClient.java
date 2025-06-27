@@ -3,7 +3,7 @@ package com.hertz.hertz_be.global.infra.ai.client;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.BusinessException;
-import com.hertz.hertz_be.global.infra.ai.dto.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;

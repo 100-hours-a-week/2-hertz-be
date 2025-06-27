@@ -5,7 +5,7 @@ import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
 import com.hertz.hertz_be.global.infra.ai.client.TuningAiClient;
-import com.hertz.hertz_be.global.infra.ai.dto.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;

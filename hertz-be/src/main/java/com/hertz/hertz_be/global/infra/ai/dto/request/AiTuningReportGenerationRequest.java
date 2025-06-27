@@ -1,7 +1,8 @@
-package com.hertz.hertz_be.global.infra.ai.dto;
+package com.hertz.hertz_be.global.infra.ai.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.global.infra.ai.dto.object.AiSignalRoomDto;
 
 import java.util.List;
 

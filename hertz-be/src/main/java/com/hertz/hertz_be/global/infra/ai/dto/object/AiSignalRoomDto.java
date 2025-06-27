@@ -1,4 +1,4 @@
-package com.hertz.hertz_be.global.infra.ai.dto;
+package com.hertz.hertz_be.global.infra.ai.dto.object;
 
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
