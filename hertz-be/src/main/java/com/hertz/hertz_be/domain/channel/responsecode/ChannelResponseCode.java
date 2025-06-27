@@ -21,6 +21,7 @@ public enum ChannelResponseCode {
     TUNING_SUCCESS(HttpStatus.OK, "TUNING_SUCCESS", "튜닝이 성공적으로 완료되었습니다."),
     NO_TUNING_CANDIDATE(HttpStatus.OK, "NO_TUNING_CANDIDATE", "추천할 튜닝 후보자가 없습니다."),
     TUNING_SUCCESS_BUT_NO_MATCH(HttpStatus.OK, "TUNING_SUCCESS_BUT_NO_MATCH", "튜닝은 성공했으나 매칭 상대가 없습니다."),
+    MESSAGE_REPORTED(HttpStatus.OK, "MESSAGE_REPORTED", "신고가 정상적으로 접수되었습니다."),
 
     // 예외 응답 코드
     CHANNEL_NOT_FOUND(HttpStatus.GONE, "CHANNEL_NOT_FOUND", "찾을 수 없는 채팅방입니다."),
