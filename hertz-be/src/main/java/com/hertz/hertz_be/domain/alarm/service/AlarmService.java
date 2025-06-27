@@ -2,10 +2,7 @@ package com.hertz.hertz_be.domain.alarm.service;
 
 import static com.hertz.hertz_be.global.util.MessageCreatorUtil.*;
 import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.AlarmItem;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.*;
 import com.hertz.hertz_be.domain.alarm.entity.*;
 import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
 import com.hertz.hertz_be.domain.alarm.repository.*;
@@ -252,6 +249,12 @@ public class AlarmService {
                                 AlarmCategory.REPORT.getValue(),
                                 report.getTitle(),
                                 report.getCreatedAt().toString()
+                        );
+                    } else if (alarm instanceof AlarmAlert alert) {
+                        return new AlertAlarm(
+                                AlarmCategory.ALERT.getValue(),
+                                alert.getTitle(),
+                                alert.getCreatedAt().toString()
                         );
                     } else {
                         throw new BusinessException(
