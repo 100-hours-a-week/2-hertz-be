@@ -42,6 +42,7 @@ public class AlarmService {
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final AlarmReportRepository alarmReportRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
+    private final AlarmAlertRepository alarmAlertRepository;
     private final AlarmRepository alarmRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
@@ -174,6 +175,41 @@ public class AlarmService {
                 for (User user : allUsers) {
                     asyncAlarmService.updateAlarmNotification(user.getId());
                 }
+            }
+        });
+    }
+
+    @Transactional
+    public void createAlertAlarm(Long userId, String message) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_DEACTIVATED.getCode(),
+                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                        UserResponseCode.USER_DEACTIVATED.getMessage()
+                ));
+
+        String alarmAlertTitle = createAlertMessageForInappropriateContent();
+
+        AlarmAlert alarmAlert = AlarmAlert.builder()
+                .title(alarmAlertTitle)
+                .reportedMessage(message)
+                .build();
+
+        AlarmAlert savedAlarmForUser = alarmAlertRepository.save(alarmAlert);
+
+        UserAlarm userAlarm = UserAlarm.builder()
+                .alarm(savedAlarmForUser)
+                .user(user)
+                .build();
+
+        userAlarmRepository.save(userAlarm);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAlarmService.updateAlarmNotification(user.getId());
             }
         });
     }
