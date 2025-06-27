@@ -1,5 +1,7 @@
 package com.hertz.hertz_be.domain.channel.service.v3;
 
+import com.hertz.hertz_be.domain.alarm.service.AlarmService;
+import com.hertz.hertz_be.domain.channel.dto.request.v3.ChatReportRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.*;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
@@ -24,6 +26,7 @@ import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.infra.ai.client.TuningAiClient;
+import com.hertz.hertz_be.global.infra.ai.dto.response.AiChatReportResponseDto;
 import com.hertz.hertz_be.global.util.AESUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -34,6 +37,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -58,6 +62,7 @@ public class ChannelService {
     private final InterestsService interestsService;
     private final UserInterestsRepository userInterestsRepository;
     private final AsyncChannelService asyncChannelService;
+    private final AlarmService alarmService;
     private final AESUtil aesUtil;
     private final TuningAiClient tuningAiClient;
 
@@ -420,4 +425,72 @@ public class ChannelService {
     public boolean hasSelectedInterests(User user) {
         return userInterestsRepository.existsByUser(user);
     }
+
+    @Transactional
+    public void reportMessage(Long reportSenderId, ChatReportRequestDto requestDto) {
+        if (!userRepository.existsById(reportSenderId)) {
+            throw new BusinessException(
+                    UserResponseCode.USER_NOT_FOUND.getCode(),
+                    UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                    "메세지 신고를 요청한 사용자가 존재하지 않습니다."
+            );
+        }
+
+        if (!userRepository.existsById(requestDto.getReportedUserId())) {
+            throw new BusinessException(
+                    UserResponseCode.USER_DEACTIVATED.getCode(),
+                    UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                    UserResponseCode.USER_DEACTIVATED.getMessage()
+            );
+        }
+
+        sendReportedMessageToAi(requestDto);
+    }
+
+    private void sendReportedMessageToAi(ChatReportRequestDto requestDto) {
+        boolean isMessageToxic = handleChatReportResult(requestDto);
+        if (isMessageToxic) {
+            alarmService.createAlertAlarm(requestDto.getReportedUserId(), requestDto.getMessageContent());
+        }
+    }
+
+    private boolean handleChatReportResult(ChatReportRequestDto requestDto) {
+        AiChatReportResponseDto response = tuningAiClient.sendChatReport(requestDto);
+        String code = response.code();
+
+        if (ChannelResponseCode.CENSORED_SUCCESS.name().equals(code)) {
+            Map<String, Object> data = response.data();
+            Object result = data != null ? data.get("result") : null;
+            if (result instanceof Boolean booleanResult) {
+                return booleanResult;
+            }
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 요청 과정에서 AI 응답 결과 포맷 오류"
+            );
+
+        } else if (ChannelResponseCode.CENSORED_BAD_REQUEST.name().equals(code)) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 요청 과정에서 AI 서버에 잘못된 요청이 전달되었습니다."
+            );
+
+        } else if (ChannelResponseCode.CENSORED_INTERNAL_SERVER_ERROR.name().equals(code)) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 요청 과정에서 AI 서버 오류 발생했습니다."
+            );
+
+        } else {
+            throw new BusinessException(
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                    NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 요청 과정에서 예상치못한 AI 서버 응답을 받았습니다."
+            );
+        }
+    }
+
 }

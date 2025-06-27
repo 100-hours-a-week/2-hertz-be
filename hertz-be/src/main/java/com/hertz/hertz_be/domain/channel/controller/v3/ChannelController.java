@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.channel.controller.v3;
 
+import com.hertz.hertz_be.domain.channel.dto.request.v3.ChatReportRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.request.v3.SendSignalRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.TuningResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v3.SendSignalResponseDto;
@@ -73,6 +74,15 @@ public class ChannelController {
         }
         return ResponseEntity.ok(
                 new ResponseDto<>(ChannelResponseCode.TUNING_SUCCESS.getCode(), ChannelResponseCode.TUNING_SUCCESS.getMessage(), response)
+        );
+    }
+
+    @PostMapping("/reports")
+    @Operation(summary = "메시지 신고 API")
+    public ResponseEntity<ResponseDto<Void>> reportMessage(@AuthenticationPrincipal Long userId,
+                                                            @RequestBody @Valid ChatReportRequestDto requestDto) {
+        channelService.reportMessage(userId, requestDto);
+        return ResponseEntity.ok(new ResponseDto<>(ChannelResponseCode.MESSAGE_REPORTED.getCode(), ChannelResponseCode.MESSAGE_REPORTED.getMessage(), null )
         );
     }
 }
