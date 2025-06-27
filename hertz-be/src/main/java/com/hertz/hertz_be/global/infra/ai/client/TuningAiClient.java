@@ -1,9 +1,11 @@
 package com.hertz.hertz_be.global.infra.ai.client;
 
+import com.hertz.hertz_be.domain.channel.dto.request.v3.ChatReportRequestDto;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.response.AiChatReportResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -57,5 +59,26 @@ public class TuningAiClient {
         }
 
         return responseMap;
+    }
+
+    public AiChatReportResponseDto sendChatReport(ChatReportRequestDto request) {
+        String uri = "/api/v3/chat/report";
+
+        try {
+            return tuningWebClient
+                    .post()
+                    .uri(uri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(AiChatReportResponseDto.class)
+                    .block();
+        } catch (Exception e) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 과정에서 AI 서버 API 요청 오류 발생했습니다."
+            );
+        }
     }
 }
