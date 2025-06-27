@@ -18,5 +18,5 @@ public class ChatReportRequestDto {
     private String messageContent;
 
     @NotNull
-    private int reportedUserId;
+    private long reportedUserId;
 }
