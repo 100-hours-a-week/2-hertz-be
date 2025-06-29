@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.channel.controller.v1;
 
 import com.hertz.hertz_be.domain.channel.dto.request.v1.SendSignalRequestDto;
+import com.hertz.hertz_be.domain.channel.dto.request.v3.SendMessageRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v1.ChannelListResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v1.ChannelRoomResponseDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v1.SendSignalResponseDto;
@@ -79,7 +80,7 @@ public class ChannelController {
     @Operation(summary = "채널방 메세지 전송 API")
     public ResponseEntity<ResponseDto<ChannelRoomResponseDto>> sendChannelMessage(@PathVariable Long channelRoomId,
                                                                                   @AuthenticationPrincipal Long userId,
-                                                                                  @RequestBody @Valid SendSignalRequestDto response) {
+                                                                                  @RequestBody @Valid SendMessageRequestDto response) {
 
         channelService.sendChannelMessage(channelRoomId, userId, response);
         return ResponseEntity

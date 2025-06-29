@@ -1,13 +1,13 @@
 package com.hertz.hertz_be.domain.channel.service.v1;
 
 import com.corundumstudio.socketio.SocketIOServer;
+import com.hertz.hertz_be.domain.channel.dto.request.v3.SendMessageRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v1.*;
 import com.hertz.hertz_be.domain.channel.service.AsyncChannelService;
 import com.hertz.hertz_be.domain.channel.service.SseChannelService;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.*;
-import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
 import com.hertz.hertz_be.domain.channel.entity.*;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
@@ -64,7 +64,6 @@ public class ChannelService {
     private final AsyncChannelService asyncChannelService;
     private final WebClient webClient;
     private final AESUtil aesUtil;
-    private SocketIOServer socketIOServer;
 
     @Autowired
     public ChannelService(UserRepository userRepository,
@@ -78,7 +77,7 @@ public class ChannelService {
                           AsyncChannelService asyncChannelService,
                           SseChannelService matchingStatusScheduler,
                           AESUtil aesUtil,
-                          @Value("${ai.server.ip}") String aiServerIp, SocketIOServer socketIOServer) {
+                          @Value("${ai.server.ip}") String aiServerIp) {
         this.userRepository = userRepository;
         this.tuningRepository = tuningRepository;
         this.tuningResultRepository = tuningResultRepository;
@@ -89,7 +88,6 @@ public class ChannelService {
         this.asyncChannelService = asyncChannelService;
         this.aesUtil = aesUtil;
         this.webClient = WebClient.builder().baseUrl(aiServerIp).build();
-        this.socketIOServer = socketIOServer;
     }
 
     @Transactional
@@ -505,7 +503,7 @@ public class ChannelService {
     }
 
     @Transactional
-    public void sendChannelMessage(Long roomId, Long userId, SendSignalRequestDto response) {
+    public void sendChannelMessage(Long roomId, Long userId, SendMessageRequestDto response) {
         // 1. 메세지 DB 저장
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(
