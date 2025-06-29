@@ -36,6 +36,7 @@ public class SocketIoConfig {
 
         List<String> allowedOrigins = List.of(
                 "http://localhost:3000",
+                "http://localhost:5500",
                 "https://hertz-tuning.com",
                 "https://dev.hertz-tuning.com",
                 "https://local.hertz-tuning.com:3000",
