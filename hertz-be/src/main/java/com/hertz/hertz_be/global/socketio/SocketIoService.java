@@ -13,6 +13,7 @@ import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
 import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -58,7 +59,7 @@ public class SocketIoService {
         return SocketIoMessageResponse.from(saved, decrypted);
     }
 
-    @Transactional
+    @Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
     public void markMessageAsRead(Long roomId, Long userId) {
         signalMessageRepository.markUnreadMessagesAsRead(roomId, userId);
     }
