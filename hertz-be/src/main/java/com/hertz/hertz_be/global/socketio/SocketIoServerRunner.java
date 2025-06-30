@@ -6,6 +6,8 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.net.BindException;
+
 @Component
 @Slf4j
 public class SocketIoServerRunner {
@@ -18,7 +20,12 @@ public class SocketIoServerRunner {
 
     @PostConstruct
     public void startServer() {
-        server.start();
+        try {
+            server.start();
+            log.info("✅ Socket.IO 서버 시작됨 (port={})", server.getConfiguration().getPort());
+        } catch (Exception e) {
+            log.error("❌ Socket.IO 서버 시작 중 예외 발생", e);
+        }
     }
 
     @PreDestroy
