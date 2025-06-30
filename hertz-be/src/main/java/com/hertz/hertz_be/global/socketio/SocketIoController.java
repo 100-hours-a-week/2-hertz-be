@@ -45,10 +45,7 @@ public class SocketIoController {
         return client -> {
             try {
                 String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
-                log.info("🍪 쿠키: {}", cookie);
-
                 String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
-                log.info("🔐 추출된 리프레시 토큰: {}", refreshToken);
 
                 if (refreshToken == null) {
                     log.warn("❗ refreshToken 없음, 연결 종료");
@@ -74,35 +71,6 @@ public class SocketIoController {
             }
 
         };
-//        return client -> {
-//            String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
-//            String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
-//
-//            if (refreshToken == null) { // null만 체크
-//                client.disconnect();
-//                return;
-//            }
-//
-//            try {
-//                Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-//                client.set("userId", userId);
-//                client.sendEvent("init_user", userId); // 클라이언트에게 userId 전달
-//
-//                // 사용자가 속한 채팅방 목록 조회 (예: DB에서)
-//                List<Long> userRoomIds = signalRoomRepository.findRoomIdsByUserId(userId);
-//
-//                for (Long roomId : userRoomIds) {
-//                    client.joinRoom("room-" + roomId);
-//                    log.info("🚀 userId={} → room-{} 참가", userId, roomId);
-//                }
-//
-//                connectedUsers.put(userId, client.getSessionId());
-//                log.info("✅ userId [{}] 접속 , 현재 접속자 수={}", userId, getConnectedUserCount());
-//            } catch (Exception e) {
-//                log.error("Socket 연결 실패: 토큰 파싱 중 예외 발생. error={}", e.getMessage(), e);
-//                client.disconnect();
-//            }
-//        };
     }
 
     private DisconnectListener onDisconnected() {

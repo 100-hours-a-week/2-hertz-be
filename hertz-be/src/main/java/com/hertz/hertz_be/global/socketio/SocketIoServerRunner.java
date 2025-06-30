@@ -24,6 +24,10 @@ public class SocketIoServerRunner {
     @PreDestroy
     public void stopServer() {
         if (server != null) {
+            server.getAllClients().forEach(client -> {
+                client.disconnect();
+                log.info("🔌 클라이언트 연결 해제: sessionId = {}", client.getSessionId());
+            });
             server.stop();
             log.info("🧼 Socket.IO 서버 종료 완료");
         }
