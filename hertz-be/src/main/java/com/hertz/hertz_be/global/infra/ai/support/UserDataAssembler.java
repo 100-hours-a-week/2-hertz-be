@@ -3,7 +3,7 @@ package com.hertz.hertz_be.global.infra.ai.support;
 import com.hertz.hertz_be.domain.interests.repository.UserInterestsRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
-import com.hertz.hertz_be.global.infra.ai.dto.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

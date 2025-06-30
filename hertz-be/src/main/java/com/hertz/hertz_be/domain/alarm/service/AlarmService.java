@@ -2,10 +2,7 @@ package com.hertz.hertz_be.domain.alarm.service;
 
 import static com.hertz.hertz_be.global.util.MessageCreatorUtil.*;
 import com.hertz.hertz_be.domain.alarm.dto.response.AlarmListResponseDto;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.AlarmItem;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.MatchingAlarm;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.NoticeAlarm;
-import com.hertz.hertz_be.domain.alarm.dto.response.object.ReportAlarm;
+import com.hertz.hertz_be.domain.alarm.dto.response.object.*;
 import com.hertz.hertz_be.domain.alarm.entity.*;
 import com.hertz.hertz_be.domain.alarm.entity.enums.AlarmCategory;
 import com.hertz.hertz_be.domain.alarm.repository.*;
@@ -42,6 +39,7 @@ public class AlarmService {
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final AlarmReportRepository alarmReportRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
+    private final AlarmAlertRepository alarmAlertRepository;
     private final AlarmRepository alarmRepository;
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
@@ -178,6 +176,41 @@ public class AlarmService {
         });
     }
 
+    @Transactional
+    public void createAlertAlarm(Long userId, String message) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_DEACTIVATED.getCode(),
+                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                        UserResponseCode.USER_DEACTIVATED.getMessage()
+                ));
+
+        String alarmAlertTitle = createAlertMessageForInappropriateContent();
+
+        AlarmAlert alarmAlert = AlarmAlert.builder()
+                .title(alarmAlertTitle)
+                .reportedMessage(message)
+                .build();
+
+        AlarmAlert savedAlarmForUser = alarmAlertRepository.save(alarmAlert);
+
+        UserAlarm userAlarm = UserAlarm.builder()
+                .alarm(savedAlarmForUser)
+                .user(user)
+                .build();
+
+        userAlarmRepository.save(userAlarm);
+
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAlarmService.updateAlarmNotification(user.getId());
+            }
+        });
+    }
+
     @Transactional(readOnly = true)
     public AlarmListResponseDto getAlarmList(int page, int size, Long userId) {
         PageRequest pageRequest = PageRequest.of(page, size);
@@ -216,6 +249,12 @@ public class AlarmService {
                                 AlarmCategory.REPORT.getValue(),
                                 report.getTitle(),
                                 report.getCreatedAt().toString()
+                        );
+                    } else if (alarm instanceof AlarmAlert alert) {
+                        return new AlertAlarm(
+                                AlarmCategory.ALERT.getValue(),
+                                alert.getTitle(),
+                                alert.getCreatedAt().toString()
                         );
                     } else {
                         throw new BusinessException(

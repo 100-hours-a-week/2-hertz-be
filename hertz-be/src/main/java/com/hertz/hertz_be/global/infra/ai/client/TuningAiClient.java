@@ -1,9 +1,11 @@
 package com.hertz.hertz_be.global.infra.ai.client;
 
+import com.hertz.hertz_be.domain.channel.dto.request.v3.ChatReportRequestDto;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.exception.BusinessException;
-import com.hertz.hertz_be.global.infra.ai.dto.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.response.AiChatReportResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -19,15 +21,23 @@ public class TuningAiClient {
 
     @Value("${ai.tuningreport.ip}")
     private String AI_TUNING_REPORT_IP;
+
+    @Value("${ai.server.ip}")
+    private String AI_TUNING_SERVER_IP;
+
+    @Value("${ai.message.report.server.ip}")
+    private String AI_MESSAGE_REPORT_SERVER_IP;
+
     private final WebClient.Builder webClientBuilder;
-    private final WebClient tuningWebClient;
 
     public Map<String, Object> requestTuningReport(AiTuningReportGenerationRequest aiReportRequest) {
-        WebClient webClient = webClientBuilder.baseUrl(AI_TUNING_REPORT_IP).build();
-        String uri = "api/v2/report";
+        String uri = "/api/v2/report";
 
-        try{
-            return webClient.post()
+        try {
+            return webClientBuilder
+                    .baseUrl(AI_TUNING_REPORT_IP)
+                    .build()
+                    .post()
                     .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(aiReportRequest)
@@ -42,7 +52,10 @@ public class TuningAiClient {
     public Map<String, Object> requestTuningByCategory(Long userId, String category) {
         String uri = "/api/v3/tuning?userId=" + userId + "&category=" + category;
 
-        Map<String, Object> responseMap = tuningWebClient.get()
+        Map<String, Object> responseMap = webClientBuilder
+                .baseUrl(AI_TUNING_SERVER_IP)
+                .build()
+                .get()
                 .uri(uri)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
@@ -57,5 +70,28 @@ public class TuningAiClient {
         }
 
         return responseMap;
+    }
+
+    public AiChatReportResponseDto sendChatReport(ChatReportRequestDto request) {
+        String uri = "/api/v3/chat/report";
+
+        try {
+            return webClientBuilder
+                    .baseUrl(AI_MESSAGE_REPORT_SERVER_IP)
+                    .build()
+                    .post()
+                    .uri(uri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(AiChatReportResponseDto.class)
+                    .block();
+        } catch (Exception e) {
+            throw new BusinessException(
+                    NewResponseCode.AI_SERVER_ERROR.getCode(),
+                    NewResponseCode.AI_SERVER_ERROR.getHttpStatus(),
+                    "메세지 신고 과정에서 AI 서버 API 요청 오류 발생했습니다."
+            );
+        }
     }
 }
