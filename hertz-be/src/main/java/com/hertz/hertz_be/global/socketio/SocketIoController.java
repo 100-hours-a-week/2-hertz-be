@@ -121,10 +121,10 @@ public class SocketIoController {
     // 메세지 수신
     private void handleSendMessage(SocketIOClient client, SocketIoMessageRequest data, AckRequest ackSender) {
         Long senderId = getUserIdFromClient(client);
-        log.info("📨 메시지 수신: [{}] → 방 {}: {}", senderId, data.roomId(), data.message());
+        log.info("📨 메시지 수신: [{}] → 방 {}: {}, 전송 시각: {}", senderId, data.roomId(), data.message(), data.sendAt());
 
         // 저장 + 복호화 응답 생성
-        SocketIoMessageResponse response = messageService.processAndRespond(data.roomId(), senderId, data.message());
+        SocketIoMessageResponse response = messageService.processAndRespond(data.roomId(), senderId, data.message(), data.sendAt());
 
         String roomKey = "room-" + data.roomId();
         server.getRoomOperations(roomKey).sendEvent("receive_message", response);
