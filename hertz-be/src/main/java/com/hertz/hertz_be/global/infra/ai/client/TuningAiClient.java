@@ -21,15 +21,23 @@ public class TuningAiClient {
 
     @Value("${ai.tuningreport.ip}")
     private String AI_TUNING_REPORT_IP;
+
+    @Value("${ai.server.ip}")
+    private String AI_TUNING_SERVER_IP;
+
+    @Value("${ai.message.report.server.ip}")
+    private String AI_MESSAGE_REPORT_SERVER_IP;
+
     private final WebClient.Builder webClientBuilder;
-    private final WebClient tuningWebClient;
 
     public Map<String, Object> requestTuningReport(AiTuningReportGenerationRequest aiReportRequest) {
-        WebClient webClient = webClientBuilder.baseUrl(AI_TUNING_REPORT_IP).build();
-        String uri = "api/v2/report";
+        String uri = "/api/v2/report";
 
-        try{
-            return webClient.post()
+        try {
+            return webClientBuilder
+                    .baseUrl(AI_TUNING_REPORT_IP)
+                    .build()
+                    .post()
                     .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(aiReportRequest)
@@ -44,7 +52,10 @@ public class TuningAiClient {
     public Map<String, Object> requestTuningByCategory(Long userId, String category) {
         String uri = "/api/v3/tuning?userId=" + userId + "&category=" + category;
 
-        Map<String, Object> responseMap = tuningWebClient.get()
+        Map<String, Object> responseMap = webClientBuilder
+                .baseUrl(AI_TUNING_SERVER_IP)
+                .build()
+                .get()
                 .uri(uri)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
@@ -65,7 +76,9 @@ public class TuningAiClient {
         String uri = "/api/v3/chat/report";
 
         try {
-            return tuningWebClient
+            return webClientBuilder
+                    .baseUrl(AI_MESSAGE_REPORT_SERVER_IP)
+                    .build()
                     .post()
                     .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
