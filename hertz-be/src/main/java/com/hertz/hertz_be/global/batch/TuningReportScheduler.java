@@ -26,14 +26,16 @@ public class TuningReportScheduler {
     /**
      * 매주 월요일 & 수요일 오전 6시에 튜닝 리포트 생성
      */
-    @Scheduled(cron = "0 0 6 * * MON,WED")
+    //@Scheduled(cron = "0 0 6 * * MON,WED")
+    @Scheduled(cron = "0 */3 * * * *")
     public void runCategoryBasedTuningReport() {
-        String category =
-                switch (LocalDate.now().getDayOfWeek()) {
-                    case MONDAY -> "LOVER";
-                    case WEDNESDAY -> "FRIEND";
-                    default -> throw new IllegalStateException("지원하지 않는 요일");
-                };
+        String category = "FRIEND";
+//        String category =
+//                switch (LocalDate.now().getDayOfWeek()) {
+//                    case MONDAY -> "LOVER";
+//                    case WEDNESDAY -> "FRIEND";
+//                    default -> throw new IllegalStateException("지원하지 않는 요일");
+//                };
 
         try {
             JobParameters params = new JobParametersBuilder()
