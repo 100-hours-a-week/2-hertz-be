@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.channel.entity.Tuning;
 import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
+import com.hertz.hertz_be.domain.user.dto.request.v3.OneLineIntroductionRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
@@ -26,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service("userServiceV3")
@@ -169,6 +169,30 @@ public class UserService {
 
     private User getUserWithSentSignalRoomsOrThrow(Long userId) {
         return userRepository.findByIdWithSentSignalRooms(userId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_NOT_FOUND.getCode(),
+                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
+                        UserResponseCode.USER_NOT_FOUND.getMessage()));
+    }
+
+    @Transactional
+    public void updateOneLineIntroduction(Long targetUserId, Long requesterId, OneLineIntroductionRequestDto requestDto) {
+        if(!targetUserId.equals(requesterId)) {
+            throw new BusinessException(
+                    UserResponseCode.PROFILE_UPDATED_UNAUTHORIZED.getCode(),
+                    UserResponseCode.PROFILE_UPDATED_UNAUTHORIZED.getHttpStatus(),
+                    UserResponseCode.PROFILE_UPDATED_UNAUTHORIZED.getMessage()
+            );
+        }
+
+        User user = getActiveUserOrThrow(targetUserId);
+        String newOneLineIntroduction = requestDto.getOneLineIntroduction();
+
+        user.updateOneLineIntroduction(newOneLineIntroduction);
+    }
+
+    private User getActiveUserOrThrow(Long userId) {
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(
                         UserResponseCode.USER_NOT_FOUND.getCode(),
                         UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
