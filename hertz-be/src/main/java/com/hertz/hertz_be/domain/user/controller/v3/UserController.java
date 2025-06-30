@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.controller.v3;
 
+import com.hertz.hertz_be.domain.user.dto.request.v3.OneLineIntroductionRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
@@ -71,6 +72,23 @@ public class UserController {
                         UserResponseCode.CATEGORY_UPDATED_SUCCESSFULLY.getCode(),
                         UserResponseCode.CATEGORY_UPDATED_SUCCESSFULLY.getMessage(),
                         null
+                )
+        );
+    }
+
+    @PatchMapping("/users/{userId}")
+    @Operation(summary = "마이페이지 한 줄 소개 수정 API")
+    public ResponseEntity<ResponseDto<Void>> updateOneLineIntroduction(@RequestBody @Valid OneLineIntroductionRequestDto requestDto,
+                                                                       @PathVariable Long userId,
+                                                                       @AuthenticationPrincipal Long requesterId) {
+
+        userService.updateOneLineIntroduction(userId, requesterId, requestDto);
+
+        return ResponseEntity.ok(
+                new ResponseDto<>(
+                    UserResponseCode.PROFILE_UPDATED_SUCCESSFULLY.getCode(),
+                    UserResponseCode.PROFILE_UPDATED_SUCCESSFULLY.getMessage(),
+                    null
                 )
         );
     }

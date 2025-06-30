@@ -122,4 +122,8 @@ public class User {
         };
     }
 
+    public void updateOneLineIntroduction(String newOneLineIntroduction) {
+        this.oneLineIntroduction = newOneLineIntroduction;
+    }
+
 }
