@@ -88,7 +88,7 @@ public class ChannelService {
         return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ChannelRoomResponseDto getChannelRoom(Long roomId, Long userId, int page, int size) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(
