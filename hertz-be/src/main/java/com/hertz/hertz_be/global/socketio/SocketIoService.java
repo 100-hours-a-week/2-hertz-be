@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class SocketIoService {
     private final AESUtil aesUtil;
 
     @Transactional
-    public SignalMessage saveMessage(Long roomId, Long senderId, String plainText) {
+    public SignalMessage saveMessage(Long roomId, Long senderId, String plainText, LocalDateTime sendAt) {
         SignalRoom room = signalRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(
                         ChannelResponseCode.CHANNEL_NOT_FOUND.getCode(),
@@ -48,13 +50,14 @@ public class SocketIoService {
                 .signalRoom(room)
                 .senderUser(sender)
                 .message(encrypted)
+                .sendAt(sendAt)
                 .build();
 
         return signalMessageRepository.save(message);
     }
 
-    public SocketIoMessageResponse processAndRespond(Long roomId, Long senderId, String plainText) {
-        SignalMessage saved = saveMessage(roomId, senderId, plainText);
+    public SocketIoMessageResponse processAndRespond(Long roomId, Long senderId, String plainText, LocalDateTime sendAt) {
+        SignalMessage saved = saveMessage(roomId, senderId, plainText, sendAt);
         String decrypted = aesUtil.decrypt(saved.getMessage());
         return SocketIoMessageResponse.from(saved, decrypted);
     }
