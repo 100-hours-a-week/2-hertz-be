@@ -45,31 +45,57 @@ public class SocketIoController {
         return client -> {
             try {
                 String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
-                String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
 
-                if (refreshToken == null) {
-                    log.warn("❗ refreshToken 없음, 연결 종료");
+                if (cookie == null) {
+                    log.warn("❗ 연결 시 쿠키 없음 → 연결 종료: sessionId={}", client.getSessionId());
                     client.disconnect();
                     return;
                 }
 
-                Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+                log.debug("🍪 수신한 쿠키: {}", cookie);
+
+                String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
+
+                if (refreshToken == null || refreshToken.isBlank()) {
+                    log.warn("❗ refreshToken 추출 실패 → 연결 종료: sessionId={}", client.getSessionId());
+                    client.disconnect();
+                    return;
+                }
+
+                log.debug("🔐 추출된 refreshToken: {}", refreshToken);
+
+                Long userId = null;
+                try {
+                    userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+                    log.info("🪪 JWT 파싱 성공 → userId={}", userId);
+                } catch (Exception jwtEx) {
+                    log.error("❌ JWT 토큰 파싱 실패: {}, 토큰={}", jwtEx.getMessage(), refreshToken);
+                    client.disconnect();
+                    return;
+                }
+
                 client.set("userId", userId);
                 client.sendEvent("init_user", userId);
 
                 List<Long> roomIds = signalRoomRepository.findRoomIdsByUserId(userId);
+                log.info("📦 userId={} 의 채팅방 목록: {}", userId, roomIds);
+
                 for (Long roomId : roomIds) {
-                    client.joinRoom("room-" + roomId);
-                    log.info("🚀 userId={} → room-{} 참가", userId, roomId);
+                    try {
+                        client.joinRoom("room-" + roomId);
+                        log.info("🚀 userId={} → room-{} 참가 성공", userId, roomId);
+                    } catch (Exception joinEx) {
+                        log.error("❌ userId={} → room-{} 참가 실패: {}", userId, roomId, joinEx.getMessage());
+                    }
                 }
 
                 connectedUsers.put(userId, client.getSessionId());
-                log.info("✅ userId [{}] 접속 , 현재 접속자 수={}", userId, getConnectedUserCount());
+                log.info("✅ userId [{}] 접속 완료, 현재 접속자 수={}", userId, getConnectedUserCount());
+
             } catch (Exception e) {
-                log.error("❌ 연결 중 예외 발생: {}", e.getMessage(), e);
+                log.error("❌ 연결 처리 중 예외 발생: {}", e.getMessage(), e);
                 client.disconnect();
             }
-
         };
     }
 
