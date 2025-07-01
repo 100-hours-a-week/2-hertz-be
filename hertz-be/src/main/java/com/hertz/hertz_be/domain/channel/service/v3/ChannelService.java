@@ -37,12 +37,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -114,7 +112,6 @@ public class ChannelService {
         }
 
         boolean isPartnerExited = room.isPartnerExited(userId);
-
         Long partnerId = room.getPartnerUser(userId).getId();
 
         User partner = userRepository.findByIdAndDeletedAtIsNull(partnerId)
@@ -133,8 +130,6 @@ public class ChannelService {
             }
         }
 
-        asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
-
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "sendAt"));
         Page<SignalMessage> messagePage = signalMessageRepository.findBySignalRoom_Id(roomId, pageable);
 
@@ -148,6 +143,7 @@ public class ChannelService {
             @Override
             public void afterCommit() {
                 asyncChannelService.updateNavbarMessageNotification(userId);
+                asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
             }
         });
 
@@ -413,6 +409,7 @@ public class ChannelService {
         );
     }
 
+    @Transactional(readOnly = true)
     public User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(
@@ -422,6 +419,7 @@ public class ChannelService {
                 ));
     }
 
+    @Transactional(readOnly = true)
     public boolean hasSelectedInterests(User user) {
         return userInterestsRepository.existsByUser(user);
     }

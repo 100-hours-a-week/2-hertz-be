@@ -101,10 +101,13 @@ public class SocketIoController {
     // 메세지 읽음 처리
     private void handleMarkAsRead(SocketIOClient client, SocketIoMessageMarkRequest data, AckRequest ackSender) {
         Long userId = getUserIdFromClient(client);
-        messageService.markMessageAsRead(data.roomId(), userId);
+        Long roomId = data.roomId();
+
+        log.info("✅ 읽음 처리 요청: userId={}, roomId={}", userId, roomId);
+
+        // DB 읽음 처리 + afterCommit에서 웹소켓 응답 브로드캐스트
+        messageService.markMessageAsRead(roomId, userId);
     }
-
-
 
     public int getConnectedUserCount() {
         return connectedUsers.size();
