@@ -8,14 +8,16 @@ public record SocketIoMessageResponse(
         Long roomId,
         Long senderId,
         String message,
-        LocalDateTime sendAt
+        LocalDateTime sendAt,
+        Long messageId
 ){
     public static SocketIoMessageResponse from (SignalMessage message) {
         return new SocketIoMessageResponse(
                 message.getSignalRoom().getId(),
                 message.getSenderUser().getId(),
                 message.getMessage(),
-                message.getSendAt()
+                message.getSendAt(),
+                message.getId()
         );
     }
 
@@ -24,7 +26,8 @@ public record SocketIoMessageResponse(
                 message.getSignalRoom().getId(),
                 message.getSenderUser().getId(),
                 decryptMessage,
-                message.getSendAt()
+                message.getSendAt(),
+                message.getId()
         );
     }
 }
