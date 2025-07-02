@@ -147,18 +147,18 @@ jobs:
             CHECK_URL="http://${{ env.HOST }}:8080/api/ping"
           fi
 
-          for i in {1..5}; do
+          for i in {1..15}; do
             echo "⏱️ 시도 $i: $CHECK_URL"
             if curl -sf "$CHECK_URL"; then
               echo "✅ 헬스체크 성공"
               exit 0
             else
               echo "::error::헬스체크 시도 $i 실패"
-              sleep 15
+              sleep 30
             fi
           done
 
-          echo "::error::❌ 3회 헬스체크 실패"
+          echo "::error::❌ 15회 헬스체크 실패"
           exit 1
 
       - name: Send failure notification
@@ -279,14 +279,14 @@ jobs:
             CHECK_URL="http://${HOST}:8080/api/ping"
           fi
 
-          for i in {1..5}; do
+          for i in {1..15}; do
             echo "⏱️ 시도 $i: $CHECK_URL"
             if curl -sf "$CHECK_URL"; then
               echo "(Rollback) ✅ 헬스체크 성공 🎉"
               exit 0
             else
               echo "::error::헬스체크 시도 $i 실패"
-              sleep 15
+              sleep 30
             fi
           done
 
