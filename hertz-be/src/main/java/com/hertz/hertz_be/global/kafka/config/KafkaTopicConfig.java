@@ -17,7 +17,7 @@ public class KafkaTopicConfig {
     @Value("${kafka.bootstrapAddress}")
     private String bootstrapAddress;
 
-    @Value("${kafka.topic.see.numPartitions}")
+    @Value("${kafka.topic.sse.name}")
     private String SseEventTopicName;
 
     @Value("${kafka.topic.see.numPartitions}")
@@ -25,6 +25,9 @@ public class KafkaTopicConfig {
 
     @Value("${kafka.topic.sse.replicationFactor}")
     private short replicationFactor;
+
+    @Value("${kafka.topic.sse.dlq.name}")
+    private String SseDLQTopicName;
 
     @Bean
     public KafkaAdmin kafkaAdmin() {
@@ -41,6 +44,14 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic healthCheckTopic() {
         return TopicBuilder.name("healthcheck-topic")
+                .partitions(1)
+                .replicas(3)
+                .build();
+    }
+
+    @Bean
+    public NewTopic sseDlqTopic() {
+        return TopicBuilder.name(SseDLQTopicName)
                 .partitions(1)
                 .replicas(3)
                 .build();
