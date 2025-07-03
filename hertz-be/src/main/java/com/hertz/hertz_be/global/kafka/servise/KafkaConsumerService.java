@@ -2,7 +2,7 @@ package com.hertz.hertz_be.global.kafka.servise;
 
 import com.hertz.hertz_be.global.kafka.exception.KafkaSseDeliveryException;
 import com.hertz.hertz_be.global.sse.SseService;
-import com.hertz.hertz_be.global.kafka.dto.SseEvent;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -30,7 +30,7 @@ public class KafkaConsumerService {
             groupId = "${kafka.sse.consumer.sse-group-id}",
             containerFactory = "sseKafkaListener"
     )
-    public void consumeToSse(SseEvent event, Acknowledgment ack) {
+    public void consumeToSse(SseEventDto event, Acknowledgment ack) {
         boolean sent = sseService.sendToClient(event.userId(), event.eventName(), event.data());
 
         if (sent) {
@@ -47,7 +47,7 @@ public class KafkaConsumerService {
             topics = "${kafka.topic.sse.dlq.name}",
             groupId = "${kafka.consumer.sse.dlq.group-id}"
     )
-    public void consumeDlq(SseEvent failedEvent) {
+    public void consumeDlq(SseEventDto failedEvent) {
         log.error("🔥 Kafka SSE DLQ에 저장된 실패 이벤트: userId={}, event={}", failedEvent.userId(), failedEvent.eventName());
     }
 }

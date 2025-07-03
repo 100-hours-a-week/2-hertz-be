@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.global.kafka.config;
 
-import com.hertz.hertz_be.global.kafka.dto.SseEvent;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -49,16 +49,16 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConsumerFactory<String, SseEvent> sseConsumerFactory() {
+    public ConsumerFactory<String, SseEventDto> sseConsumerFactory() {
         return new DefaultKafkaConsumerFactory<>(commonConsumerProps(sseGroupId),
                 new StringDeserializer(),
-                new JsonDeserializer<>(SseEvent.class));
+                new JsonDeserializer<>(SseEventDto.class));
     }
 
     @Bean(name = "sseKafkaListener")
-    public ConcurrentKafkaListenerContainerFactory<String, SseEvent> sseFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, SseEventDto> sseFactory(
             DefaultErrorHandler errorHandler) {
-        ConcurrentKafkaListenerContainerFactory<String, SseEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        ConcurrentKafkaListenerContainerFactory<String, SseEventDto> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(sseConsumerFactory());
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
@@ -66,7 +66,7 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public DefaultErrorHandler sseEventErrorHandler(KafkaTemplate<String, SseEvent> kafkaTemplate) {
+    public DefaultErrorHandler sseEventErrorHandler(KafkaTemplate<String, SseEventDto> kafkaTemplate) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
                 kafkaTemplate,
                 (record, ex) -> new TopicPartition(SseDLQTopicName, record.partition())

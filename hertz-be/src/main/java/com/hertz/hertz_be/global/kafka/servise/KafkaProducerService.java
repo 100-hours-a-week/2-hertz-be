@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.global.kafka.servise;
 
-import com.hertz.hertz_be.global.kafka.dto.SseEvent;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -14,13 +14,13 @@ public class KafkaProducerService {
     private String SseEventTopicName;
 
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final KafkaTemplate<String, SseEvent> kafkaTemplateForSee;
+    private final KafkaTemplate<String, SseEventDto> kafkaTemplateForSee;
 
     public void sendHealthcheckMessage(String topic, String message) {
         kafkaTemplate.send(topic, message);
     }
 
-    public void sendSseEvent(SseEvent event) {
+    public void sendSseEvent(SseEventDto event) {
         kafkaTemplateForSee.send(SseEventTopicName, event.userId().toString(), event);
     }
 }

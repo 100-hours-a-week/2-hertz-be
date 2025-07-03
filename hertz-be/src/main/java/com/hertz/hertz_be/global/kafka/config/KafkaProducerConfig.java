@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.global.kafka.config;
 
-import com.hertz.hertz_be.global.kafka.dto.SseEvent;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +33,7 @@ public class KafkaProducerConfig {
     private int maxInflight;
 
     @Bean
-    public ProducerFactory<String, SseEvent> producerFactory() {
+    public ProducerFactory<String, SseEventDto> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.ACKS_CONFIG, acksConfig);
@@ -47,7 +47,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, SseEvent> kafkaTemplate() {
+    public KafkaTemplate<String, SseEventDto> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }
