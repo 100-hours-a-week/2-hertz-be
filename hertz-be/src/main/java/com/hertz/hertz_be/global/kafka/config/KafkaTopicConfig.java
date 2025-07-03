@@ -18,7 +18,7 @@ public class KafkaTopicConfig {
     private String bootstrapAddress;
 
     @Value("${kafka.topic.see.numPartitions}")
-    private String topicName;
+    private String SseEventTopicName;
 
     @Value("${kafka.topic.see.numPartitions}")
     private int numPartitions;
@@ -35,7 +35,7 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic sseTopic() {
-        return new NewTopic(topicName, numPartitions, replicationFactor);
+        return new NewTopic(SseEventTopicName, numPartitions, replicationFactor);
     }
 
     @Bean

@@ -21,7 +21,7 @@ public class KafkaConsumerService {
             groupId = "${spring.kafka.consumer.healthcheck-topic.group-id}",
             containerFactory = "stringKafkaListener"
     )
-    public void listen(String message) {
+    public void consumeHealthcheck(String message) {
         log.info("Kafka 메시지 수신: {}", message);
     }
 

@@ -16,11 +16,11 @@ public class KafkaProducerService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final KafkaTemplate<String, SseEvent> kafkaTemplateForSee;
 
-    public void sendMessage(String topic, String message) {
+    public void sendHealthcheckMessage(String topic, String message) {
         kafkaTemplate.send(topic, message);
     }
 
-    public void send(SseEvent event) {
+    public void sendSseEvent(SseEvent event) {
         kafkaTemplateForSee.send(SseEventTopicName, event.userId().toString(), event);
     }
 }
