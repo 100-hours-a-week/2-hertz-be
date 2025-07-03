@@ -18,7 +18,7 @@ public class KafkaController {
     @PostMapping("/ping")
     @Operation(summary = "Kafka 헬스체크를 위한 API")
     public String sendMessage(@RequestParam String message) {
-        producerService.sendMessage("test-topic", message);
+        producerService.sendMessage("healthcheck-topic", message);
         return "pong";
     }
 }

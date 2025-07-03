@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class KafkaConsumerService {
 
-    @KafkaListener(topics = "test-topic", groupId = "hertz-group")
+    @KafkaListener(
+            topics = "healthcheck-topic",
+            groupId = "${spring.kafka.consumer.healthcheck-topic.group-id}"
+    )
     public void listen(String message) {
         log.info("Kafka 메시지 수신: {}", message);
     }
