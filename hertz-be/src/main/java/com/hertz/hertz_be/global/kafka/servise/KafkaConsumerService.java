@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.global.kafka.servise;
 
-
+import com.hertz.hertz_be.global.kafka.exception.KafkaSseDeliveryException;
 import com.hertz.hertz_be.global.sse.SseService;
 import com.hertz.hertz_be.global.kafka.dto.SseEvent;
 import lombok.RequiredArgsConstructor;
@@ -32,9 +32,22 @@ public class KafkaConsumerService {
     )
     public void consumeToSse(SseEvent event, Acknowledgment ack) {
         boolean sent = sseService.sendToClient(event.userId(), event.eventName(), event.data());
+
         if (sent) {
             ack.acknowledge();
-            log.info("Kafka → SSE: userId={}, event={}", event.userId(), event.eventName());
+            log.info("✅ Kafka → SSE 전송 성공: userId= {}, event name= {}", event.userId(), event.eventName());
+        } else {
+            throw new KafkaSseDeliveryException(
+                    String.format("Kafka → SSE 전송 실패: userId=%d, event=%s, 재시도 실행", event.userId(), event.eventName())
+            );
         }
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topic.sse.dlq.name}",
+            groupId = "${kafka.consumer.sse.dlq.group-id}"
+    )
+    public void consumeDlq(SseEvent failedEvent) {
+        log.error("🔥 Kafka SSE DLQ에 저장된 실패 이벤트: userId={}, event={}", failedEvent.userId(), failedEvent.eventName());
     }
 }
