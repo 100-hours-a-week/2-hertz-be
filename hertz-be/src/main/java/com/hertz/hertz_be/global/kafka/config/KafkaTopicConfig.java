@@ -38,7 +38,11 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic sseTopic() {
-        return new NewTopic(SseEventTopicName, numPartitions, replicationFactor);
+        return TopicBuilder.name(SseEventTopicName)
+                .partitions(numPartitions)
+                .replicas(replicationFactor)
+                .config("retention.ms", "3600000")
+                .build();
     }
 
     @Bean
@@ -46,6 +50,7 @@ public class KafkaTopicConfig {
         return TopicBuilder.name("healthcheck-topic")
                 .partitions(1)
                 .replicas(3)
+                .config("retention.ms", "600000")
                 .build();
     }
 
