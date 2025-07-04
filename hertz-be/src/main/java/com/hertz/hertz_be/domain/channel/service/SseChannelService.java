@@ -10,6 +10,8 @@ import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
+import com.hertz.hertz_be.global.kafka.servise.KafkaProducerService;
 import com.hertz.hertz_be.global.sse.SseService;
 import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class SseChannelService {
     private final UserRepository userRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final AESUtil aesUtil;
+    private final KafkaProducerService kafkaProducerService;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -188,10 +191,11 @@ public class SseChannelService {
                 signalMessage.getSignalRoom().getRelationType()
         );
 
-        boolean result = sseService.sendToClient(partnerId, eventName.getValue(), dto);
-        if (result) {
-            log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(partnerId, eventName.getValue(), dto));
+//        boolean result = sseService.sendToClient(partnerId, eventName.getValue(), dto);
+//        if (result) {
+//            log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
+//        }
     }
 
     public void notifyMatchingResultToPartner(SignalRoom room, User user, User partner, MatchingStatus matchingStatus) {
