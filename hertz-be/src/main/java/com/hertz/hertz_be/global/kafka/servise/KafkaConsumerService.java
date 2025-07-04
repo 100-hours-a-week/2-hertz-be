@@ -1,6 +1,6 @@
 package com.hertz.hertz_be.global.kafka.servise;
 
-import com.hertz.hertz_be.global.kafka.exception.KafkaSseDeliveryException;
+import com.hertz.hertz_be.global.kafka.exception.KafkaException;
 import com.hertz.hertz_be.global.sse.SseService;
 import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ public class KafkaConsumerService {
             ack.acknowledge();
             log.info("✅ Kafka → SSE 전송 성공: userId= {}, event name= {}", event.userId(), event.eventName());
         } else {
-            throw new KafkaSseDeliveryException(
+            throw new KafkaException(
                     String.format("Kafka → SSE 전송 실패: userId=%d, event=%s, 재시도 실행", event.userId(), event.eventName())
             );
         }
