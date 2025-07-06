@@ -42,6 +42,7 @@ public class KafkaTopicConfig {
                 .partitions(numPartitions)
                 .replicas(replicationFactor)
                 .config("retention.ms", "3600000")
+                .config("min.insync.replicas", "2")
                 .build();
     }
 
@@ -57,8 +58,8 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic sseDlqTopic() {
         return TopicBuilder.name(SseDLQTopicName)
-                .partitions(1)
-                .replicas(3)
+                .partitions(numPartitions)
+                .replicas(replicationFactor)
                 .build();
     }
 }
