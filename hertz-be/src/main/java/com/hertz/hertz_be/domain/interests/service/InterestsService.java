@@ -236,7 +236,7 @@ public class InterestsService {
     }
 
     private Map<String, Object> saveInterestsToAiServer(Map<String, Object> requestAiBody, Map<String, String> keywordMap, Map<String, String[]> interestsMap) {
-        String uri = "/api/v1/users"; //Todo: 3차 배포 직전에 "/api/v3/users"로 수정 할 것
+        String uri = "/api/v3/users";
         Long userId = (Long) requestAiBody.get("userId");
 
         UserAiInterestsRequestDto aiRequest = UserAiInterestsRequestDto.builder()
