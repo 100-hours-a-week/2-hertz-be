@@ -7,7 +7,7 @@ on:
       - main
       - develop
     paths-ignore:
-      - .github/workflows/cicd-backend.yml
+      - ".github/workflows/**"
 
   workflow_dispatch:
     inputs:
