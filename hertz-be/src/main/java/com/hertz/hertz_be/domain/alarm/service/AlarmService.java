@@ -15,7 +15,6 @@ import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,9 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AlarmService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
+    private final EntityManager entityManager;
     private final AlarmNotificationRepository alarmNotificationRepository;
     private final AlarmReportRepository alarmReportRepository;
     private final AlarmMatchingRepository alarmMatchingRepository;
@@ -75,12 +72,9 @@ public class AlarmService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                for (User user : allUsers) {
-                    asyncAlarmService.updateAlarmNotification(user.getId());
-                }
+        registerAfterCommitCallback(() -> {
+            for (User user : allUsers) {
+                asyncAlarmService.updateAlarmNotification(user.getId());
             }
         });
     }
@@ -131,12 +125,9 @@ public class AlarmService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncAlarmService.updateAlarmNotification(user.getId());
-                asyncAlarmService.updateAlarmNotification(partner.getId());
-            }
+        registerAfterCommitCallback(() -> {
+            asyncAlarmService.updateAlarmNotification(user.getId());
+            asyncAlarmService.updateAlarmNotification(partner.getId());
         });
 
     }
@@ -166,12 +157,9 @@ public class AlarmService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                for (User user : allUsers) {
-                    asyncAlarmService.updateAlarmNotification(user.getId());
-                }
+        registerAfterCommitCallback(() -> {
+            for (User user : allUsers) {
+                asyncAlarmService.updateAlarmNotification(user.getId());
             }
         });
     }
@@ -203,11 +191,8 @@ public class AlarmService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncAlarmService.updateAlarmNotification(user.getId());
-            }
+        registerAfterCommitCallback(() -> {
+            asyncAlarmService.updateAlarmNotification(user.getId());
         });
     }
 
@@ -268,11 +253,8 @@ public class AlarmService {
 
         entityManager.flush();
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncAlarmService.updateAlarmNotification(userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncAlarmService.updateAlarmNotification(userId);
         });
 
         return new AlarmListResponseDto(
@@ -294,5 +276,14 @@ public class AlarmService {
         }
 
         alarmRepository.deleteById(alarmId);
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                callback.run();
+            }
+        });
     }
 }
