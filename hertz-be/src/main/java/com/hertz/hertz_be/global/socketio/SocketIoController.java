@@ -6,6 +6,7 @@ import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageMarkRequest;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageRequest;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
@@ -31,13 +32,14 @@ public class SocketIoController {
     private final JwtTokenProvider jwtTokenProvider;
     private final SocketIoTokenUtil socketIoTokenUtil;
     private final SignalRoomRepository signalRoomRepository;
+    private final UserRepository userRepository;
     private final Map<Long, UUID> connectedUsers = new ConcurrentHashMap<>();
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         server.addConnectListener(onConnected());
         server.addEventListener("send_message", SocketIoMessageRequest.class, this::handleSendMessage);
-        server.addEventListener("mark_as_read", SocketIoMessageMarkRequest.class, this::handleMarkAsRead);
+        //server.addEventListener("mark_as_read", SocketIoMessageMarkRequest.class, this::handleMarkAsRead);
         server.addDisconnectListener(onDisconnected());
     }
 
@@ -47,53 +49,54 @@ public class SocketIoController {
                 String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
 
                 if (cookie == null) {
-                    log.warn("❗ 연결 시 쿠키 없음 → 연결 종료: sessionId={}", client.getSessionId());
+                    log.warn("[Connect Fail] 쿠키 없음 → 연결 종료: sessionId={}", client.getSessionId());
                     client.disconnect();
                     return;
                 }
-
-                log.debug("🍪 수신한 쿠키: {}", cookie);
 
                 String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
 
                 if (refreshToken == null || refreshToken.isBlank()) {
-                    log.warn("❗ refreshToken 추출 실패 → 연결 종료: sessionId={}", client.getSessionId());
+                    log.warn("[Connect Fail] refreshToken 추출 실패 → 연결 종료: sessionId={}", client.getSessionId());
                     client.disconnect();
                     return;
                 }
 
-                log.debug("🔐 추출된 refreshToken: {}", refreshToken);
-
                 Long userId = null;
                 try {
                     userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-                    log.info("🪪 JWT 파싱 성공 → userId={}", userId);
+                    if(!userRepository.existsById(userId)) {
+                        log.warn("[Connect Fail] 존재하지 않는 userId={} → 연결 종료: sessionId={}", userId, client.getSessionId());
+                        client.disconnect();
+                        return;
+                    }
                 } catch (Exception jwtEx) {
-                    log.error("❌ JWT 토큰 파싱 실패: {}, 토큰={}", jwtEx.getMessage(), refreshToken);
+                    log.error("[Connect Fail] JWT 토큰 파싱 실패: {}, 토큰={}", jwtEx.getMessage(), refreshToken);
                     client.disconnect();
                     return;
                 }
 
                 client.set("userId", userId);
-                client.sendEvent("init_user", userId);
 
                 List<Long> roomIds = signalRoomRepository.findRoomIdsByUserId(userId);
-                log.info("📦 userId={} 의 채팅방 목록: {}", userId, roomIds);
+                client.set("roomIds", roomIds); // 채팅방 목록 저장
 
-                for (Long roomId : roomIds) {
-                    try {
-                        client.joinRoom("room-" + roomId);
-                        log.info("🚀 userId={} → room-{} 참가 성공", userId, roomId);
-                    } catch (Exception joinEx) {
-                        log.error("❌ userId={} → room-{} 참가 실패: {}", userId, roomId, joinEx.getMessage());
-                    }
-                }
+//                for (Long roomId : roomIds) {
+//                    try {
+//                        client.joinRoom("room-" + roomId);
+//                        log.info("[Connect Success] userId={} → room-{} 참가 성공", userId, roomId);
+//                    } catch (Exception joinEx) {
+//                        log.error("[Connect Fail] userId={} → room-{} 참가 실패: {}", userId, roomId, joinEx.getMessage());
+//                    }
+//                }
+
+                client.sendEvent("init_user", userId);
 
                 connectedUsers.put(userId, client.getSessionId());
-                log.info("✅ userId [{}] 접속 완료, 현재 접속자 수={}", userId, getConnectedUserCount());
+                log.info("[Connect Success] userId [{}] 접속 완료, 현재 접속자 수={}", userId, getConnectedUserCount());
 
             } catch (Exception e) {
-                log.error("❌ 연결 처리 중 예외 발생: {}", e.getMessage(), e);
+                log.error("[Connect Fail] 연결 처리 중 예외 발생: {}", e.getMessage(), e);
                 client.disconnect();
             }
         };
@@ -102,12 +105,17 @@ public class SocketIoController {
     private DisconnectListener onDisconnected() {
         return client -> {
             Long userId = getUserIdFromClient(client);
-            String sessionId = client.getSessionId().toString();
-            log.warn("🔌 disconnect 발생! sessionId={}, userId={}", sessionId, userId);
+            @SuppressWarnings("unchecked")
+            List<Long> roomIds = (List<Long>) client.get("roomIds");
+            Long joinRoomId = client.get("joinRoomId");
+
+            if(roomIds != null && roomIds.contains(joinRoomId)) {
+                client.leaveRoom("room-" + joinRoomId);
+            }
 
             if (userId != null) {
                 connectedUsers.remove(userId);
-                log.info("❌ userId [{}] 연결 종료, 현재 접속자 수={}", userId, getConnectedUserCount());
+                log.info("[Disconnect Success] userId={}, 연결 종료, 현재 접속자 수={}", userId, getConnectedUserCount());
             }
         };
     }
@@ -115,13 +123,23 @@ public class SocketIoController {
     // 메세지 수신
     private void handleSendMessage(SocketIOClient client, SocketIoMessageRequest data, AckRequest ackSender) {
         Long senderId = getUserIdFromClient(client);
-        log.info("📨 메시지 수신: [{}] → 방 {}: {}, 전송 시각: {}", senderId, data.roomId(), data.message(), data.sendAt());
+        Long roomId = data.roomId();
+
+        @SuppressWarnings("unchecked")
+        List<Long> roomIds = (List<Long>) client.get("roomIds");
+
+        if(roomIds == null || !roomIds.contains(roomId)) {
+            log.warn("[Invalid RoomID] [{}]는 [{}} roomID에 접근 권한 없음", senderId, roomId);
+            return;
+        } else {
+            client.set("joinRoomId", roomId);
+            client.joinRoom("room-" + roomId);
+            log.info("[JoinRoom Success] userId={} → room-{} 참가 성공", client.get("userId"), roomId);
+        }
 
         // 저장 + 복호화 응답 생성
         SocketIoMessageResponse response = messageService.processAndRespond(data.roomId(), senderId, data.message(), data.sendAt());
-
-        String roomKey = "room-" + data.roomId();
-        server.getRoomOperations(roomKey).sendEvent("receive_message", response);
+        server.getRoomOperations("room-" + data.roomId()).sendEvent("receive_message", response);
     }
 
     // 메세지 읽음 처리
