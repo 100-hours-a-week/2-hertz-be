@@ -8,7 +8,7 @@ on:
       - develop # develop 브랜치로 Merge 시 -> DEV 환경에 배포
     paths-ignore:
       - .github/workflows/** # 워크플로우 파일 변경은 배포 트리거하지 않음
-
+      - Dockerfile # Dockerfile 변경은 배포 트리거하지 않음
   # ✅ 수동 `실행 트리거 추가
   workflow_dispatch:
     inputs:
