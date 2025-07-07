@@ -5,6 +5,7 @@ import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.common.NewResponseCode;
+import com.hertz.hertz_be.global.kafka.exception.KafkaException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,7 +25,7 @@ public class SseService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenService;
 
-    private static final Long TIMEOUT = 120_000L;
+    private static final Long TIMEOUT = 1_800_000L;
 
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
@@ -83,8 +84,16 @@ public class SseService {
         });
 
         // 최초 연결 성공 이벤트 전송
-        sendToClient(userId, SseEventName.PING.getValue(), "connect success");
-        log.info("SSE 연결 성공: userId={}", userId);
+        try {
+            emitter.send(SseEmitter.event()
+                    .name(SseEventName.PING.getValue())
+                    .data("connect success"));
+            log.info("SSE 연결 성공: userId={}", userId);
+        } catch (IllegalStateException | IOException e) {
+            log.warn("connect success 전송 실패: userId={}, 사유: {}", userId, e.getMessage());
+            emitter.complete();
+            emitters.remove(userId);
+        }
 
         return emitter;
     }
@@ -120,25 +129,26 @@ public class SseService {
         }
 
         SseEmitter emitter = emitters.get(userId);
-        if (emitter != null && data != null) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name(eventName)
-                        .data(data));
-                return true;
-            } catch (IllegalStateException e) {
-                log.warn("SSE 이벤트 전송 시 IllegalStateException: 이미 완료된 emitter에 send 시도 userId={}", userId);
-                emitter.complete();
-                emitters.remove(userId);
-                return false;
-            } catch (IOException e) {
-                log.warn("SSE 이벤트 전송 시 IOException: 이벤트 전송 실패 userId={}, message={}", userId, e.getMessage());
-                emitter.complete();
-                emitters.remove(userId);
-                return false;
-            }
+        if (emitter == null) {
+            return false;
         }
-        return false;
+
+        try {
+            emitter.send(SseEmitter.event()
+                    .name(eventName)
+                    .data(data));
+            return true;
+        } catch (IllegalStateException e) {
+            log.warn("SSE 이벤트 전송 시 IllegalStateException: 이미 완료된 emitter에 send 시도 userId={}", userId);
+            emitter.complete();
+            emitters.remove(userId);
+            throw new KafkaException("SSE 전송 실패: 이미 완료된 emitter", e);
+        } catch (IOException e) {
+            log.warn("SSE 이벤트 전송 시 IOException: 이벤트 전송 실패 userId={}, message={}", userId, e.getMessage());
+            emitter.complete();
+            emitters.remove(userId);
+            throw new KafkaException("SSE 전송 실패: IOException", e);
+        }
     }
 
     /**

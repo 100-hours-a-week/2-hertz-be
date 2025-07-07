@@ -10,7 +10,8 @@ import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
 import com.hertz.hertz_be.global.exception.BusinessException;
-import com.hertz.hertz_be.global.sse.SseService;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
+import com.hertz.hertz_be.global.kafka.servise.KafkaProducerService;
 import com.hertz.hertz_be.global.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,13 +33,14 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SseChannelService {
+
     @Value("${matching.convert.delay-minutes}")
     private long matchingConvertDelayMinutes;
 
-    private final SseService sseService;
     private final UserRepository userRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final AESUtil aesUtil;
+    private final KafkaProducerService kafkaProducerService;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -97,10 +99,7 @@ public class SseChannelService {
                 partnerNickname
         );
 
-        boolean result = sseService.sendToClient(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION.getValue(), dto);
-        if (result) {
-            log.info("[페이지 상관 없이 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", targetUserId, roomId);
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(targetUserId, SseEventName.SIGNAL_MATCHING_CONVERSION.getValue(), dto));
     }
 
     private void sendMatchingConvertedInChannelRoom(
@@ -117,10 +116,7 @@ public class SseChannelService {
                 partnerHasResponded
         );
 
-        boolean result = sseService.sendToClient(userId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto);
-        if (result) {
-            log.info("[채팅방 안에서 매칭 전환 여부 메세지] userId={}, roomId={} 전송 완료", userId, roomId);
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(userId, SseEventName.SIGNAL_MATCHING_CONVERSION_IN_ROOM.getValue(), dto));
     }
 
     public void updatePartnerChannelList(SignalMessage signalMessage, Long partnerId) {
@@ -137,10 +133,7 @@ public class SseChannelService {
                 signalMessage.getSignalRoom().getRelationType()
         );
 
-        boolean result = sseService.sendToClient(partnerId, SseEventName.CHAT_ROOM_UPDATE.getValue(), dto);
-        if (result) {
-            log.info("[채널 목록 페이지에서 새 메세지에 대한 정보 알림 전송] userId={}, roomId={}", partnerId, signalMessage.getSignalRoom().getId());
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(partnerId, SseEventName.CHAT_ROOM_UPDATE.getValue(), dto));
     }
 
     public void updatePartnerNavbar(Long userId) {
@@ -159,11 +152,9 @@ public class SseChannelService {
         boolean isThereNewMessage = signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
 
         if (isThereNewMessage) {
-            boolean result = sseService.sendToClient(userId, SseEventName.NAV_NEW_MESSAGE.getValue(), "");
-            if (result){log.info("[네비게이션 바에서 새 메세지 알림 전송] userId={}", userId);}
+            kafkaProducerService.sendSseEvent(new SseEventDto(userId, SseEventName.NAV_NEW_MESSAGE.getValue(), ""));
         } else {
-            boolean result = sseService.sendToClient(userId, SseEventName.NAV_NO_ANY_NEW_MESSAGE.getValue(), "");
-            if (result){log.info("[네비게이션 바에서 새 메세지 없음 알림 전송] userId={}", userId);}
+            kafkaProducerService.sendSseEvent(new SseEventDto(userId, SseEventName.NAV_NO_ANY_NEW_MESSAGE.getValue(), ""));
         }
     }
 
@@ -188,20 +179,15 @@ public class SseChannelService {
                 signalMessage.getSignalRoom().getRelationType()
         );
 
-        boolean result = sseService.sendToClient(partnerId, eventName.getValue(), dto);
-        if (result) {
-            log.info("[{} 전송] userId={}, roomId={}", eventName.name(), partnerId, signalMessage.getSignalRoom().getId());
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(partnerId, eventName.getValue(), dto));
     }
 
     public void notifyMatchingResultToPartner(SignalRoom room, User user, User partner, MatchingStatus matchingStatus) {
         if (matchingStatus == MatchingStatus.MATCHED) {
-            boolean result = sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_SUCCESS);
-            if (result){log.info("[{}번 유저에게 매칭 결과 성공 SSE 알림 전송]", partner.getId());}
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_SUCCESS);
         }
         else {
-            boolean result = sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_REJECTION);
-            if (result){log.info("[{}번 유저에게 매칭 결과 실패 SSE 알림 전송]", partner.getId());}
+            sendMatchingResultSse(room, user, partner.getId(), SseEventName.MATCHING_REJECTION);
         }
     }
 
@@ -213,13 +199,10 @@ public class SseChannelService {
                 user.getNickname()
         );
 
-        boolean result = sseService.sendToClient(partner.getId(), SseEventName.MATCHING_CONFIRMED.getValue(), dto);
-        if (result) {
-            log.info("[{}번 유저에게 매칭 여부 SSE 알림 전송]", partner.getId());
-        }
+        kafkaProducerService.sendSseEvent(new SseEventDto(partner.getId(), SseEventName.MATCHING_CONFIRMED.getValue(), dto));
     }
 
-    private boolean sendMatchingResultSse(SignalRoom room, User user, Long partnerId, SseEventName sseEventName) {
+    private void sendMatchingResultSse(SignalRoom room, User user, Long partnerId, SseEventName sseEventName) {
         MatchingResultResponseDto dto = new MatchingResultResponseDto(
                 room.getId(),
                 user.getId(),
@@ -227,7 +210,7 @@ public class SseChannelService {
                 user.getNickname()
         );
 
-        return sseService.sendToClient(partnerId, sseEventName.getValue(), dto);
+        kafkaProducerService.sendSseEvent(new SseEventDto(partnerId, sseEventName.getValue(), dto));
     }
 
 }
