@@ -6,6 +6,7 @@ import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.responsecode.ChannelResponseCode;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
+import com.hertz.hertz_be.domain.channel.service.AsyncChannelService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
@@ -13,6 +14,8 @@ import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageMarkResponse;
 import com.hertz.hertz_be.global.socketio.dto.SocketIoMessageResponse;
 import com.hertz.hertz_be.global.util.AESUtil;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,11 +31,15 @@ import java.time.LocalDateTime;
 @Slf4j
 public class SocketIoService {
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final SignalRoomRepository signalRoomRepository;
     private final SignalMessageRepository signalMessageRepository;
     private final UserRepository userRepository;
     private final AESUtil aesUtil;
     private final SocketIOServer server;
+    private final AsyncChannelService asyncChannelService;
 
     @Transactional
     public SignalMessage saveMessage(Long roomId, Long senderId, String plainText, LocalDateTime sendAt) {
@@ -50,16 +57,42 @@ public class SocketIoService {
                         UserResponseCode.USER_NOT_FOUND.getMessage()
                 ));
 
-        String encrypted = aesUtil.encrypt(plainText);
+        if (!room.isParticipant(senderId)) {
+            throw new BusinessException(
+                    ChannelResponseCode.ALREADY_EXITED_CHANNEL_ROOM.getCode(),
+                    ChannelResponseCode.ALREADY_EXITED_CHANNEL_ROOM.getHttpStatus(),
+                    "사용자가 참여 중인 채팅방 아닙니다."
+            );
+        }
 
-        SignalMessage message = SignalMessage.builder()
+        Long partnerId = room.getPartnerUser(senderId).getId();
+        userRepository.findByIdAndDeletedAtIsNull(partnerId)
+                .orElseThrow(() -> new BusinessException(
+                        UserResponseCode.USER_DEACTIVATED.getCode(),
+                        UserResponseCode.USER_DEACTIVATED.getHttpStatus(),
+                        UserResponseCode.USER_DEACTIVATED.getMessage()
+                ));
+
+        String encrypted = aesUtil.encrypt(plainText);
+        SignalMessage signalMessage = SignalMessage.builder()
                 .signalRoom(room)
                 .senderUser(sender)
                 .message(encrypted)
                 .sendAt(sendAt)
                 .build();
 
-        return signalMessageRepository.save(message);
+        signalMessageRepository.save(signalMessage);
+        entityManager.flush();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncChannelService.notifyMatchingConverted(room);
+                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
+            }
+        });
+
+        return signalMessage;
     }
 
     public SocketIoMessageResponse processAndRespond(Long roomId, Long senderId, String plainText, LocalDateTime sendAt) {
@@ -83,5 +116,4 @@ public class SocketIoService {
             }
         });
     }
-
 }
