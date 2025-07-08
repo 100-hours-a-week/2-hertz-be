@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.user.service.v3;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.auth.repository.OAuthRedisRepository;
 import com.hertz.hertz_be.domain.auth.repository.RefreshTokenRepository;
 import com.hertz.hertz_be.domain.auth.responsecode.AuthResponseCode;
@@ -7,9 +8,13 @@ import com.hertz.hertz_be.domain.channel.entity.Tuning;
 import com.hertz.hertz_be.domain.channel.entity.TuningResult;
 import com.hertz.hertz_be.domain.channel.repository.TuningRepository;
 import com.hertz.hertz_be.domain.channel.repository.TuningResultRepository;
+import com.hertz.hertz_be.domain.interests.service.InterestsService;
 import com.hertz.hertz_be.domain.user.dto.request.v3.OneLineIntroductionRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
+import com.hertz.hertz_be.domain.user.dto.response.v3.InterestsDTO;
+import com.hertz.hertz_be.domain.user.dto.response.v3.KeywordsDTO;
+import com.hertz.hertz_be.domain.user.dto.response.v3.UserProfileDTO;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.entity.UserOauth;
@@ -27,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service("userServiceV3")
@@ -43,6 +50,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final TuningResultRepository tuningResultRepository;
     private final TuningRepository tuningRepository;
+    private final InterestsService interestsService;
 
     @Value("${invitation.code.kakaotech}")
     private int kakaotechInvitationCode;
@@ -197,5 +205,52 @@ public class UserService {
                         UserResponseCode.USER_NOT_FOUND.getCode(),
                         UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
                         UserResponseCode.USER_NOT_FOUND.getMessage()));
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileDTO getUserProfile(Long targetUserId, Long userId) {
+        User targetUser = getActiveUserOrThrow(targetUserId);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        Map<String, String> keywordsMap = interestsService.getUserKeywords(targetUser.getId());
+        Map<String, List<String>> currentUserInterestsMap = interestsService.getUserInterests(userId);
+
+        KeywordsDTO keywordsDto = objectMapper.convertValue(keywordsMap, KeywordsDTO.class);
+        InterestsDTO currentUserDto = objectMapper.convertValue(currentUserInterestsMap, InterestsDTO.class);
+
+        if(Objects.equals(targetUser.getId(), userId)) { // 마이페이지 조회
+            return new UserProfileDTO(
+                    targetUser.getProfileImageUrl(),
+                    targetUser.getNickname(),
+                    targetUser.getGender(),
+                    targetUser.getOneLineIntroduction(),
+                    "ME",
+                    keywordsDto,
+                    currentUserDto,
+                    null,
+                    targetUser.getIsFriendAllowed(),
+                    targetUser.getIsCoupleAllowed()
+            );
+        } else { // 상대방 페이지 조회
+            String relationType = userRepository.findRelationTypeBetweenUsers(userId, targetUser.getId());
+
+            Map<String, List<String>> targetInterestsMap = interestsService.getUserInterests(targetUser.getId());
+            Map<String, List<String>> sameInterestsMap = interestsService.extractSameInterests(targetInterestsMap, currentUserInterestsMap);
+            InterestsDTO sameInterestsDto = objectMapper.convertValue(sameInterestsMap, InterestsDTO.class);
+
+            return new UserProfileDTO(
+                    targetUser.getProfileImageUrl(),
+                    targetUser.getNickname(),
+                    targetUser.getGender(),
+                    targetUser.getOneLineIntroduction(),
+                    relationType,
+                    keywordsDto,
+                    currentUserDto,
+                    sameInterestsDto,
+                    null,
+                    null
+            );
+        }
     }
 }

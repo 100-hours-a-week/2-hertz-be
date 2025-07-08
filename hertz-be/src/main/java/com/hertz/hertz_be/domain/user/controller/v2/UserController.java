@@ -24,7 +24,7 @@ public class UserController {
      * @author daisy.lee
      */
     @GetMapping("/v2/users/{userId}")
-    @Operation(summary = "사용자 정보 조회")
+    @Operation(summary = "사용자 정보 조회 API")
     public ResponseEntity<ResponseDto<UserProfileDTO>> getUserProfile(@PathVariable Long userId,
                                                                       @AuthenticationPrincipal Long id) {
         UserProfileDTO response = userService.getUserProfile(userId, id);
