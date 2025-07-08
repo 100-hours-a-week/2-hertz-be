@@ -32,10 +32,11 @@ public class KafkaConsumerService {
     )
     public void consumeToSse(SseEventDto event, Acknowledgment ack) {
         try {
-            if(sseService.sendToClient(event.userId(), event.eventName(), event.data())) {
+            boolean sent = sseService.sendToClient(event.userId(), event.eventName(), event.data());
+            if (sent) {
                 log.info("✅ Kafka → SSE 전송 성공: userId= {}, event-name= {}", event.userId(), event.eventName());
-                ack.acknowledge();
             }
+            ack.acknowledge();
         } catch (Exception e) {
             throw new KafkaException(String.format(
                     "Kafka → SSE 처리 중 알 수 없는 예외 발생: userId=%d, event=%s, 재시도 실행",
