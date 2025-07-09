@@ -81,18 +81,20 @@ public class SocketIoService {
                 .sendAt(sendAt)
                 .build();
 
-        signalMessageRepository.save(signalMessage);
-        entityManager.flush();
+        return signalMessageRepository.save(signalMessage);
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
-            }
-        });
-
-        return signalMessage;
+//        signalMessageRepository.save(signalMessage);
+//        entityManager.flush();
+//
+//        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+//            @Override
+//            public void afterCommit() {
+//                asyncChannelService.notifyMatchingConverted(room);
+//                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, partnerId, false);
+//            }
+//        });
+//
+//        return signalMessage;
     }
 
     public SocketIoMessageResponse processAndRespond(Long roomId, Long senderId, String plainText, LocalDateTime sendAt) {
