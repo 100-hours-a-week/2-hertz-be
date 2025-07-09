@@ -9,7 +9,10 @@ import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,25 +26,37 @@ public class TuningReportReactionService {
 
     @Transactional
     @Retryable(
-            value = {ObjectOptimisticLockingFailureException.class},
-            maxAttempts = 3
+            value = {
+                    ObjectOptimisticLockingFailureException.class,
+                    DeadlockLoserDataAccessException.class,
+                    CannotAcquireLockException.class
+            },
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100, multiplier = 2)
     )
     public TuningReportReactionResponse toggleReportReaction(Long userId, Long reportId, TuningReportReactionToggleRequest request) {
-        TuningReport report = tuningReportRepository.findById(reportId)
+
+        // 먼저 PESSIMISTIC_WRITE 락 걸고 가져옴
+        TuningReport report = tuningReportRepository.findWithLockById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("리포트가 존재하지 않습니다."));
 
         ReactionType reactionType = request.reactionType();
         boolean isReacted;
 
-        if(tuningReportUserReactionRepository.existsByReportIdAndUserIdAndReactionType(reportId, userId, reactionType)) { // 이미 선택한 리액션인지 확인
-            tuningReportUserReactionRepository.deleteByReportIdAndUserIdAndReactionType(reportId, userId, reactionType);
+        boolean alreadyExists = tuningReportUserReactionRepository.existsByReportIdAndUserIdAndReactionType(
+                reportId, userId, reactionType);
+
+        if (alreadyExists) {
+            // 수치 먼저 감소 후 삭제
             report.decreaseReaction(reactionType);
+            tuningReportUserReactionRepository.deleteByReportIdAndUserIdAndReactionType(reportId, userId, reactionType);
             isReacted = false;
         } else {
+            // 저장 후 수치 증가
             TuningReportUserReaction reaction = TuningReportUserReaction.builder()
                     .report(report)
                     .user(User.of(userId))
-                    .reactionType(request.reactionType())
+                    .reactionType(reactionType)
                     .build();
 
             tuningReportUserReactionRepository.save(reaction);
@@ -49,15 +64,14 @@ public class TuningReportReactionService {
             isReacted = true;
         }
 
-        int reactionCount = switch(reactionType) {
-            case CELEBRATE  -> report.getReactionCelebrate();
-            case EYES       -> report.getReactionEyes();
-            case HEART      -> report.getReactionHeart();
-            case LAUGH      -> report.getReactionLaugh();
-            case THUMBS_UP  -> report.getReactionThumbsUp();
+        int reactionCount = switch (reactionType) {
+            case CELEBRATE -> report.getReactionCelebrate();
+            case THUMBS_UP -> report.getReactionThumbsUp();
+            case LAUGH -> report.getReactionLaugh();
+            case EYES -> report.getReactionEyes();
+            case HEART -> report.getReactionHeart();
         };
 
-        return new TuningReportReactionResponse (reportId, reactionType, isReacted, reactionCount);
-
+        return new TuningReportReactionResponse(reportId, reactionType, isReacted, reactionCount);
     }
 }
