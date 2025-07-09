@@ -2,12 +2,11 @@ package com.hertz.hertz_be.domain.tuningreport.repository;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
-import io.lettuce.core.dynamic.annotation.Param;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -40,5 +39,11 @@ public interface TuningReportRepository extends JpaRepository<TuningReport, Long
 
     @Modifying
     @Query("UPDATE TuningReport t SET t.deletedAt = CURRENT_TIMESTAMP WHERE t.id = :id")
-    void softDeleteById(@Param("id") Long id);
+    void softDeleteById(@org.springframework.data.repository.query.Param("id") Long id);
+
+    // 교착 상태 예방용 비관적 락 메서드 추가
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM TuningReport r WHERE r.id = :id")
+    Optional<TuningReport> findWithLockById(@org.springframework.data.repository.query.Param("id") Long id);
+
 }
