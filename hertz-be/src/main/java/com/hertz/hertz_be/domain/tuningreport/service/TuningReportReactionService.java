@@ -94,6 +94,9 @@ public class TuningReportReactionService {
 
                 redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), Duration.ofMinutes(35));
 
+                String listKey = cacheManager.pageListKey();
+                redisTemplate.expire(listKey, Duration.ofMinutes(35));
+
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
                     case THUMBS_UP -> item.getReactions().getThumbsUp();
