@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,30 +53,49 @@ public class TuningReportService {
         return items;
     }
 
-    private List<TuningReportListResponse.ReportItem> enrichWithUserReactions(List<TuningReportListResponse.ReportItem> items, Long userId) {
+    private List<TuningReportListResponse.ReportItem> enrichWithUserReactions(
+            List<TuningReportListResponse.ReportItem> items, Long userId) {
+
         List<Long> reportIds = items.stream()
                 .map(TuningReportListResponse.ReportItem::getReportId)
                 .toList();
 
-        List<TuningReportUserReaction> dbList =
-                transactionalService.getTuningReportUserReactionRepository().findAllByUserIdAndReportIdIn(userId, reportIds);
+        boolean anyCached = reportIds.stream()
+                .anyMatch(reportId -> cacheManager.hasUserReactionCached(reportId, userId));
 
-        log.info("💡 사용자 {}에 대해 DB에서 조회된 반응 수: {}", userId, dbList.size());
+        Map<Long, Set<ReactionType>> userReactionMap;
 
-        dbList.forEach(reaction ->
-                cacheManager.setUserReaction(
-                        reaction.getReport().getId(),
-                        userId,
-                        reaction.getReactionType(),
-                        true
-                )
-        );
+        if (anyCached) {
+            // ✅ Redis에 전부 존재 → 캐시에서 생성
+            userReactionMap = reportIds.stream().collect(Collectors.toMap(
+                    reportId -> reportId,
+                    reportId -> Arrays.stream(ReactionType.values())
+                            .filter(type -> Boolean.TRUE.equals(cacheManager.getUserReaction(reportId, userId, type)))
+                            .collect(Collectors.toSet())
+            ));
+            log.info("✅ Redis에서 사용자 {}의 반응 정보 조회 완료 (DB 미조회)", userId);
+        } else {
+            // ❌ 캐시 누락 → DB 조회 후 캐싱
+            List<TuningReportUserReaction> dbList =
+                    transactionalService.getTuningReportUserReactionRepository().findAllByUserIdAndReportIdIn(userId, reportIds);
 
-        Map<Long, Set<ReactionType>> userReactionMap = dbList.stream()
-                .collect(Collectors.groupingBy(
-                        r -> r.getReport().getId(),
-                        Collectors.mapping(TuningReportUserReaction::getReactionType, Collectors.toSet())
-                ));
+            log.info("💡 사용자 {}에 대해 DB에서 조회된 반응 수: {}", userId, dbList.size());
+
+            dbList.forEach(reaction ->
+                    cacheManager.setUserReaction(
+                            reaction.getReport().getId(),
+                            userId,
+                            reaction.getReactionType(),
+                            true
+                    )
+            );
+
+            userReactionMap = dbList.stream()
+                    .collect(Collectors.groupingBy(
+                            r -> r.getReport().getId(),
+                            Collectors.mapping(TuningReportUserReaction::getReactionType, Collectors.toSet())
+                    ));
+        }
 
         return items.stream()
                 .map(item -> {

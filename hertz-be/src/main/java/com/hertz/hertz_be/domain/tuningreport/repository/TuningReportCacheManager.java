@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -52,8 +51,6 @@ public class TuningReportCacheManager {
     }
 
     // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (Hash) ===
-
-    // 현재 페이지(0페이지, size=10, 정렬 기준=LATEST)의 게시글 목록을 Redis에서 반환
     public List<TuningReportListResponse.ReportItem> getCachedReportList() {
         String listKey = pageListKey();
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(listKey))) return null;
@@ -76,7 +73,6 @@ public class TuningReportCacheManager {
         return result;
     }
 
-    // 현재 페이지에 해당하는 게시글 목록을 Redis에 캐시
     public void cacheReportList(List<TuningReportListResponse.ReportItem> items) {
         String listKey = pageListKey();
         redisTemplate.delete(listKey);
@@ -99,8 +95,6 @@ public class TuningReportCacheManager {
     }
 
     // === 튜닝 레포트 반응 관리를 위한 Cache : 유저별 반응 상태 (Hash) ===
-
-    // 유저가 해당 게시글에 특정 반응을 했는지 여부를 Redis에 저장
     public void setUserReaction(Long reportId, Long userId, ReactionType type, boolean reacted) {
         String key = userKey(reportId, userId);
         try {
@@ -111,33 +105,15 @@ public class TuningReportCacheManager {
         }
     }
 
-    // 해당 유저가 특정 게시글에 특정 반응을 눌렀는지 확인
     public Boolean getUserReaction(Long reportId, Long userId, ReactionType type) {
         String key = userKey(reportId, userId);
         Object v = redisTemplate.opsForHash().get(key, type.name());
         return v != null && "1".equals(v);
     }
 
-    // 유저가 해당 게시글에 모든 반응 타입을 눌렀는지 한꺼번
-    public Map<ReactionType, Boolean> getUserReactionMap(Long reportId, Long userId) {
+    public boolean hasUserReactionCached(Long reportId, Long userId) {
         String key = userKey(reportId, userId);
-        Map<Object, Object> raw = redisTemplate.opsForHash().entries(key);
-        return Arrays.stream(ReactionType.values())
-                .collect(Collectors.toMap(
-                        r -> r,
-                        r -> "1".equals(raw.getOrDefault(r.name(), "0"))
-                ));
-    }
-
-    // MyReactions DTO 변환
-    public TuningReportListResponse.MyReactions toMyReactions(Map<ReactionType, Boolean> map) {
-        return new TuningReportListResponse.MyReactions(
-                map.getOrDefault(ReactionType.CELEBRATE, false),
-                map.getOrDefault(ReactionType.THUMBS_UP, false),
-                map.getOrDefault(ReactionType.LAUGH, false),
-                map.getOrDefault(ReactionType.EYES, false),
-                map.getOrDefault(ReactionType.HEART, false)
-        );
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     public void markDirty(Long reportId) {

@@ -34,63 +34,85 @@ public class TuningReportFlushScheduler {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Transactional
-    @Scheduled(cron = "0 0/2 * * * *")
+    @Scheduled(cron = "0 0/3 * * * *")
     public void flushDirtyReports() {
         Set<String> dirty = cacheManager.getDirtyReportIds();
         if (dirty.isEmpty()) return;
 
         for (String rid : dirty) {
+            Long reportId = null;
             try {
-                Long reportId = Long.valueOf(rid);
+                reportId = Long.valueOf(rid);
                 String reportKey = cacheManager.reportItemKey(reportId);
                 String json = redisTemplate.opsForValue().get(reportKey);
 
-                if (json == null) continue;
+                if (json == null) {
+                    log.warn("❌ [FLUSH SKIP] reportId={} 캐시에 JSON 없음", rid);
+                    continue;
+                }
 
-                TuningReportListResponse.ReportItem item =
-                        objectMapper.readValue(json, TuningReportListResponse.ReportItem.class);
+                TuningReportListResponse.ReportItem item = null;
+                try {
+                    item = objectMapper.readValue(json, TuningReportListResponse.ReportItem.class);
+                } catch (Exception e) {
+                    log.warn("❌ [JSON 파싱 실패] reportId={} msg={}", rid, e.getMessage());
+                    continue;
+                }
+
+                if (item == null || item.getReactions() == null) {
+                    log.warn("❌ [FLUSH SKIP] reportId={} 역직렬화된 객체가 null", rid);
+                    continue;
+                }
 
                 TuningReport report = reportRepo.findById(reportId)
                         .orElseThrow(() -> new IllegalArgumentException("Report not found"));
 
-                // ✅ 반응 수 반영
+                // 반응 수 반영
                 report.updateReactionsFrom(item.getReactions());
                 reportRepo.save(report);
 
-                // ✅ 유저별 반응 동기화
+                // 유저별 반응 동기화
                 String userPattern = String.format("reports:%d:user:*", reportId);
-                Set<String> userKeys = redisTemplate.keys(userPattern);
+                Set<String> userKeys = redisTemplate.keys(userPattern); // NOTE: SCAN 권장
 
                 for (String uk : userKeys) {
-                    Long userId = Long.valueOf(uk.split(":")[3]);
-                    for (ReactionType type : ReactionType.values()) {
-                        Boolean reacted = cacheManager.getUserReaction(reportId, userId, type);
-                        if (reacted != null) {
+                    try {
+                        Long userId = Long.parseLong(uk.split(":")[3]);
+
+                        for (ReactionType type : ReactionType.values()) {
+                            Boolean reacted = cacheManager.getUserReaction(reportId, userId, type);
+                            if (reacted == null) continue;
+
                             boolean exists = reactionRepo.existsByReportIdAndUserIdAndReactionType(reportId, userId, type);
-                            if (reacted) {
-                                if (!exists) {
-                                    reactionRepo.save(
-                                            TuningReportUserReaction.builder()
-                                                    .report(report)
-                                                    .user(User.of(userId))
-                                                    .reactionType(type)
-                                                    .build()
-                                    );
-                                }
-                            } else {
-                                if (exists) {
-                                    reactionRepo.deleteByReportIdAndUserIdAndReactionType(reportId, userId, type);
-                                }
+
+                            if (reacted && !exists) {
+                                reactionRepo.save(TuningReportUserReaction.builder()
+                                        .report(report)
+                                        .user(User.of(userId))
+                                        .reactionType(type)
+                                        .build());
+                            } else if (!reacted && exists) {
+                                reactionRepo.deleteByReportIdAndUserIdAndReactionType(reportId, userId, type);
                             }
                         }
+
+                    } catch (Exception e) {
+                        log.warn("❌ [유저 반응 동기화 실패] userKey={} msg={}", uk, e.getMessage());
                     }
                 }
 
-                cacheManager.clearDirtyReportId(rid);
                 log.info("✅ [FLUSHED] reportId={} synchronized successfully.", reportId);
 
             } catch (Exception e) {
                 log.warn("❌ [FLUSH FAILED] reportId={} error: {}", rid, e.getMessage());
+            } finally {
+                if (reportId != null) {
+                    try {
+                        cacheManager.clearDirtyReportId(rid);
+                    } catch (Exception e) {
+                        log.error("❗ dirty set에서 제거 실패: reportId={} error={}", rid, e.getMessage());
+                    }
+                }
             }
         }
     }
