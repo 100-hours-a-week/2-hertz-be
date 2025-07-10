@@ -67,13 +67,13 @@ public class TuningReportFlushScheduler {
                 TuningReport report = reportRepo.findById(reportId)
                         .orElseThrow(() -> new IllegalArgumentException("Report not found"));
 
-                // 반응 수 반영
+                // 각 게시글의 반응 수 동기화
                 report.updateReactionsFrom(item.getReactions());
                 reportRepo.save(report);
 
-                // 유저별 반응 동기화
+                // 각 게시글에 대한 유저별 반응 동기화
                 String userPattern = String.format("reports:%d:user:*", reportId);
-                Set<String> userKeys = redisTemplate.keys(userPattern); // NOTE: SCAN 권장
+                Set<String> userKeys = redisTemplate.keys(userPattern);
 
                 for (String uk : userKeys) {
                     try {

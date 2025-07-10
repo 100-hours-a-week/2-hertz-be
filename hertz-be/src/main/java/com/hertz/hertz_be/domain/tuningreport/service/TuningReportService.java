@@ -66,7 +66,6 @@ public class TuningReportService {
         Map<Long, Set<ReactionType>> userReactionMap;
 
         if (anyCached) {
-            // ✅ Redis에 전부 존재 → 캐시에서 생성
             userReactionMap = reportIds.stream().collect(Collectors.toMap(
                     reportId -> reportId,
                     reportId -> Arrays.stream(ReactionType.values())
@@ -75,11 +74,8 @@ public class TuningReportService {
             ));
             log.info("✅ Redis에서 사용자 {}의 반응 정보 조회 완료 (DB 미조회)", userId);
         } else {
-            // ❌ 캐시 누락 → DB 조회 후 캐싱
             List<TuningReportUserReaction> dbList =
                     transactionalService.getTuningReportUserReactionRepository().findAllByUserIdAndReportIdIn(userId, reportIds);
-
-            log.info("💡 사용자 {}에 대해 DB에서 조회된 반응 수: {}", userId, dbList.size());
 
             dbList.forEach(reaction ->
                     cacheManager.setUserReaction(

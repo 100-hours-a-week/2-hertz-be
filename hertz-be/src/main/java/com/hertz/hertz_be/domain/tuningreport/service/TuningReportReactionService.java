@@ -85,18 +85,15 @@ public class TuningReportReactionService {
             if (json != null) {
                 TuningReportListResponse.ReportItem item = objectMapper.readValue(json, TuningReportListResponse.ReportItem.class);
 
-                // reactions 수정
                 if (isReacted) item.getReactions().increase(type);
                 else item.getReactions().decrease(type);
 
-                // myReactions 수정
                 if (item.getMyReactions() == null)
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
                 redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), Duration.ofMinutes(35));
 
-                // 최신 카운트 추출
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
                     case THUMBS_UP -> item.getReactions().getThumbsUp();
