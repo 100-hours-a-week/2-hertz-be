@@ -39,18 +39,7 @@ public class TuningReportCacheManager {
         return String.format("reports:%d:user:%d", reportId, userId);
     }
 
-    // Redis에서 reports:page=* 형식으로 저장된 모든 페이지 캐시의 key 목록 조회
-    public Set<String> scanPageKeys() {
-        return redisTemplate.execute((RedisCallback<Set<String>>) conn -> {
-            Set<String> result = new HashSet<>();
-            Cursor<byte[]> cursor = conn.scan(ScanOptions.scanOptions()
-                    .match("reports:page=*:list").count(1000).build());
-            cursor.forEachRemaining(b -> result.add(new String(b)));
-            return result;
-        });
-    }
-
-    // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (Hash) ===
+    // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (List) ===
     public List<TuningReportListResponse.ReportItem> getCachedReportList() {
         String listKey = pageListKey();
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(listKey))) return null;
