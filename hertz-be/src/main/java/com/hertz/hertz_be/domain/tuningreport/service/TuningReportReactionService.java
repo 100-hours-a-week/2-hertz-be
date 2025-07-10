@@ -57,9 +57,8 @@ public class TuningReportReactionService {
             public Object execute(RedisOperations ops) {
                 ops.multi();
                 ops.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
-                ops.opsForSet().add("dirty:reports", reportId.toString());
                 ops.expire(userKey, Duration.ofMinutes(35));
-                ops.expire("dirty:reports", Duration.ofMinutes(35));
+                cacheManager.markDirty(reportId);
                 return ops.exec();
             }
         });
