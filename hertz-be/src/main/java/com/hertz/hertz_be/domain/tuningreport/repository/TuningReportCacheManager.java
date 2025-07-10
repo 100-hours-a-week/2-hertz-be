@@ -24,7 +24,7 @@ public class TuningReportCacheManager {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-    private static final Duration PAGE_TTL = Duration.ofMinutes(35);
+    private static final Duration TUNING_REPORT_TTL = Duration.ofMinutes(35);
     private static final String DIRTY_SET = "dirty:reports";
 
     public String pageListKey() {
@@ -70,13 +70,13 @@ public class TuningReportCacheManager {
             try {
                 String reportKey = reportItemKey(item.getReportId());
                 String json = objectMapper.writeValueAsString(item);
-                redisTemplate.opsForValue().set(reportKey, json, PAGE_TTL);
+                redisTemplate.opsForValue().set(reportKey, json, getTTLDurForTuningReport());
                 redisTemplate.opsForList().rightPush(listKey, item.getReportId().toString());
             } catch (JsonProcessingException e) {
                 log.warn("❌ ReportItem 직렬화 실패: {}", e.getMessage());
             }
         }
-        redisTemplate.expire(listKey, PAGE_TTL);
+        redisTemplate.expire(listKey, getTTLDurForTuningReport());
     }
 
     public boolean isReportCached(Long reportId) {
@@ -88,7 +88,7 @@ public class TuningReportCacheManager {
         String key = userKey(reportId, userId);
         try {
             redisTemplate.opsForHash().put(key, type.name(), reacted ? "1" : "0");
-            redisTemplate.expire(key, PAGE_TTL);
+            redisTemplate.expire(key, getTTLDurForTuningReport());
         } catch (Exception e) {
             log.warn("❌ 유저 리액션 캐싱 실패: {}", e.getMessage());
         }
@@ -98,6 +98,10 @@ public class TuningReportCacheManager {
         String key = userKey(reportId, userId);
         Object v = redisTemplate.opsForHash().get(key, type.name());
         return v != null && "1".equals(v);
+    }
+
+    public Duration getTTLDurForTuningReport() {
+        return TUNING_REPORT_TTL;
     }
 
     public boolean hasUserReactionCached(Long reportId, Long userId) {

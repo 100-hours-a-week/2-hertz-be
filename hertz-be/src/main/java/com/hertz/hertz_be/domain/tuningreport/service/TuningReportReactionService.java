@@ -74,7 +74,7 @@ public class TuningReportReactionService {
                 public Object execute(RedisOperations ops) {
                     ops.multi();
                     ops.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
-                    ops.expire(userKey, Duration.ofMinutes(35));
+                    ops.expire(userKey, cacheManager.getTTLDurForTuningReport());
                     cacheManager.markDirty(reportId);
                     return ops.exec();
                 }
@@ -92,10 +92,10 @@ public class TuningReportReactionService {
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
-                redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), Duration.ofMinutes(35));
+                redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), cacheManager.getTTLDurForTuningReport());
 
                 String listKey = cacheManager.pageListKey();
-                redisTemplate.expire(listKey, Duration.ofMinutes(35));
+                redisTemplate.expire(listKey, cacheManager.getTTLDurForTuningReport());
 
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
