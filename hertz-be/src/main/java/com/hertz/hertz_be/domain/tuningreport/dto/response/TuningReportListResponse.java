@@ -20,7 +20,7 @@ public class TuningReportListResponse {
     private int pageNumber;
     private int pageSize;
 
-    @JsonProperty("isLast") // JSON에선 isLast 유지
+    @JsonProperty("isLast")
     private boolean isLast;
 
     @Getter
@@ -55,13 +55,27 @@ public class TuningReportListResponse {
     @Getter
     @Setter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class Reactions {
         private int celebrate;
         private int thumbsUp;
         private int laugh;
         private int eyes;
         private int heart;
+
+        @JsonCreator
+        public Reactions(
+                @JsonProperty("celebrate") int celebrate,
+                @JsonProperty("thumbsUp") int thumbsUp,
+                @JsonProperty("laugh") int laugh,
+                @JsonProperty("eyes") int eyes,
+                @JsonProperty("heart") int heart
+        ) {
+            this.celebrate = celebrate;
+            this.thumbsUp = thumbsUp;
+            this.laugh = laugh;
+            this.eyes = eyes;
+            this.heart = heart;
+        }
 
         public void increase(ReactionType type) {
             switch (type) {
@@ -87,13 +101,27 @@ public class TuningReportListResponse {
     @Getter
     @Setter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class MyReactions {
         private boolean celebrate;
         private boolean thumbsUp;
         private boolean laugh;
         private boolean eyes;
         private boolean heart;
+
+        @JsonCreator
+        public MyReactions(
+                @JsonProperty("celebrate") boolean celebrate,
+                @JsonProperty("thumbsUp") boolean thumbsUp,
+                @JsonProperty("laugh") boolean laugh,
+                @JsonProperty("eyes") boolean eyes,
+                @JsonProperty("heart") boolean heart
+        ) {
+            this.celebrate = celebrate;
+            this.thumbsUp = thumbsUp;
+            this.laugh = laugh;
+            this.eyes = eyes;
+            this.heart = heart;
+        }
 
         public void set(ReactionType type, boolean value) {
             switch (type) {
