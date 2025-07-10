@@ -5,12 +5,9 @@ import com.hertz.hertz_be.domain.tuningreport.entity.TuningReportUserReaction;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.TuningReportSortType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
-import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
-import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,9 +22,6 @@ public class TuningReportService {
 
     private final TuningReportTransactionalService transactionalService;
     private final TuningReportCacheManager cacheManager;
-    private final RedisTemplate<String, String> redisTemplate;
-    private final TuningReportRepository tuningReportRepository;
-    private final TuningReportUserReactionRepository tuningReportUserReactionRepository;
 
     public TuningReportListResponse getReportList(Long userId, int page, int size, TuningReportSortType sort) {
         if (isCacheApplicable(page, size, sort)) {
