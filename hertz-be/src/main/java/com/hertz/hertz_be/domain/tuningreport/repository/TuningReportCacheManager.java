@@ -38,7 +38,7 @@ public class TuningReportCacheManager {
         return String.format("reports:%d:user:%d", reportId, userId);
     }
 
-    // 모든 페이지 키 스캔
+    // Redis에서 reports:page=* 형식으로 저장된 모든 페이지 캐시의 key 목록 조회
     public Set<String> scanPageKeys() {
         return redisTemplate.execute((RedisCallback<Set<String>>) conn -> {
             Set<String> result = new HashSet<>();
@@ -49,7 +49,9 @@ public class TuningReportCacheManager {
         });
     }
 
-    // === Cache A: 페이지별 리포트 목록 (Hash) ===
+    // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (Hash) ===
+
+    // 현재 페이지(0페이지, size=10, 정렬 기준=LATEST)의 게시글 목록을 Redis에서 반환
     public List<TuningReportListResponse.ReportItem> getCachedReportList() {
         String key = pageKey();
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) return null;
@@ -57,29 +59,32 @@ public class TuningReportCacheManager {
         List<TuningReportListResponse.ReportItem> items = new ArrayList<>();
         for (String json : hash.values()) {
             try {
+                // 각각의 JSON 문자열을 ReportItem 객체로 변환합니다 (역직렬화)
                 items.add(objectMapper.readValue(json, TuningReportListResponse.ReportItem.class));
             } catch (JsonProcessingException ignored) {
+                log.info("❌캐싱된 튜닝레포트 목록을 redis에서 불러오기 실패 {}", ignored);
             }
         }
         return items;
     }
 
+    // 현재 페이지에 해당하는 게시글 목록을 Redis에 캐시
     public void cacheReportList(List<TuningReportListResponse.ReportItem> items) {
         String key = pageKey();
+        // 해당 key에 연결된 Redis `Hash`에 대해 편리하게 조작할 수 있는 인터페이스 참조
         BoundHashOperations<String, String, String> hash = redisTemplate.boundHashOps(key);
         hash.getOperations().expire(key, PAGE_TTL);
-        // 기존 필드 초기화
+
         for (String field : hash.keys()) {
             hash.delete(field);
         }
-        // 새로 저장
+
         for (TuningReportListResponse.ReportItem item : items) {
             try {
-                log.info("✅ 게시글 캐싱 되기 직전의 reportID: {}", item.getReportId());
                 String json = objectMapper.writeValueAsString(item);
                 hash.put(item.getReportId().toString(), json);
             } catch (JsonProcessingException ignored) {
-                log.info("❌ 게시글 캐싱 되기 직전에 redis에 저장 실패 {}", ignored);
+                log.info("❌특정 튜닝레포트  redis에 캐싱 실패 {}", ignored);
             }
         }
     }
@@ -90,7 +95,9 @@ public class TuningReportCacheManager {
         );
     }
 
-    // === Cache C: 유저별 반응 상태 (Hash) ===
+    // === 튜닝 레포트 반응 관리를 위한 Cache : 유저별 반응 상태 (Hash) ===
+
+    // 유저가 해당 게시글에 특정 반응을 했는지 여부를 Redis에 저장
     public void setUserReaction(Long reportId, Long userId, ReactionType type, boolean reacted) {
         String key = userKey(reportId, userId);
         try {
@@ -102,12 +109,14 @@ public class TuningReportCacheManager {
         }
     }
 
+    // 해당 유저가 특정 게시글에 특정 반응을 눌렀는지 확인
     public Boolean getUserReaction(Long reportId, Long userId, ReactionType type) {
         String key = userKey(reportId, userId);
         Object v = redisTemplate.opsForHash().get(key, type.name());
         return v != null && "1".equals(v);
     }
 
+    // 유저가 해당 게시글에 모든 반응 타입을 눌렀는지 한꺼번
     public Map<ReactionType, Boolean> getUserReactionMap(Long reportId, Long userId) {
         String key = userKey(reportId, userId);
         Map<Object, Object> raw = redisTemplate.opsForHash().entries(key);
