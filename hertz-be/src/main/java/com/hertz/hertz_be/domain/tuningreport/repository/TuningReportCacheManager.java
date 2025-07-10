@@ -28,12 +28,14 @@ public class TuningReportCacheManager {
     private static final Duration PAGE_TTL = Duration.ofMinutes(35);
     private static final String DIRTY_SET = "dirty:reports";
 
-    // 페이지별 Hash 키 생성
-    public String pageKey() {
-        return String.format("reports:page=%d:size=%d:sort=%s", 0, 10, TuningReportSortType.LATEST);
+    public String pageListKey() {
+        return String.format("reports:page=0:size=10:sort=%s:list", TuningReportSortType.LATEST);
     }
 
-    // 사용자별 Hash 키 생성
+    public String reportItemKey(Long reportId) {
+        return String.format("report:item:%d", reportId);
+    }
+
     public String userKey(Long reportId, Long userId) {
         return String.format("reports:%d:user:%d", reportId, userId);
     }
@@ -43,7 +45,7 @@ public class TuningReportCacheManager {
         return redisTemplate.execute((RedisCallback<Set<String>>) conn -> {
             Set<String> result = new HashSet<>();
             Cursor<byte[]> cursor = conn.scan(ScanOptions.scanOptions()
-                    .match("reports:page=*" ).count(1000).build());
+                    .match("reports:page=*:list").count(1000).build());
             cursor.forEachRemaining(b -> result.add(new String(b)));
             return result;
         });
@@ -53,46 +55,47 @@ public class TuningReportCacheManager {
 
     // 현재 페이지(0페이지, size=10, 정렬 기준=LATEST)의 게시글 목록을 Redis에서 반환
     public List<TuningReportListResponse.ReportItem> getCachedReportList() {
-        String key = pageKey();
-        if (!Boolean.TRUE.equals(redisTemplate.hasKey(key))) return null;
-        BoundHashOperations<String, String, String> hash = redisTemplate.boundHashOps(key);
-        List<TuningReportListResponse.ReportItem> items = new ArrayList<>();
-        for (String json : hash.values()) {
-            try {
-                // 각각의 JSON 문자열을 ReportItem 객체로 변환합니다 (역직렬화)
-                items.add(objectMapper.readValue(json, TuningReportListResponse.ReportItem.class));
-            } catch (JsonProcessingException ignored) {
-                log.info("❌캐싱된 튜닝레포트 목록을 redis에서 불러오기 실패 {}", ignored);
+        String listKey = pageListKey();
+        if (!Boolean.TRUE.equals(redisTemplate.hasKey(listKey))) return null;
+
+        List<String> idList = redisTemplate.opsForList().range(listKey, 0, -1);
+        if (idList == null || idList.isEmpty()) return null;
+
+        List<TuningReportListResponse.ReportItem> result = new ArrayList<>();
+        for (String reportId : idList) {
+            String reportKey = reportItemKey(Long.parseLong(reportId));
+            String json = redisTemplate.opsForValue().get(reportKey);
+            if (json != null) {
+                try {
+                    result.add(objectMapper.readValue(json, TuningReportListResponse.ReportItem.class));
+                } catch (JsonProcessingException e) {
+                    log.warn("❌ ReportItem 역직렬화 실패: {}", e.getMessage());
+                }
             }
         }
-        return items;
+        return result;
     }
 
     // 현재 페이지에 해당하는 게시글 목록을 Redis에 캐시
     public void cacheReportList(List<TuningReportListResponse.ReportItem> items) {
-        String key = pageKey();
-        // 해당 key에 연결된 Redis `Hash`에 대해 편리하게 조작할 수 있는 인터페이스 참조
-        BoundHashOperations<String, String, String> hash = redisTemplate.boundHashOps(key);
-        hash.getOperations().expire(key, PAGE_TTL);
-
-        for (String field : hash.keys()) {
-            hash.delete(field);
-        }
+        String listKey = pageListKey();
+        redisTemplate.delete(listKey);
 
         for (TuningReportListResponse.ReportItem item : items) {
             try {
+                String reportKey = reportItemKey(item.getReportId());
                 String json = objectMapper.writeValueAsString(item);
-                hash.put(item.getReportId().toString(), json);
-            } catch (JsonProcessingException ignored) {
-                log.info("❌특정 튜닝레포트  redis에 캐싱 실패 {}", ignored);
+                redisTemplate.opsForValue().set(reportKey, json, PAGE_TTL);
+                redisTemplate.opsForList().rightPush(listKey, item.getReportId().toString());
+            } catch (JsonProcessingException e) {
+                log.warn("❌ ReportItem 직렬화 실패: {}", e.getMessage());
             }
         }
+        redisTemplate.expire(listKey, PAGE_TTL);
     }
 
     public boolean isReportCached(Long reportId) {
-        return Boolean.TRUE.equals(
-                redisTemplate.boundHashOps(pageKey()).hasKey(reportId.toString())
-        );
+        return Boolean.TRUE.equals(redisTemplate.hasKey(reportItemKey(reportId)));
     }
 
     // === 튜닝 레포트 반응 관리를 위한 Cache : 유저별 반응 상태 (Hash) ===
@@ -101,11 +104,10 @@ public class TuningReportCacheManager {
     public void setUserReaction(Long reportId, Long userId, ReactionType type, boolean reacted) {
         String key = userKey(reportId, userId);
         try {
-            log.info("✅ 유저별 반응 상태 캐싱 되기 직전 reportId:{}", reportId);
             redisTemplate.opsForHash().put(key, type.name(), reacted ? "1" : "0");
             redisTemplate.expire(key, PAGE_TTL);
         } catch (Exception e) {
-            log.info("❌ 유저별 반응 상태 캐싱 되기 직전에 redis에 저장 실패 {}", e);
+            log.warn("❌ 유저 리액션 캐싱 실패: {}", e.getMessage());
         }
     }
 
@@ -138,7 +140,6 @@ public class TuningReportCacheManager {
         );
     }
 
-    // Dirty Set
     public void markDirty(Long reportId) {
         redisTemplate.opsForSet().add(DIRTY_SET, reportId.toString());
     }

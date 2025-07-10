@@ -16,7 +16,6 @@ import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -45,7 +44,7 @@ public class TuningReportReactionService {
 
     private TuningReportReactionResponse toggleWithCache(Long reportId, Long userId, ReactionType type) {
         boolean isReacted;
-        String pageKey = cacheManager.pageKey();
+        String reportKey = cacheManager.reportItemKey(reportId);
         String userKey = cacheManager.userKey(reportId, userId);
 
         Boolean current = cacheManager.getUserReaction(reportId, userId, type);
@@ -69,9 +68,8 @@ public class TuningReportReactionService {
 
         // Step 2: ReportItem 캐시 수정 (reactions + myReactions)
         try {
-            Object raw = redisTemplate.opsForHash().get(pageKey, reportId.toString());
-            if (raw != null) {
-                String json = raw.toString();
+            String json = redisTemplate.opsForValue().get(reportKey);
+            if (json != null) {
                 TuningReportListResponse.ReportItem item = objectMapper.readValue(json, TuningReportListResponse.ReportItem.class);
 
                 if (isReacted) item.getReactions().increase(type);
@@ -81,8 +79,7 @@ public class TuningReportReactionService {
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
-
-                redisTemplate.opsForHash().put(pageKey, reportId.toString(), objectMapper.writeValueAsString(item));
+                redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), Duration.ofMinutes(35));
 
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
