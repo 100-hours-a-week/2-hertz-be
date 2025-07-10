@@ -1,22 +1,23 @@
 package com.hertz.hertz_be.domain.tuningreport.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hertz.hertz_be.domain.tuningreport.dto.request.TuningReportReactionToggleRequest;
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportListResponse;
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportReactionResponse;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataAccessException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.stereotype.Service;
-
 import java.time.Duration;
-import java.util.List;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TuningReportReactionService {
@@ -24,7 +25,9 @@ public class TuningReportReactionService {
     private final TuningReportCacheManager cacheManager;
     private final RedisTemplate<String, String> redisTemplate;
     private final TuningReportReactionTransactionalService txService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     public TuningReportReactionResponse toggleReportReaction(
             Long userId,
@@ -49,33 +52,49 @@ public class TuningReportReactionService {
         boolean already = current != null && current;
         isReacted = !already;
 
-        redisTemplate.execute(new SessionCallback<List<Object>>() {
+        // Step 1: 트랜잭션으로 사용자 반응 상태 + dirty set 저장
+        redisTemplate.execute(new SessionCallback<>() {
             @Override
-            public List<Object> execute(RedisOperations ops) throws DataAccessException {
+            public Object execute(RedisOperations ops) {
                 ops.multi();
-                ops.opsForHash().increment(pageKey, type.name(), isReacted ? 1L : -1L);
                 ops.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
                 ops.opsForSet().add("dirty:reports", reportId.toString());
-                ops.expire(pageKey, Duration.ofMinutes(35));
+                ops.expire(userKey, Duration.ofMinutes(35));
                 ops.expire("dirty:reports", Duration.ofMinutes(35));
                 return ops.exec();
             }
         });
 
+        int newCount = 0;
+
+        // Step 2: ReportItem 캐시 수정 (reactions + myReactions)
         try {
-            String json = redisTemplate.opsForHash().get(pageKey, reportId.toString()).toString();
-            if (json != null) {
+            Object raw = redisTemplate.opsForHash().get(pageKey, reportId.toString());
+            if (raw != null) {
+                String json = raw.toString();
                 TuningReportListResponse.ReportItem item = objectMapper.readValue(json, TuningReportListResponse.ReportItem.class);
+
                 if (isReacted) item.getReactions().increase(type);
                 else item.getReactions().decrease(type);
-                redisTemplate.opsForHash().put(pageKey, reportId.toString(), objectMapper.writeValueAsString(item));
-            }
-        } catch (JsonProcessingException ignored) {}
 
-        Object cnt = redisTemplate.opsForHash().get(pageKey, type.name());
-        int newCount = 0;
-        if (cnt instanceof String s) newCount = Integer.parseInt(s);
-        else if (cnt instanceof Integer i) newCount = i;
+                if (item.getMyReactions() == null)
+                    item.setMyReactions(new TuningReportListResponse.MyReactions());
+                item.getMyReactions().set(type, isReacted);
+
+
+                redisTemplate.opsForHash().put(pageKey, reportId.toString(), objectMapper.writeValueAsString(item));
+
+                newCount = switch (type) {
+                    case CELEBRATE -> item.getReactions().getCelebrate();
+                    case THUMBS_UP -> item.getReactions().getThumbsUp();
+                    case LAUGH -> item.getReactions().getLaugh();
+                    case EYES -> item.getReactions().getEyes();
+                    case HEART -> item.getReactions().getHeart();
+                };
+            }
+        } catch (Exception e) {
+            log.warn("❌ ReportItem 캐시 갱신 실패: reportId={}, error={}", reportId, e.getMessage());
+        }
 
         return new TuningReportReactionResponse(reportId, type, isReacted, newCount);
     }
