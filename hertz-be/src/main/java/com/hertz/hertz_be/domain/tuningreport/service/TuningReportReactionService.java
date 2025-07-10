@@ -5,25 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hertz.hertz_be.domain.tuningreport.dto.request.TuningReportReactionToggleRequest;
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportListResponse;
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportReactionResponse;
-import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
-import com.hertz.hertz_be.domain.tuningreport.entity.TuningReportUserReaction;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
-import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
-import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
-import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
@@ -34,8 +23,7 @@ public class TuningReportReactionService {
 
     private final TuningReportCacheManager cacheManager;
     private final RedisTemplate<String, String> redisTemplate;
-    private final TuningReportRepository reportRepo;
-    private final TuningReportUserReactionRepository reactionRepo;
+    private final TuningReportReactionTransactionalService txService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TuningReportReactionResponse toggleReportReaction(
@@ -48,11 +36,10 @@ public class TuningReportReactionService {
         if (cacheManager.isReportCached(reportId)) {
             return toggleWithCache(reportId, userId, type);
         } else {
-            return toggleWithDbFallback(reportId, userId, type);
+            return txService.toggleWithDbFallback(reportId, userId, type);
         }
     }
 
-    // 캐시 기반 처리
     private TuningReportReactionResponse toggleWithCache(Long reportId, Long userId, ReactionType type) {
         boolean isReacted;
         String pageKey = cacheManager.pageKey();
@@ -91,42 +78,5 @@ public class TuningReportReactionService {
         else if (cnt instanceof Integer i) newCount = i;
 
         return new TuningReportReactionResponse(reportId, type, isReacted, newCount);
-    }
-
-    // DB 기반 처리
-    @Transactional
-    @Retryable(
-            value = {
-                    ObjectOptimisticLockingFailureException.class,
-                    DeadlockLoserDataAccessException.class,
-                    CannotAcquireLockException.class
-            },
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 100, multiplier = 2)
-    )
-    protected TuningReportReactionResponse toggleWithDbFallback(Long reportId, Long userId, ReactionType type) {
-        boolean isReacted;
-        TuningReport report = reportRepo.findWithLockById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("리포트가 존재하지 않습니다."));
-
-        boolean exists = reactionRepo.existsByReportIdAndUserIdAndReactionType(reportId, userId, type);
-        if (exists) {
-            report.decreaseReaction(type);
-            reactionRepo.deleteByReportIdAndUserIdAndReactionType(reportId, userId, type);
-            isReacted = false;
-        } else {
-            reactionRepo.save(
-                    TuningReportUserReaction.builder()
-                            .report(report)
-                            .user(User.of(userId))
-                            .reactionType(type)
-                            .build()
-            );
-            report.increaseReaction(type);
-            isReacted = true;
-        }
-
-        int count = report.getCountByType(type);
-        return new TuningReportReactionResponse(reportId, type, isReacted, count);
     }
 }
