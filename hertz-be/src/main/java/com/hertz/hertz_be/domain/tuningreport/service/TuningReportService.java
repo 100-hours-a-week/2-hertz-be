@@ -8,6 +8,8 @@ import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManage
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,6 +28,7 @@ public class TuningReportService {
     private final TuningReportTransactionalService transactionalService;
     private final TuningReportCacheManager cacheManager;
     private final UserRepository userRepository;
+    private final RedissonClient redissonClient;
 
     public TuningReportListResponse getReportList(Long userId, int page, int size, TuningReportSortType sort) {
         if (isCacheApplicable(page, size, sort)) {
@@ -43,16 +47,44 @@ public class TuningReportService {
 
     private List<TuningReportListResponse.ReportItem> loadOrCacheReports(String domain, int page, int size, TuningReportSortType sort) {
         List<TuningReportListResponse.ReportItem> items = cacheManager.getCachedReportList(domain);
-        if (items == null) {
-            log.info("게시글 리스트 반환 시 캐싱 hit ⚠️");
-            var pageReq = PageRequest.of(page, size);
-            var reports = sort.fetch(pageReq, transactionalService.getTuningReportRepository(), domain);
-            items = reports.stream()
-                    .map(transactionalService::toReportItemWithoutReactions)
-                    .collect(Collectors.toList());
-            cacheManager.cacheReportList(domain, items);
+
+        if (items != null) return items;
+
+        // 캐시 미스 발생 → 락 획득 시도
+        String lockKey = "lock:report:domain:" + domain;
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            boolean acquired = lock.tryLock(2, 5, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.warn("⚠️ 도메인 {} 캐싱 락 획득 실패 → fallback to 캐시 재확인", domain);
+                return cacheManager.getCachedReportList(domain);
+            }
+
+            // 락 획득 후 다시 한 번 캐시 확인 (동시성 보장)
+            items = cacheManager.getCachedReportList(domain);
+            if (items == null) {
+                log.info("🎯 캐시 미스 → DB 조회 및 캐싱 시작: domain={}", domain);
+                var pageReq = PageRequest.of(page, size);
+                var reports = sort.fetch(pageReq, transactionalService.getTuningReportRepository(), domain);
+                items = reports.stream()
+                        .map(transactionalService::toReportItemWithoutReactions)
+                        .collect(Collectors.toList());
+
+                cacheManager.cacheReportList(domain, items);
+                log.info("✅ DB 조회 완료 및 캐싱: {}건", items.size());
+            }
+
+        } catch (InterruptedException e) {
+            log.warn("❌ 캐시 락 처리 중단: {}", e.getMessage());
+            Thread.currentThread().interrupt();
+            return List.of();
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        log.info("캐싱 되기 위해 load된 item 수: {}", items.size());
+
         return items;
     }
 
