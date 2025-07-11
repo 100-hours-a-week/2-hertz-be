@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 @Slf4j
@@ -30,6 +31,12 @@ public class TuningReportCacheManager {
 
     private static final Duration TUNING_REPORT_TTL = Duration.ofMinutes(35);
     private static final String DIRTY_SET = "dirty:reports";
+
+    public Duration getTTLDurForTuningReport() {
+        long baseSeconds = TUNING_REPORT_TTL.getSeconds();
+        long jitterSeconds = ThreadLocalRandom.current().nextInt(120);
+        return Duration.ofSeconds(baseSeconds + jitterSeconds);
+    }
 
     public String pageListKey(String domain) {
         return String.format("reports:domain=%s:page=0:size=10:sort=%s:list", domain, TuningReportSortType.LATEST);
@@ -48,16 +55,15 @@ public class TuningReportCacheManager {
     }
 
     // 특정 사용자의 userDomainKey TTL 갱신
-    public void refreshUserDomainTTL(Long userId) {
+    public void refreshUserDomainTTL(Long userId, Duration ttl) {
         String key = userDomainKey(userId);
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.expire(key, getTTLDurForTuningReport());
+            redisTemplate.expire(key, ttl);
         }
     }
 
-
     // 특정 사용자의 모든 userKey(reportId:reaction) TTL 갱신
-    public void refreshAllUserReactionTTLByScan(Long userId) {
+    public void refreshAllUserReactionTTLByScan(Long userId, Duration ttl) {
         String matchPattern = String.format("reports:*:user:%d", userId);
         ScanOptions options = ScanOptions.scanOptions().match(matchPattern).count(100).build();
 
@@ -67,12 +73,12 @@ public class TuningReportCacheManager {
 
         while (cursor.hasNext()) {
             String key = new String(cursor.next());
-            redisTemplate.expire(key, getTTLDurForTuningReport());
+            redisTemplate.expire(key, ttl);
         }
     }
 
     // 특정 domain에 해당하는 페이지 캐시의 모든 reportItemKey TTL 갱신
-    public void refreshReportListTTL(String domain) {
+    public void refreshReportListTTL(String domain, Duration ttl) {
         String listKey = pageListKey(domain);
         List<String> reportIds = redisTemplate.opsForList().range(listKey, 0, -1);
         if (reportIds == null || reportIds.isEmpty()) return;
@@ -80,12 +86,21 @@ public class TuningReportCacheManager {
         for (String reportId : reportIds) {
             String reportKey = reportItemKey(Long.parseLong(reportId));
             if (Boolean.TRUE.equals(redisTemplate.hasKey(reportKey))) {
-                redisTemplate.expire(reportKey, getTTLDurForTuningReport());
+                redisTemplate.expire(reportKey, ttl);
             }
         }
 
         // 리스트 자체의 TTL도 갱신
-        redisTemplate.expire(listKey, getTTLDurForTuningReport());
+        redisTemplate.expire(listKey, ttl);
+    }
+
+    @Async
+    public void refreshTuningReportTTL (Long userId, String domain) {
+        Duration ttl = getTTLDurForTuningReport();
+
+        refreshUserDomainTTL(userId, ttl);
+        refreshAllUserReactionTTLByScan(userId, ttl);
+        refreshReportListTTL(domain, ttl);
     }
 
     public String getUserDomain(Long userId, Function<Long, String> dbFetcher) {
@@ -94,7 +109,7 @@ public class TuningReportCacheManager {
         if (domain == null) {
             domain = dbFetcher.apply(userId);
             if (domain != null) {
-                redisTemplate.opsForValue().set(key, domain, TUNING_REPORT_TTL);
+                redisTemplate.opsForValue().set(key, domain, getTTLDurForTuningReport());
             }
         }
         return domain;
@@ -157,10 +172,6 @@ public class TuningReportCacheManager {
         String key = userKey(reportId, userId);
         Object v = redisTemplate.opsForHash().get(key, type.name());
         return v != null && "1".equals(v);
-    }
-
-    public Duration getTTLDurForTuningReport() {
-        return TUNING_REPORT_TTL;
     }
 
     public boolean hasUserReactionCached(Long reportId, Long userId) {

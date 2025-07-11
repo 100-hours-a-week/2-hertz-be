@@ -106,7 +106,7 @@ public class TuningReportReactionService {
             }
 
             // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
-            refreshTuningReportTTL(userId, domain);
+            cacheManager.refreshTuningReportTTL(userId, domain);
 
         } catch (Exception e) {
             log.warn("❌ 분산 락 처리 실패: reportId={}, error={}", reportId, e.getMessage());
@@ -118,12 +118,5 @@ public class TuningReportReactionService {
         }
 
         return new TuningReportReactionResponse(reportId, type, isReacted, newCount);
-    }
-
-    @Async
-    private void refreshTuningReportTTL (Long userId, String domain) {
-        cacheManager.refreshUserDomainTTL(userId);
-        cacheManager.refreshAllUserReactionTTLByScan(userId);
-        cacheManager.refreshReportListTTL(domain);
     }
 }
