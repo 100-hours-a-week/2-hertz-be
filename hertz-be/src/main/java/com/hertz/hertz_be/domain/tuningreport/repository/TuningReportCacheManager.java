@@ -24,7 +24,6 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class TuningReportCacheManager {
     private final RedisTemplate<String, String> redisTemplate;
-    private final TuningReportFlushScheduler tuningReportFlushScheduler;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -237,7 +236,6 @@ public class TuningReportCacheManager {
 
     @Async
     public void invalidateDomainCache(String domain) {
-        tuningReportFlushScheduler.flushDirtyReports();
         deleteReportItemsAndUserKeysByDomain(domain);
         deleteAllUserDomainKeysByDomain(domain);
         log.info("✅ [캐시 무효화 완료] domain='{}'", domain);
