@@ -13,11 +13,16 @@ import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactio
 import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 
@@ -34,7 +39,7 @@ public class TuningReportFlushScheduler {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Transactional
-    @Scheduled(cron = "0 0/3 * * * *")
+    @Scheduled(cron = "0 0/1 * * * *")
     public void flushDirtyReports() {
         Set<String> dirty = cacheManager.getDirtyReportIds();
         if (dirty.isEmpty()) return;
@@ -72,13 +77,21 @@ public class TuningReportFlushScheduler {
                 reportRepo.save(report);
 
                 // 각 게시글에 대한 유저별 반응 동기화
-                String userPattern = String.format("reports:%d:user:*", reportId);
-                Set<String> userKeys = redisTemplate.keys(userPattern);
+                Set<String> userKeys = new HashSet<>();
+                ScanOptions options = ScanOptions.scanOptions()
+                        .match(String.format("reports:%d:user:*", reportId))
+                        .count(100)
+                        .build();
+                try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory().getConnection().scan(options)) {
+                    while (cursor.hasNext()) {
+                        userKeys.add(new String(cursor.next()));
+                    }
+                }
 
+                List<TuningReportUserReaction> toInsert = new ArrayList<>();
                 for (String uk : userKeys) {
                     try {
                         Long userId = Long.parseLong(uk.split(":")[3]);
-
                         for (ReactionType type : ReactionType.values()) {
                             Boolean reacted = cacheManager.getUserReaction(reportId, userId, type);
                             if (reacted == null) continue;
@@ -86,7 +99,7 @@ public class TuningReportFlushScheduler {
                             boolean exists = reactionRepo.existsByReportIdAndUserIdAndReactionType(reportId, userId, type);
 
                             if (reacted && !exists) {
-                                reactionRepo.save(TuningReportUserReaction.builder()
+                                toInsert.add(TuningReportUserReaction.builder()
                                         .report(report)
                                         .user(User.of(userId))
                                         .reactionType(type)
@@ -95,10 +108,13 @@ public class TuningReportFlushScheduler {
                                 reactionRepo.deleteByReportIdAndUserIdAndReactionType(reportId, userId, type);
                             }
                         }
-
                     } catch (Exception e) {
                         log.warn("❌ [유저 반응 동기화 실패] userKey={} msg={}", uk, e.getMessage());
                     }
+                }
+
+                if (!toInsert.isEmpty()) {
+                    reactionRepo.saveAll(toInsert);
                 }
 
                 log.info("✅ [FLUSHED] reportId={} synchronized successfully.", reportId);
