@@ -39,7 +39,7 @@ public class TuningReportFlushScheduler {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Transactional
-    @Scheduled(cron = "0 0/1 * * * *")
+    @Scheduled(cron = "0 0/30 * * * *")
     public void flushDirtyReports() {
         Set<String> dirty = cacheManager.getDirtyReportIds();
         if (dirty.isEmpty()) return;
