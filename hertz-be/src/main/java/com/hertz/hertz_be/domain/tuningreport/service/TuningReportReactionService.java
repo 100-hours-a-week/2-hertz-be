@@ -74,15 +74,8 @@ public class TuningReportReactionService {
             isReacted = !already;
 
             // Step 2: 유저 상태 + Dirty Set 저장
-            redisTemplate.execute(new SessionCallback<>() {
-                @Override
-                public Object execute(RedisOperations ops) {
-                    ops.multi();
-                    ops.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
-                    cacheManager.markDirty(reportId);
-                    return ops.exec();
-                }
-            });
+            redisTemplate.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
+            cacheManager.markDirty(reportId);
 
             // Step 3: ReportItem 캐시 읽고 수정
             String json = redisTemplate.opsForValue().get(reportKey);
