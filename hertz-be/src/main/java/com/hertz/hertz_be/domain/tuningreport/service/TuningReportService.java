@@ -46,7 +46,7 @@ public class TuningReportService {
         if (items == null) {
             log.info("게시글 리스트 반환 시 캐싱 hit ⚠️");
             var pageReq = PageRequest.of(page, size);
-            var reports = sort.fetch(pageReq, transactionalService.getTuningReportRepository());
+            var reports = sort.fetch(pageReq, transactionalService.getTuningReportRepository(), domain);
             items = reports.stream()
                     .map(transactionalService::toReportItemWithoutReactions)
                     .collect(Collectors.toList());

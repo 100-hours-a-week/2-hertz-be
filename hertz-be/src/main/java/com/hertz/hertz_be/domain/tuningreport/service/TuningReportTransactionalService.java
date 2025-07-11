@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.TuningReportSortType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,11 +29,13 @@ public class TuningReportTransactionalService {
 
     private final TuningReportRepository tuningReportRepository;
     private final TuningReportUserReactionRepository tuningReportUserReactionRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public TuningReportListResponse fetchDirectlyFromDB(Long userId, int page, int size, TuningReportSortType sort) {
+        String domain = userRepository.findDistinctEmailDomains(userId);
         PageRequest pageRequest = PageRequest.of(page, size);
-        Page<TuningReport> reports = sort.fetch(pageRequest, tuningReportRepository);
+        Page<TuningReport> reports = sort.fetch(pageRequest, tuningReportRepository, domain);
 
         List<Long> reportIds = reports.stream().map(TuningReport::getId).toList();
         List<TuningReportUserReaction> userReactions =
