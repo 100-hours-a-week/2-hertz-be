@@ -7,9 +7,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportListResponse;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.TuningReportSortType;
+import com.hertz.hertz_be.domain.tuningreport.service.TuningReportFlushScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -21,6 +23,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class TuningReportCacheManager {
     private final RedisTemplate<String, String> redisTemplate;
+    private final TuningReportFlushScheduler tuningReportFlushScheduler;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -97,7 +100,6 @@ public class TuningReportCacheManager {
         return domain;
     }
 
-    // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (List) ===
     public List<TuningReportListResponse.ReportItem> getCachedReportList(String domain) {
         String listKey = pageListKey(domain);
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(listKey))) return null;
@@ -141,7 +143,6 @@ public class TuningReportCacheManager {
         return Boolean.TRUE.equals(redisTemplate.hasKey(reportItemKey(reportId)));
     }
 
-    // === 튜닝 레포트 반응 관리를 위한 Cache : 유저별 반응 상태 (Hash) ===
     public void setUserReaction(Long reportId, Long userId, ReactionType type, boolean reacted) {
         String key = userKey(reportId, userId);
         try {
@@ -177,5 +178,57 @@ public class TuningReportCacheManager {
 
     public void clearDirtyReportId(String reportId) {
         redisTemplate.opsForSet().remove(DIRTY_SET, reportId);
+    }
+
+    public void deleteReportItemsAndUserKeysByDomain(String domain) {
+        String listKey = pageListKey(domain);
+
+        List<String> reportIds = redisTemplate.opsForList().range(listKey, 0, -1);
+        if (reportIds == null || reportIds.isEmpty()) {
+            return;
+        }
+
+        for (String reportId : reportIds) {
+            String reportKey = reportItemKey(Long.parseLong(reportId));
+            redisTemplate.delete(reportKey);
+
+            String userPattern = String.format("reports:%s:user:*", reportId);
+            ScanOptions options = ScanOptions.scanOptions().match(userPattern).count(100).build();
+
+            try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory().getConnection().scan(options)) {
+                while (cursor.hasNext()) {
+                    String key = new String(cursor.next());
+                    redisTemplate.delete(key);
+                }
+            } catch (Exception e) {
+                log.warn("❌ 유저 리액션 키 삭제 중 오류: reportId={} - {}", reportId, e.getMessage());
+            }
+        }
+
+        redisTemplate.delete(listKey);
+    }
+
+    public void deleteAllUserDomainKeysByDomain(String domain) {
+        ScanOptions options = ScanOptions.scanOptions().match("user:*:domain").count(100).build();
+
+        try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory().getConnection().scan(options)) {
+            while (cursor.hasNext()) {
+                String key = new String(cursor.next());
+                String value = redisTemplate.opsForValue().get(key);
+                if (domain.equals(value)) {
+                    redisTemplate.delete(key);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("❌ userDomainKey 삭제 실패: {}", e.getMessage());
+        }
+    }
+
+    @Async
+    public void invalidateDomainCache(String domain) {
+        tuningReportFlushScheduler.flushDirtyReports();
+        deleteReportItemsAndUserKeysByDomain(domain);
+        deleteAllUserDomainKeysByDomain(domain);
+        log.info("✅ [캐시 무효화 완료] domain='{}'", domain);
     }
 }
