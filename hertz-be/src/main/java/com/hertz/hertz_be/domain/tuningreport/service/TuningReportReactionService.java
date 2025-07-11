@@ -16,8 +16,10 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -77,7 +79,6 @@ public class TuningReportReactionService {
                 public Object execute(RedisOperations ops) {
                     ops.multi();
                     ops.opsForHash().put(userKey, type.name(), isReacted ? "1" : "0");
-                    ops.expire(userKey, cacheManager.getTTLDurForTuningReport());
                     cacheManager.markDirty(reportId);
                     return ops.exec();
                 }
@@ -95,11 +96,6 @@ public class TuningReportReactionService {
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
-                redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), cacheManager.getTTLDurForTuningReport());
-
-                String listKey = cacheManager.pageListKey(domain);
-                redisTemplate.expire(listKey, cacheManager.getTTLDurForTuningReport());
-
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
                     case THUMBS_UP -> item.getReactions().getThumbsUp();
@@ -108,6 +104,9 @@ public class TuningReportReactionService {
                     case HEART -> item.getReactions().getHeart();
                 };
             }
+
+            // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
+            refreshTuningReportTTL(userId, domain);
 
         } catch (Exception e) {
             log.warn("❌ 분산 락 처리 실패: reportId={}, error={}", reportId, e.getMessage());
@@ -119,5 +118,12 @@ public class TuningReportReactionService {
         }
 
         return new TuningReportReactionResponse(reportId, type, isReacted, newCount);
+    }
+
+    @Async
+    private void refreshTuningReportTTL (Long userId, String domain) {
+        cacheManager.refreshUserDomainTTL(userId);
+        cacheManager.refreshAllUserReactionTTLByScan(userId);
+        cacheManager.refreshReportListTTL(domain);
     }
 }

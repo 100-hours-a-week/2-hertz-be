@@ -44,6 +44,47 @@ public class TuningReportCacheManager {
         return String.format("reports:%d:user:%d", reportId, userId);
     }
 
+    // 특정 사용자의 userDomainKey TTL 갱신
+    public void refreshUserDomainTTL(Long userId) {
+        String key = userDomainKey(userId);
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            redisTemplate.expire(key, getTTLDurForTuningReport());
+        }
+    }
+
+
+    // 특정 사용자의 모든 userKey(reportId:reaction) TTL 갱신
+    public void refreshAllUserReactionTTLByScan(Long userId) {
+        String matchPattern = String.format("reports:*:user:%d", userId);
+        ScanOptions options = ScanOptions.scanOptions().match(matchPattern).count(100).build();
+
+        Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
+                .getConnection()
+                .scan(options);
+
+        while (cursor.hasNext()) {
+            String key = new String(cursor.next());
+            redisTemplate.expire(key, getTTLDurForTuningReport());
+        }
+    }
+
+    // 특정 domain에 해당하는 페이지 캐시의 모든 reportItemKey TTL 갱신
+    public void refreshReportListTTL(String domain) {
+        String listKey = pageListKey(domain);
+        List<String> reportIds = redisTemplate.opsForList().range(listKey, 0, -1);
+        if (reportIds == null || reportIds.isEmpty()) return;
+
+        for (String reportId : reportIds) {
+            String reportKey = reportItemKey(Long.parseLong(reportId));
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(reportKey))) {
+                redisTemplate.expire(reportKey, getTTLDurForTuningReport());
+            }
+        }
+
+        // 리스트 자체의 TTL도 갱신
+        redisTemplate.expire(listKey, getTTLDurForTuningReport());
+    }
+
     public String getUserDomain(Long userId, Function<Long, String> dbFetcher) {
         String key = userDomainKey(userId);
         String domain = redisTemplate.opsForValue().get(key);
