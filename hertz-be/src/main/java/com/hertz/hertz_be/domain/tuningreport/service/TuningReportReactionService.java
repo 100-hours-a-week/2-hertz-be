@@ -8,6 +8,7 @@ import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportListRespo
 import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportReactionResponse;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -27,6 +28,7 @@ public class TuningReportReactionService {
     private final TuningReportCacheManager cacheManager;
     private final RedisTemplate<String, String> redisTemplate;
     private final TuningReportReactionTransactionalService txService;
+    private final UserRepository userRepository;
     private final RedissonClient redissonClient;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -51,6 +53,7 @@ public class TuningReportReactionService {
         boolean isReacted;
         String reportKey = cacheManager.reportItemKey(reportId);
         String userKey = cacheManager.userKey(reportId, userId);
+        String domain = cacheManager.getUserDomain(userId, userRepository::findDistinctEmailDomains);
 
         RLock lock = redissonClient.getLock("lock:report:" + reportId);
 
@@ -94,7 +97,7 @@ public class TuningReportReactionService {
 
                 redisTemplate.opsForValue().set(reportKey, objectMapper.writeValueAsString(item), cacheManager.getTTLDurForTuningReport());
 
-                String listKey = cacheManager.pageListKey();
+                String listKey = cacheManager.pageListKey(domain);
                 redisTemplate.expire(listKey, cacheManager.getTTLDurForTuningReport());
 
                 newCount = switch (type) {

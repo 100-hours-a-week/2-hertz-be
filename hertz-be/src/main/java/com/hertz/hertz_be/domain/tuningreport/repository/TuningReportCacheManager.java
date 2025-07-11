@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Function;
 
 @Slf4j
 @Component
@@ -27,8 +28,12 @@ public class TuningReportCacheManager {
     private static final Duration TUNING_REPORT_TTL = Duration.ofMinutes(35);
     private static final String DIRTY_SET = "dirty:reports";
 
-    public String pageListKey() {
-        return String.format("reports:page=0:size=10:sort=%s:list", TuningReportSortType.LATEST);
+    public String pageListKey(String domain) {
+        return String.format("reports:domain=%s:page=0:size=10:sort=%s:list", domain, TuningReportSortType.LATEST);
+    }
+
+    public String userDomainKey(Long userId) {
+        return "user:" + userId + ":domain";
     }
 
     public String reportItemKey(Long reportId) {
@@ -39,9 +44,21 @@ public class TuningReportCacheManager {
         return String.format("reports:%d:user:%d", reportId, userId);
     }
 
+    public String getUserDomain(Long userId, Function<Long, String> dbFetcher) {
+        String key = userDomainKey(userId);
+        String domain = redisTemplate.opsForValue().get(key);
+        if (domain == null) {
+            domain = dbFetcher.apply(userId);
+            if (domain != null) {
+                redisTemplate.opsForValue().set(key, domain, TUNING_REPORT_TTL);
+            }
+        }
+        return domain;
+    }
+
     // === 최신 게시글 10에 대한 Cache : 페이지별 리포트 목록 (List) ===
-    public List<TuningReportListResponse.ReportItem> getCachedReportList() {
-        String listKey = pageListKey();
+    public List<TuningReportListResponse.ReportItem> getCachedReportList(String domain) {
+        String listKey = pageListKey(domain);
         if (!Boolean.TRUE.equals(redisTemplate.hasKey(listKey))) return null;
 
         List<String> idList = redisTemplate.opsForList().range(listKey, 0, -1);
@@ -62,8 +79,8 @@ public class TuningReportCacheManager {
         return result;
     }
 
-    public void cacheReportList(List<TuningReportListResponse.ReportItem> items) {
-        String listKey = pageListKey();
+    public void cacheReportList(String domain, List<TuningReportListResponse.ReportItem> items) {
+        String listKey = pageListKey(domain);
         redisTemplate.delete(listKey);
 
         for (TuningReportListResponse.ReportItem item : items) {

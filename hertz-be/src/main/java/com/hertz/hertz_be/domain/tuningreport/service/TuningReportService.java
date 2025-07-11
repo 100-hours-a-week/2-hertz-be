@@ -5,6 +5,7 @@ import com.hertz.hertz_be.domain.tuningreport.entity.TuningReportUserReaction;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.TuningReportSortType;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
+import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -23,10 +24,12 @@ public class TuningReportService {
 
     private final TuningReportTransactionalService transactionalService;
     private final TuningReportCacheManager cacheManager;
+    private final UserRepository userRepository;
 
     public TuningReportListResponse getReportList(Long userId, int page, int size, TuningReportSortType sort) {
         if (isCacheApplicable(page, size, sort)) {
-            List<TuningReportListResponse.ReportItem> cachedItems = loadOrCacheReports(page, size, sort);
+            String domain = cacheManager.getUserDomain(userId, userRepository::findDistinctEmailDomains);
+            List<TuningReportListResponse.ReportItem> cachedItems = loadOrCacheReports(domain, page, size, sort);
             List<TuningReportListResponse.ReportItem> enriched = enrichWithUserReactions(cachedItems, userId);
             return createResponse(enriched, page, size);
         }
@@ -38,8 +41,8 @@ public class TuningReportService {
         return page == 0 && size == 10 && sort == TuningReportSortType.LATEST;
     }
 
-    private List<TuningReportListResponse.ReportItem> loadOrCacheReports(int page, int size, TuningReportSortType sort) {
-        List<TuningReportListResponse.ReportItem> items = cacheManager.getCachedReportList();
+    private List<TuningReportListResponse.ReportItem> loadOrCacheReports(String domain, int page, int size, TuningReportSortType sort) {
+        List<TuningReportListResponse.ReportItem> items = cacheManager.getCachedReportList(domain);
         if (items == null) {
             log.info("게시글 리스트 반환 시 캐싱 hit ⚠️");
             var pageReq = PageRequest.of(page, size);
@@ -47,7 +50,7 @@ public class TuningReportService {
             items = reports.stream()
                     .map(transactionalService::toReportItemWithoutReactions)
                     .collect(Collectors.toList());
-            cacheManager.cacheReportList(items);
+            cacheManager.cacheReportList(domain, items);
         }
         log.info("캐싱 되기 위해 load된 item 수: {}", items.size());
         return items;
