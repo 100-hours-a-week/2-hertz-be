@@ -21,14 +21,36 @@ public class SocketIoServerRunner {
     @PostConstruct
     public void startServer() {
         try {
-            server.start();
-            log.info("✅ Socket.IO 서버 시작됨 (port={})", server.getConfiguration().getPort());
+            if (!serverRunning()) {
+                server.start();
+                log.info(":: [Socket.IO] Server - Start ::");
+            } else {
+                log.info(":: [Socket.IO] Server - already process ::");
+            }
         } catch (Exception e) {
             if (containsBindException(e)) {
-                log.warn("⚠️ 이미 해당 포트로 Socket.IO 서버가 실행 중입니다. 무시하고 진행합니다.");
+                log.warn(":: [Socket.IO] Server - Port conflict, Restart ::");
+
+                // 강제 재시작 로직
+                try {
+                    server.stop(); // 이미 떠 있는 서버 종료 시도
+                    server.start(); // 다시 시작
+                    log.info(":: [Socket.IO] Server - Restart Success::");
+                } catch (Exception ex) {
+                    log.error(":: [Socket.IO] Server - Restart Fail::", ex);
+                }
             } else {
-                log.error("❌ Socket.IO 서버 시작 중 예외 발생", e);
+                log.error(":: [Socket.IO] Server - Run Fail::", e);
             }
+        }
+    }
+
+    private boolean serverRunning() {
+        try {
+            // 최소한 포트가 바인딩되어 있고, 클라이언트 목록을 가져올 수 있다면 서버는 살아있음
+            return server.getConfiguration().getPort() > 0 && !server.getAllClients().isEmpty();
+        } catch (Exception e) {
+            return false;
         }
     }
 
