@@ -19,9 +19,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Slf4j
@@ -33,7 +30,7 @@ public class SocketIoController {
     private final SocketIoTokenUtil socketIoTokenUtil;
     private final SignalRoomRepository signalRoomRepository;
     private final UserRepository userRepository;
-    private final Map<Long, UUID> connectedUsers = new ConcurrentHashMap<>();
+    private final SocketIoSessionManager socketIoSessionManager;
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
@@ -47,7 +44,6 @@ public class SocketIoController {
         return client -> {
             try {
                 String cookie = client.getHandshakeData().getHttpHeaders().get("cookie");
-
                 if (cookie == null) {
                     log.warn("[Connect Fail] 쿠키 없음 → 연결 종료: sessionId={}", client.getSessionId());
                     client.disconnect();
@@ -55,7 +51,6 @@ public class SocketIoController {
                 }
 
                 String refreshToken = socketIoTokenUtil.extractCookie(cookie, "refreshToken");
-
                 if (refreshToken == null || refreshToken.isBlank()) {
                     log.warn("[Connect Fail] refreshToken 추출 실패 → 연결 종료: sessionId={}", client.getSessionId());
                     client.disconnect();
@@ -76,23 +71,12 @@ public class SocketIoController {
                     return;
                 }
 
-                client.set("userId", userId);
-
                 List<Long> roomIds = signalRoomRepository.findRoomIdsByUserId(userId);
                 client.set("roomIds", roomIds); // 채팅방 목록 저장
-
-//                for (Long roomId : roomIds) {
-//                    try {
-//                        client.joinRoom("room-" + roomId);
-//                        log.info("[Connect Success] userId={} → room-{} 참가 성공", userId, roomId);
-//                    } catch (Exception joinEx) {
-//                        log.error("[Connect Fail] userId={} → room-{} 참가 실패: {}", userId, roomId, joinEx.getMessage());
-//                    }
-//                }
-
+                client.set("userId", userId);
                 client.sendEvent("init_user", userId);
 
-                connectedUsers.put(userId, client.getSessionId());
+                socketIoSessionManager.registerSession(userId, client.getSessionId());
                 log.info("[Connect Success] userId [{}] 접속 완료, 현재 접속자 수={}", userId, getConnectedUserCount());
 
             } catch (Exception e) {
@@ -114,7 +98,7 @@ public class SocketIoController {
             }
 
             if (userId != null) {
-                connectedUsers.remove(userId);
+                socketIoSessionManager.unregisterSession(userId);
                 log.info("[Disconnect Success] userId={}, 연결 종료, 현재 접속자 수={}", userId, getConnectedUserCount());
             }
         };
@@ -154,7 +138,7 @@ public class SocketIoController {
     }
 
     public int getConnectedUserCount() {
-        return connectedUsers.size();
+        return socketIoSessionManager.getConnectedUserCount();
     }
 
     private Long getUserIdFromClient(SocketIOClient client) {

@@ -40,3 +40,5 @@ out/
 
 ### Shenandoah GC logs ###
 logs/*
+
+tuning-fcm-certification.json
