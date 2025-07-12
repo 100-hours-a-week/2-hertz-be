@@ -41,6 +41,7 @@ public class FCMService {
     }
 
     // 사용자에게 push 알림
+    @Transactional(readOnly = true)
     public ResponseEntity<?> pushNotification(Long userId, String title, String content){
         Map<String, Object> resultMap = new HashMap<>();
         HttpStatus status = null;
