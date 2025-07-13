@@ -8,8 +8,10 @@ import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.webpush.responsecode.FCMResponseCode;
 import com.hertz.hertz_be.global.webpush.token.FCMTokenDao;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -21,23 +23,32 @@ import java.util.Map;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class FCMService {
 
     private final FCMTokenDao fcmTokenDao;
     private final UserRepository userRepository;
 
-    public ResponseEntity<?> saveToken(Long userId, String token) {
-        Map<String, Object> resultMap = new HashMap<>();
-        HttpStatus status = null;
+    public void saveToken(Long userId, String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new BusinessException(
+                    FCMResponseCode.FCM_INVALID_TOKEN.getCode(),
+                    FCMResponseCode.FCM_INVALID_TOKEN.getHttpStatus(),
+                    FCMResponseCode.FCM_INVALID_TOKEN.getMessage()
+            );
+        }
+
         try {
             User user = getActiveUserOrThrow(userId);
             fcmTokenDao.saveToken(userId, token);
-            status = HttpStatus.OK;
         } catch (Exception e) {
-            resultMap.put("exception", e.getMessage());
-            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            log.error(":: FCM Token 저장 중 예외 발생 ::", e);
+            throw new BusinessException(
+                    FCMResponseCode.FCM_TOKEN_SAVED_FAIL.getCode(),
+                    FCMResponseCode.FCM_TOKEN_SAVED_FAIL.getHttpStatus(),
+                    FCMResponseCode.FCM_TOKEN_SAVED_FAIL.getMessage()
+            );
         }
-        return new ResponseEntity<>(resultMap, status);
     }
 
     // 사용자에게 push 알림
