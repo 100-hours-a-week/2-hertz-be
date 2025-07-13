@@ -3,6 +3,7 @@ package com.hertz.hertz_be.domain.user.controller.v3;
 import com.hertz.hertz_be.domain.user.dto.request.v3.OneLineIntroductionRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.RejectCategoryChangeRequestDto;
 import com.hertz.hertz_be.domain.user.dto.request.v3.UserInfoRequestDto;
+import com.hertz.hertz_be.domain.user.dto.response.v3.UserProfileDTO;
 import com.hertz.hertz_be.domain.user.dto.response.v3.UserInfoResponseDto;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.service.v3.UserService;
@@ -91,6 +92,29 @@ public class UserController {
                     null
                 )
         );
+    }
+
+    @GetMapping("/users/{userId}")
+    @Operation(summary = "사용자 정보 조회 API")
+    public ResponseEntity<ResponseDto<UserProfileDTO>> getUserProfile(@PathVariable Long userId,
+                                                                      @AuthenticationPrincipal Long id) {
+        UserProfileDTO response = userService.getUserProfile(userId, id);
+
+        if("ME".equals(response.getRelationType())) {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(
+                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getCode(),
+                            UserResponseCode.USER_INFO_FETCH_SUCCESS.getMessage(),
+                            response)
+            );
+        } else {
+            return ResponseEntity.ok(
+                    new ResponseDto<>(
+                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getCode(),
+                            UserResponseCode.OTHER_USER_INFO_FETCH_SUCCESS.getMessage(),
+                            response)
+            );
+        }
     }
 
 }

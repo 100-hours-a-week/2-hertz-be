@@ -18,6 +18,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.util.backoff.FixedBackOff;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,8 +71,19 @@ public class KafkaConsumerConfig {
                 kafkaTemplate,
                 (record, ex) -> new TopicPartition(SseDLQTopicName, record.partition())
         );
+
         FixedBackOff backOff = new FixedBackOff(1000L, 3);
-        return new DefaultErrorHandler(recoverer, backOff);
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+
+        errorHandler.addNotRetryableExceptions(
+                IOException.class,
+                IllegalStateException.class,
+                org.apache.catalina.connector.ClientAbortException.class,
+                org.springframework.web.context.request.async.AsyncRequestNotUsableException.class,
+                com.hertz.hertz_be.global.kafka.exception.KafkaException.class
+        );
+
+        return errorHandler;
     }
 
     @Bean(name = "stringKafkaListener")

@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - .github/workflows/** # 워크플로우 파일 변경은 배포 트리거하지 않음
       - Dockerfile # Dockerfile 변경은 배포 트리거하지 않음
+
   # ✅ 수동 `실행 트리거 추가
   workflow_dispatch:
     inputs:

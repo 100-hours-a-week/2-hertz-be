@@ -31,8 +31,25 @@ public class SseService {
 
     @Transactional(readOnly = true)
     public SseEmitter subscribe(Long userId) {
+        // 이미 연결된 emitter가 있다면 connect success 재전송 후 반환
+        if (emitters.containsKey(userId)) {
+            SseEmitter existingEmitter = emitters.get(userId);
+            try {
+                existingEmitter.send(SseEmitter.event()
+                        .name(SseEventName.PING.getValue())
+                        .data("connect success"));
+                log.info("기존 SSE 연결에 connect success 재전송: userId={}", userId);
+            } catch (IllegalStateException | IOException e) {
+                log.warn("기존 emitter에 connect success 전송 실패: userId={}, 사유: {}", userId, e.getMessage());
+                existingEmitter.complete();
+                emitters.remove(userId);
+            }
+            return existingEmitter;
+        }
+
         SseEmitter emitter = new SseEmitter(TIMEOUT);
 
+        // 유저 존재 여부 확인
         if (!userRepository.existsById(userId)) {
             try {
                 emitter.send(SseEmitter.event()
@@ -42,35 +59,26 @@ public class SseService {
                                 "message", String.format("SSE 연결 요청한 사용자가(userId=%s) 존재하지 않습니다.", userId)
                         )));
             } catch (IOException ignored) {
-                // 전송 실패해도 무시
             } finally {
                 emitter.complete();
             }
             return emitter;
         }
 
-        // 이미 연결되어 있으면 기존 emitter 종료
-        if (emitters.containsKey(userId)) {
-            emitters.get(userId).complete();
-            emitters.remove(userId);
-        }
-
+        // 새로운 emitter 저장 및 핸들러 등록
         emitters.put(userId, emitter);
 
-        // 연결 정상 종료
         emitter.onCompletion(() -> {
             log.info("SSE 연결 종료: userId={}", userId);
             emitters.remove(userId);
         });
 
-        // 연결 타임아웃
         emitter.onTimeout(() -> {
             log.info("SSE 타임아웃: userId={}", userId);
             emitter.complete();
             emitters.remove(userId);
         });
 
-        // 오류 발생
         emitter.onError(throwable -> {
             if (throwable instanceof org.apache.catalina.connector.ClientAbortException) {
                 log.warn("SSE ClientAbortException: 클라이언트 강제 종료 userId={}", userId);
