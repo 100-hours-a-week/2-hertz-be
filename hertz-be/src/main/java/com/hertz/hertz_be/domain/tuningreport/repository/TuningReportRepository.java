@@ -15,13 +15,23 @@ import java.util.Optional;
 @Repository
 public interface TuningReportRepository extends JpaRepository<TuningReport, Long> {
 
-    @Query("SELECT r FROM TuningReport r WHERE r.deletedAt IS NULL AND r.isVisible = true ORDER BY r.createdAt DESC")
-    Page<TuningReport> findAllNotDeletedOrderByCreatedAtDesc(Pageable pageable);
+    @Query("""
+    SELECT r FROM TuningReport r 
+    WHERE r.deletedAt IS NULL 
+      AND r.isVisible = true 
+      AND r.emailDomain = :emailDomain
+    ORDER BY r.createdAt DESC
+""")
+    Page<TuningReport> findAllNotDeletedByEmailDomainOrderByCreatedAtDesc(
+            @Param("emailDomain") String emailDomain,
+            Pageable pageable
+    );
 
     @Query("""
-    SELECT r FROM TuningReport r
-    WHERE r.deletedAt IS NULL
-    AND r.isVisible = true
+    SELECT r FROM TuningReport r 
+    WHERE r.deletedAt IS NULL 
+      AND r.isVisible = true 
+      AND r.emailDomain = :emailDomain
     ORDER BY (
         r.reactionCelebrate +
         r.reactionThumbsUp +
@@ -30,7 +40,10 @@ public interface TuningReportRepository extends JpaRepository<TuningReport, Long
         r.reactionHeart
     ) DESC
 """)
-    Page<TuningReport> findAllNotDeletedOrderByTotalReactionDesc(Pageable pageable);
+    Page<TuningReport> findAllNotDeletedByEmailDomainOrderByTotalReactionDesc(
+            @Param("emailDomain") String emailDomain,
+            Pageable pageable
+    );
 
     @Query("SELECT r FROM TuningReport r WHERE r.signalRoom = :signalRoom AND r.deletedAt IS NULL")
     Optional<TuningReport> findNotDeletedBySignalRoom(@Param("signalRoom") SignalRoom signalRoom);

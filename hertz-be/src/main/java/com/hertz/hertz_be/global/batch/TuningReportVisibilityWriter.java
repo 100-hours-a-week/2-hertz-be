@@ -2,7 +2,9 @@ package com.hertz.hertz_be.global.batch;
 
 import com.hertz.hertz_be.domain.alarm.service.AlarmService;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
+import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportCacheManager;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
+import com.hertz.hertz_be.domain.tuningreport.service.TuningReportFlushScheduler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
@@ -15,6 +17,8 @@ public class TuningReportVisibilityWriter implements ItemWriter<TuningReport> {
 
     private final AlarmService alarmService;
     private final TuningReportRepository tuningReportRepository;
+    private final TuningReportCacheManager tuningReportCacheManager;
+    private final TuningReportFlushScheduler tuningReportFlushScheduler;
 
     @Override
     @Transactional
@@ -28,5 +32,8 @@ public class TuningReportVisibilityWriter implements ItemWriter<TuningReport> {
         }
 
         alarmService.createTuningReportAlarm(emailDomain, coupleCount);
+
+        tuningReportFlushScheduler.flushDirtyReports();
+        tuningReportCacheManager.invalidateDomainCache(emailDomain);
     }
 }

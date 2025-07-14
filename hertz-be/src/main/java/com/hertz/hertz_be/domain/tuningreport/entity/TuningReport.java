@@ -1,6 +1,7 @@
 package com.hertz.hertz_be.domain.tuningreport.entity;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.tuningreport.dto.response.TuningReportListResponse;
 import com.hertz.hertz_be.domain.tuningreport.entity.enums.ReactionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,8 +14,6 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-// @SQLDelete(sql = "UPDATE tuning_report SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-//@Where(clause = "deleted_at IS NULL")
 @Table(name = "tuning_report")
 @Builder
 public class TuningReport {
@@ -119,5 +118,23 @@ public class TuningReport {
                 .isVisible(false)
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    public void updateReactionsFrom(TuningReportListResponse.Reactions reactions) {
+        this.reactionCelebrate = reactions.getCelebrate();
+        this.reactionThumbsUp = reactions.getThumbsUp();
+        this.reactionLaugh = reactions.getLaugh();
+        this.reactionEyes = reactions.getEyes();
+        this.reactionHeart = reactions.getHeart();
+    }
+
+    public int getCountByType(ReactionType type) {
+        return switch (type) {
+            case CELEBRATE -> reactionCelebrate;
+            case THUMBS_UP -> reactionThumbsUp;
+            case LAUGH -> reactionLaugh;
+            case EYES -> reactionEyes;
+            case HEART -> reactionHeart;
+        };
     }
 }

@@ -8,16 +8,16 @@ import org.springframework.data.domain.Pageable;
 public enum TuningReportSortType {
     LATEST {
         @Override
-        public Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository) {
-            return repository.findAllNotDeletedOrderByCreatedAtDesc(pageable);
+        public Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository, String emailDomain) {
+            return repository.findAllNotDeletedByEmailDomainOrderByCreatedAtDesc(emailDomain, pageable);
         }
     },
     POPULAR {
         @Override
-        public Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository) {
-            return repository.findAllNotDeletedOrderByTotalReactionDesc(pageable);
+        public Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository, String emailDomain) {
+            return repository.findAllNotDeletedByEmailDomainOrderByTotalReactionDesc(emailDomain, pageable);
         }
     };
 
-    public abstract Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository);
+    public abstract Page<TuningReport> fetch(Pageable pageable, TuningReportRepository repository, String emailDomain);
 }
