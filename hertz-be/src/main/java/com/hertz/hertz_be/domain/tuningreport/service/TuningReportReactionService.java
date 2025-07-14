@@ -96,10 +96,12 @@ public class TuningReportReactionService {
                     case EYES -> item.getReactions().getEyes();
                     case HEART -> item.getReactions().getHeart();
                 };
+                log.warn("👍게시글{}에 반응 처리 완료", reportId);
             }
 
             // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
             cacheManager.refreshTuningReportTTL(userId, domain);
+            log.warn("도메인={}의 모든 TTL 초기화", domain);
 
         } catch (Exception e) {
             log.warn("❌ 분산 락 처리 실패: reportId={}, error={}", reportId, e.getMessage());
