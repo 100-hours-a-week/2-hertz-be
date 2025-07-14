@@ -28,10 +28,14 @@ public class FCMInitializer {
                     .setCredentials(GoogleCredentials.fromStream(is))
                     .build();
 
-            if (FirebaseApp.getApps().isEmpty()) {
+            if (FirebaseApp.getApps().stream().noneMatch(app -> app.getName().equals(FirebaseApp.DEFAULT_APP_NAME))) {
                 FirebaseApp.initializeApp(options);
-                log.info("FirebaseApp initialization complete");
+                log.info("🔥 FirebaseApp initialization SUCCESS");
+            } else {
+                log.info("✅ FirebaseApp already initialized");
             }
+        } catch (Exception e) {
+            log.error("❌ FCM initialization FAIL");
         }
     }
 }
