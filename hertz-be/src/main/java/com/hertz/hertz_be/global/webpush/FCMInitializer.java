@@ -35,7 +35,7 @@ public class FCMInitializer {
                 log.info("✅ FirebaseApp already initialized");
             }
         } catch (Exception e) {
-            log.error("❌ FCM initialization FAIL");
+            log.error("❌ FCM initialization FAIL", e);
         }
     }
 }
