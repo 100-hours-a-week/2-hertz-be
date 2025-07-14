@@ -8,6 +8,7 @@ import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportRepository;
 import com.hertz.hertz_be.domain.tuningreport.repository.TuningReportUserReactionRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DeadlockLoserDataAccessException;
@@ -17,6 +18,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TuningReportReactionTransactionalService {
@@ -58,6 +60,7 @@ public class TuningReportReactionTransactionalService {
         }
 
         int count = report.getCountByType(type);
+        log.warn("⭐️게시글{}에 반응 처리 완료, DB에 바로 반영", reportId);
         return new TuningReportReactionResponse(reportId, type, isReacted, count);
     }
 }
