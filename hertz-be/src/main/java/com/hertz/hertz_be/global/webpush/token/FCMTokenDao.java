@@ -1,7 +1,5 @@
 package com.hertz.hertz_be.global.webpush.token;
 
-
-import com.hertz.hertz_be.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -18,7 +16,7 @@ public class FCMTokenDao {
     }
 
     public String getToken(Long userId) {
-        return tokenRedisTemplate.opsForValue().get(String.valueOf(userId));
+        return tokenRedisTemplate.opsForValue().get("fcm-token-userId-" + String.valueOf(userId));
     }
 
     public void deleteToken(Long userId) {
@@ -26,6 +24,6 @@ public class FCMTokenDao {
     }
 
     public boolean hasKey(Long userId) {
-        return tokenRedisTemplate.hasKey(String.valueOf(userId));
+        return tokenRedisTemplate.hasKey("fcm-token-userId-" + String.valueOf(userId));
     }
 }
