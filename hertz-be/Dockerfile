@@ -18,6 +18,6 @@ RUN curl -L -o opentelemetry-javaagent.jar \
 COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java","-Dloader.path=/app/resources","-javaagent:opentelemetry-javaagent.jar","-jar","app.jar"]
+ENTRYPOINT ["java","-Dloader.main=org.springframework.boot.loader.PropertiesLauncher", "-Dloader.path=/app/resources","-javaagent:opentelemetry-javaagent.jar","-jar","app.jar"]
 
 #ENTRYPOINT ["java", "-jar", "app.jar"]
