@@ -99,7 +99,7 @@ public class TuningReportReactionService {
                     case EYES -> item.getReactions().getEyes();
                     case HEART -> item.getReactions().getHeart();
                 };
-                log.warn("🔄{}에 반응 처리완료", reportId);
+//                log.warn("🔄{}에 반응 처리완료", reportId);
             }
 
             // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
