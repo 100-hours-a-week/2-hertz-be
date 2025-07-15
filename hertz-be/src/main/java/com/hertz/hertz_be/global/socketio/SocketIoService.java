@@ -75,24 +75,26 @@ public class SocketIoService {
                 .sendAt(sendAt)
                 .build();
 
-        signalMessageRepository.save(signalMessage);
-        entityManager.flush();
-
         if(!socketIoSessionManager.isConnected(receiverId)) {
             String pushTitle = sender.getNickname();
             String pushContent = aesUtil.decrypt(encryptedMessage);
             fcmService.pushNotification(receiverId, pushTitle, pushContent);
         }
 
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiverId, false);
-            }
-        });
+        return signalMessageRepository.save(signalMessage);
 
-        return signalMessage;
+//        signalMessageRepository.save(signalMessage);
+//        entityManager.flush();
+//
+//        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+//            @Override
+//            public void afterCommit() {
+//                asyncChannelService.notifyMatchingConverted(room);
+//                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiverId, false);
+//            }
+//        });
+//
+//        return signalMessage;
     }
 
     @Transactional
