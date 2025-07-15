@@ -89,6 +89,9 @@ public class TuningReportReactionService {
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
+                String updatedJson = objectMapper.writeValueAsString(item);
+                redisTemplate.opsForValue().set(reportKey, updatedJson, cacheManager.getTTLDurForTuningReport());
+
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
                     case THUMBS_UP -> item.getReactions().getThumbsUp();
