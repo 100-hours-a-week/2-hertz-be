@@ -15,4 +15,5 @@ public interface ChannelRoomProjection {
     Long getSenderUserId();
     Long getReceiverUserId();
     String getCategory();
+    int getLastPageNumber();
 }

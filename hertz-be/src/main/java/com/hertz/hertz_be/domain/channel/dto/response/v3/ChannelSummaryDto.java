@@ -20,6 +20,7 @@ public class ChannelSummaryDto {
     private boolean isRead;
     private String category;
     private String relationType;
+    private int lastPageNumber;
 
     public static com.hertz.hertz_be.domain.channel.dto.response.v3.ChannelSummaryDto fromProjectionWithDecrypt(ChannelRoomProjection p, AESUtil aesUtil) {
         String decryptedMessage;
@@ -37,7 +38,8 @@ public class ChannelSummaryDto {
                 p.getLastMessageTime(),
                 p.getIsRead(),
                 p.getCategory(),
-                p.getRelationType()
+                p.getRelationType(),
+                p.getLastPageNumber()
         );
     }
 }
