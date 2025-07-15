@@ -28,9 +28,9 @@ public class WarmupTuningReport {
     private final TuningReportFlushScheduler tuningReportFlushScheduler;
     private final RedissonClient redissonClient;
 
-    @Scheduled(cron = "0 0 15 ? * TUE")
+    @Scheduled(cron = "0 0 16 ? * TUE")
     public void warmupKakaotechReports() {
-        String domain = "kakaotech.com";
+        String domain = "example.com";
         String key = cacheManager.pageListKey(domain);
         String lockKey = "lock:warmup:" + domain;
 
