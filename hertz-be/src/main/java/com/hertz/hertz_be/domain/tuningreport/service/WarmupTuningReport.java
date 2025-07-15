@@ -30,7 +30,7 @@ public class WarmupTuningReport {
 
     @Scheduled(cron = "0 20 12 ? * MON,THU")
     public void warmupKakaotechReports() {
-        String domain = "example.com";
+        String domain = "kakaotech.com";
         String key = cacheManager.pageListKey(domain);
         String lockKey = "lock:warmup:" + domain;
 
