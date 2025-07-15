@@ -99,7 +99,7 @@ public class TuningReportReactionService {
 
             // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
             cacheManager.refreshTuningReportTTL(userId, domain);
-            log.warn("🔄모든 캐시된 데이터 TTL 갱신");
+//            log.warn("🔄모든 캐시된 데이터 TTL 갱신");
 
         } catch (Exception e) {
             log.warn("❌ 분산 락 처리 실패: reportId={}, error={}", reportId, e.getMessage());
