@@ -56,7 +56,9 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
             WHEN sr.sender_matching_status = 'UNMATCHED' OR sr.receiver_matching_status = 'UNMATCHED'
                 THEN 'UNMATCHED'
             ELSE 'SIGNAL'
-        END AS relationType
+        END AS relationType,
+        CEIL(
+            (SELECT COUNT(*) FROM signal_message sm3 WHERE sm3.signal_room_id = sr.id) / :pageSize * 1.0) - 1 AS lastPageNumber
     FROM signal_room sr
     JOIN user u ON 
         (CASE 
@@ -81,6 +83,7 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
             nativeQuery = true)
     Page<ChannelRoomProjection> findChannelRoomsWithPartnerAndLastMessage(
             @Param("userId") Long userId,
+            @Param("pageSize") int pageSize,
             Pageable pageable
     );
 

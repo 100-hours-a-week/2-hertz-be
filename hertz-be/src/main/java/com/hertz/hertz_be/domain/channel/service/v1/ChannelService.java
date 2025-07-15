@@ -1,6 +1,5 @@
 package com.hertz.hertz_be.domain.channel.service.v1;
 
-import com.corundumstudio.socketio.SocketIOServer;
 import com.hertz.hertz_be.domain.channel.dto.request.v3.SendMessageRequestDto;
 import com.hertz.hertz_be.domain.channel.dto.response.v1.*;
 import com.hertz.hertz_be.domain.channel.service.AsyncChannelService;
@@ -37,7 +36,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -418,7 +416,7 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, pageable);
+        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, size, pageable);
 
         if (result.isEmpty()) {
             return null;
