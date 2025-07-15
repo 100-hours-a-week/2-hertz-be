@@ -13,13 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -89,6 +84,9 @@ public class TuningReportReactionService {
                     item.setMyReactions(new TuningReportListResponse.MyReactions());
                 item.getMyReactions().set(type, isReacted);
 
+                String updatedJson = objectMapper.writeValueAsString(item);
+                redisTemplate.opsForValue().set(reportKey, updatedJson, cacheManager.getTTLDurForTuningReport());
+
                 newCount = switch (type) {
                     case CELEBRATE -> item.getReactions().getCelebrate();
                     case THUMBS_UP -> item.getReactions().getThumbsUp();
@@ -96,12 +94,12 @@ public class TuningReportReactionService {
                     case EYES -> item.getReactions().getEyes();
                     case HEART -> item.getReactions().getHeart();
                 };
-                log.warn("👍게시글{}에 반응 처리 완료", reportId);
+//                log.warn("🔄{}에 반응 처리완료", reportId);
             }
 
             // 해당 도메인과 해당 사용자와 관련 모든 캐시된 데이터 TTL 갱신
             cacheManager.refreshTuningReportTTL(userId, domain);
-            log.warn("도메인={}의 모든 TTL 초기화", domain);
+            log.warn("🔄모든 캐시된 데이터 TTL 갱신");
 
         } catch (Exception e) {
             log.warn("❌ 분산 락 처리 실패: reportId={}, error={}", reportId, e.getMessage());

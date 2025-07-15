@@ -57,14 +57,13 @@ public class TuningReportService {
         try {
             boolean acquired = lock.tryLock(2, 5, TimeUnit.SECONDS);
             if (!acquired) {
-                log.warn("⚠️ 도메인 {} 캐싱 락 획득 실패 → fallback to 캐시 재확인", domain);
                 return cacheManager.getCachedReportList(domain);
             }
 
             // 락 획득 후 다시 한 번 캐시 확인 (동시성 보장)
             items = cacheManager.getCachedReportList(domain);
             if (items == null) {
-                log.info("🎯 캐시 미스 → DB 조회 및 캐싱 시작: domain={}", domain);
+//                log.info("🎯 캐시 미스 → DB 조회 및 캐싱 시작: domain={}", domain);
                 var pageReq = PageRequest.of(page, size);
                 var reports = sort.fetch(pageReq, transactionalService.getTuningReportRepository(), domain);
                 items = reports.stream()
@@ -107,7 +106,7 @@ public class TuningReportService {
                             .filter(type -> Boolean.TRUE.equals(cacheManager.getUserReaction(reportId, userId, type)))
                             .collect(Collectors.toSet())
             ));
-            log.info("✅ Redis에서 사용자 {}의 반응 정보 조회 완료 (DB 미조회)", userId);
+//            log.info("✅ Redis에서 사용자 {}의 반응 정보 조회 완료 (DB 미조회)", userId);
         } else {
             List<TuningReportUserReaction> dbList =
                     transactionalService.getTuningReportUserReactionRepository().findAllByUserIdAndReportIdIn(userId, reportIds);
