@@ -1,15 +1,19 @@
 package com.hertz.hertz_be.global.webpush.service;
 
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.WebpushConfig;
-import com.google.firebase.messaging.WebpushNotification;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import com.hertz.hertz_be.global.webpush.token.FCMTokenDao;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,7 @@ import java.util.Map;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class FCMService {
 
     private final FCMTokenDao fcmTokenDao;
@@ -41,36 +46,37 @@ public class FCMService {
     }
 
     // 사용자에게 push 알림
-    @Transactional(readOnly = true)
-    public ResponseEntity<?> pushNotification(Long userId, String title, String content){
-        Map<String, Object> resultMap = new HashMap<>();
-        HttpStatus status = null;
-        try {
-            User user = getActiveUserOrThrow(userId);
-            if (!fcmTokenDao.hasKey(userId)) {
-                resultMap.put("message", "유저의 FireBase 토큰이 없습니다.");
-                status = HttpStatus.BAD_REQUEST;
-            }
-            else {
-                String token = fcmTokenDao.getToken(userId);
-                Message message = Message.builder()
-                        .setToken(token)
-                        .setWebpushConfig(WebpushConfig.builder()
-                                .putHeader("ttl", "300")
-                                .setNotification(new WebpushNotification(title, content))
-                                .build())
-                        .build();
-                String response = FirebaseMessaging.getInstance().sendAsync(message).get();
-                status = HttpStatus.OK;
-                resultMap.put("response", response);
-            }
-        } catch (Exception e) {
-            resultMap.put("message", "요청 실패");
-            resultMap.put("exception", e.getMessage());
-            status = HttpStatus.INTERNAL_SERVER_ERROR;
+    @Transactional
+    public void sendWebPush(Long userId, String title, String content){
+        if (!fcmTokenDao.hasKey(userId)) {
+            log.warn("❌ FCM 토큰 없음: userId = {}", userId);
+            return;
         }
 
-        return new ResponseEntity<>(resultMap, status);
+        String token = fcmTokenDao.getToken(userId);
+
+        Message message = Message.builder()
+                .setToken(token)
+                .setWebpushConfig(WebpushConfig.builder()
+                        .putHeader("ttl", "300")
+                        .putData("title", title)
+                        .putData("content", content)
+                        .build())
+                .build();
+        FirebaseMessaging firebaseMessaging = FirebaseMessaging.getInstance();
+        ApiFuture<String> future = firebaseMessaging.sendAsync(message);
+
+        ApiFutures.addCallback(future, new ApiFutureCallback<>() {
+            @Override
+            public void onSuccess(String result) {
+                log.info("✅ FCM 전송 성공: {}", result);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                log.error("❌ FCM 전송 실패: {}", t.getMessage(), t);
+            }
+        }, MoreExecutors.directExecutor());
     }
 
     private User getActiveUserOrThrow(Long userId) {

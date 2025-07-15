@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/push")
+@RequestMapping("/api/v3/push")
 public class FCMController {
 
     private final FCMService fcmService;

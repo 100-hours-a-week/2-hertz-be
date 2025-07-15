@@ -1,14 +1,12 @@
 package com.hertz.hertz_be.global.socketio;
 
 import com.corundumstudio.socketio.SocketIOServer;
-import com.hertz.hertz_be.domain.channel.dto.request.v3.SendMessageRequestDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.responsecode.ChannelResponseCode;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
 import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.channel.service.AsyncChannelService;
-import com.hertz.hertz_be.domain.channel.service.v1.ChannelService;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
@@ -78,10 +76,10 @@ public class SocketIoService {
         signalMessageRepository.save(signalMessage);
         entityManager.flush();
 
-        if(!socketIoSessionManager.isConnected(receiverId)) {
+        if (!socketIoSessionManager.isUserInRoom(receiverId, "room-" + roomId)) {
             String pushTitle = sender.getNickname();
             String pushContent = aesUtil.decrypt(encryptedMessage);
-            fcmService.pushNotification(receiverId, pushTitle, pushContent);
+            fcmService.sendWebPush(receiverId, pushTitle, pushContent);
         }
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
