@@ -28,9 +28,13 @@ public class WarmupTuningReport {
     private final TuningReportFlushScheduler tuningReportFlushScheduler;
     private final RedissonClient redissonClient;
 
-    @Scheduled(cron = "0 20 12 ? * MON,THU")
+    @Scheduled(cron = "0 40 12 ? * MON,THU")
     public void warmupKakaotechReports() {
         String domain = "kakaotech.com";
+        warmupDomain(domain);
+    }
+
+    public void warmupDomain(String domain) {
         String key = cacheManager.pageListKey(domain);
         String lockKey = "lock:warmup:" + domain;
 
@@ -40,6 +44,7 @@ public class WarmupTuningReport {
         try {
             acquired = lock.tryLock(0, 10, TimeUnit.SECONDS);
             if (!acquired) {
+                log.info("🚫 락 획득 실패 → 워밍업 건너뜀: {}", domain);
                 return;
             }
 
