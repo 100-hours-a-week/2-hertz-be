@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -142,4 +143,19 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     """)
     List<Long> findRoomIdsByUserId(@Param("userId") Long userId);
 
+    @Query("""
+    SELECT DISTINCT sr FROM SignalRoom sr
+        JOIN FETCH sr.senderUser sender
+        JOIN FETCH sr.receiverUser receiver
+        LEFT JOIN FETCH sr.tuningReport tr
+        WHERE sr.category = :category
+          AND sr.senderMatchingStatus = com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus.MATCHED
+          AND sr.receiverMatchingStatus = com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus.MATCHED
+          AND (
+            tr IS NULL OR tr.isVisible = false OR tr.deletedAt IS NOT NULL
+          )
+          AND sr.createdAt <= :endDateTime
+""")
+    List<SignalRoom> findEligibleRooms(@Param("category") Category category,
+                                       @Param("end") LocalDateTime endDateTime);
 }

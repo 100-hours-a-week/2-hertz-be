@@ -74,6 +74,9 @@ public class SignalRoom {
     @Builder.Default
     private List<AlarmMatching> alarms = new ArrayList<>();
 
+    @Transient
+    private int tempMessageCount;
+
     /**
      * 현재 유저 기준으로 상대방을 반환
      */
@@ -135,5 +138,8 @@ public class SignalRoom {
         }
         return senderExitedAt != null;
     }
+
+    public int getTempMessageCount() { return tempMessageCount; }
+    public void setTempMessageCount(int count) { this.tempMessageCount = count; }
 }
 

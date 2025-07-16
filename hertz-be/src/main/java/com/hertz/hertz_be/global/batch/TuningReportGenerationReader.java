@@ -29,11 +29,20 @@ public class TuningReportGenerationReader {
             @Value("#{jobParameters['timestamp']}") Long timestamp
     ) {
         String jpql = """
-            SELECT sr FROM SignalRoom sr
-            WHERE sr.senderMatchingStatus = 'MATCHED'
-              AND sr.receiverMatchingStatus = 'MATCHED'
-              AND sr.category = :category
-              AND sr.createdAt <= :end
+            SELECT DISTINCT sr FROM SignalRoom sr
+                JOIN FETCH sr.senderUser sender
+                JOIN FETCH sr.receiverUser receiver
+                LEFT JOIN FETCH sr.messages msg
+                LEFT JOIN FETCH sr.tuningReport tr
+                WHERE sr.category = :category
+                  AND sr.senderMatchingStatus = 'MATCHED'
+                  AND sr.receiverMatchingStatus = 'MATCHED'
+                  AND (
+                       tr IS NULL
+                       OR tr.isVisible = false
+                       OR tr.deletedAt IS NOT NULL
+                  )
+                  AND sr.createdAt <= :end
         """;
 
         LocalDateTime endDateTime = LocalDateTime.ofInstant(

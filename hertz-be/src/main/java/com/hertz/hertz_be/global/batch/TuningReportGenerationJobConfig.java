@@ -1,7 +1,8 @@
 package com.hertz.hertz_be.global.batch;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
-import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
+import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
 import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +27,11 @@ public class TuningReportGenerationJobConfig {
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
     private final TuningReportGenerationReader tuningReportGenerationReader;
+    private final TuningReportGenerationCustomReader tuningReportGenerationCustomReader; // 커스텀 reader 추가
     private final TuningReportGenerationWriter tuningReportGenerationWriter;
     private final TuningReportGenerationProcessor tuningReportGenerationProcessor;
-    private final TuningReportVisibilityReader tuningReportVisibilityReader;
-    private final TuningReportVisibilityWriter tuningReportVisibilityWriter;
+    private final SignalRoomRepository signalRoomRepository;
+    private final SignalMessageRepository signalMessageRepository;
 
     private static final int CHUNK_SIZE = 10;
 
@@ -43,13 +45,28 @@ public class TuningReportGenerationJobConfig {
 
     @Bean
     @StepScope
+    public TuningReportGenerationCustomReader tuningReportGenerationCustomReader(
+            @Value("#{jobParameters['category']}") String category,
+            @Value("#{jobParameters['timestamp']}") Long timestamp
+    ) {
+        return new TuningReportGenerationCustomReader(
+                signalRoomRepository,
+                signalMessageRepository,
+                category,
+                timestamp
+        );
+    }
+
+    @Bean
+    @StepScope
     public Step tuningReportGenerationStep(
             @Value("#{jobParameters['category']}") String category,
             @Value("#{jobParameters['timestamp']}") Long timestamp
     ) {
         return new StepBuilder("TuningReportGenerationStep", jobRepository)
                 .<SignalRoom, AiTuningReportGenerationRequest>chunk(CHUNK_SIZE, transactionManager)
-                .reader(tuningReportGenerationReader.reader(category, timestamp))
+                //.reader(tuningReportGenerationReader.reader(category, timestamp))
+                .reader(tuningReportGenerationCustomReader)
                 .processor(tuningReportGenerationProcessor)
                 .writer(tuningReportGenerationWriter)
                 .faultTolerant()
@@ -59,16 +76,16 @@ public class TuningReportGenerationJobConfig {
     }
 
     @Bean
-    public Job tuningReportGenerationJobForFriendTest() {
-        return new JobBuilder("TuningReportGenerationJobForFriendTest", jobRepository)
+    public Job tuningReportGenerationJobForFriend() {
+        return new JobBuilder("TuningReportGenerationJobForFriend", jobRepository)
                 .incrementer(new RunIdIncrementer())
-                .start(tuningReportGenerationStepForFriendTest())
+                .start(tuningReportGenerationStepForFriend())
                 .build();
     }
 
     @Bean
-    public Step tuningReportGenerationStepForFriendTest() {
-        return new StepBuilder("TuningReportGenerationStepForTest", jobRepository)
+    public Step tuningReportGenerationStepForFriend() {
+        return new StepBuilder("TuningReportGenerationStepFor", jobRepository)
                 .<SignalRoom, AiTuningReportGenerationRequest>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tuningReportGenerationReader.reader("FRIEND", System.currentTimeMillis()))
                 .processor(tuningReportGenerationProcessor)
@@ -77,37 +94,20 @@ public class TuningReportGenerationJobConfig {
     }
 
     @Bean
-    public Job tuningReportGenerationJobForCoupleTest() {
-        return new JobBuilder("tuningReportGenerationJobForCoupleTest", jobRepository)
+    public Job tuningReportGenerationJobForCouple() {
+        return new JobBuilder("tuningReportGenerationJobForCouple", jobRepository)
                 .incrementer(new RunIdIncrementer())
-                .start(tuningReportGenerationStepForCoupledTest())
+                .start(tuningReportGenerationStepForCoupled())
                 .build();
     }
 
     @Bean
-    public Step tuningReportGenerationStepForCoupledTest() {
-        return new StepBuilder("TuningReportGenerationStepForTest", jobRepository)
+    public Step tuningReportGenerationStepForCoupled() {
+        return new StepBuilder("TuningReportGenerationStepFor", jobRepository)
                 .<SignalRoom, AiTuningReportGenerationRequest>chunk(CHUNK_SIZE, transactionManager)
                 .reader(tuningReportGenerationReader.reader("COUPLE", System.currentTimeMillis()))
                 .processor(tuningReportGenerationProcessor)
                 .writer(tuningReportGenerationWriter)
-                .build();
-    }
-
-    @Bean
-    public Job tuningReportVisibilityJobForTest() {
-        return new JobBuilder("tuningReportVisibilityJobForTest", jobRepository)
-                .incrementer(new RunIdIncrementer())
-                .start(tuningReportVisibilityStepForTest())
-                .build();
-    }
-
-    @Bean
-    public Step tuningReportVisibilityStepForTest() {
-        return new StepBuilder("tuningReportVisibilityStepForTest", jobRepository)
-                .<TuningReport, TuningReport>chunk(CHUNK_SIZE, transactionManager)
-                .reader(tuningReportVisibilityReader.reader())
-                .writer(tuningReportVisibilityWriter)
                 .build();
     }
 

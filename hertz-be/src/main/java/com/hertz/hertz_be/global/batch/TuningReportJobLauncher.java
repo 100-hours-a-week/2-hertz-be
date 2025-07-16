@@ -21,13 +21,16 @@ public class TuningReportJobLauncher {
     private final JobLauncher jobLauncher;
 
     public void runGenerationBatch(String category) throws Exception {
-        String timestamp = java.time.LocalDateTime.now()
+        Long timestamp = java.time.LocalDateTime.now()
                 .minusDays(1)
-                .withHour(23).withMinute(59).withSecond(59).toString();
+                .withHour(23).withMinute(59).withSecond(59)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
 
         JobParameters jobParameters = new JobParametersBuilder()
                 .addString("category", category)
-                .addString("timestamp", timestamp)
+                .addLong("timestamp", timestamp)
                 .toJobParameters();
 
         jobLauncher.run(tuningReportGenerationJob, jobParameters);
