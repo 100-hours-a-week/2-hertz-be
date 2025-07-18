@@ -20,14 +20,19 @@ public abstract class TestContainersConfig {
     @Container
     static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:6.2")
             .withExposedPorts(6379)
+            .withCommand("redis-server --requirepass testpass")
             .waitingFor(Wait.forListeningPort());
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        // MySQL
+        registry.add("spring.datasource.url",    mysqlContainer::getJdbcUrl);
         registry.add("spring.datasource.username", mysqlContainer::getUsername);
         registry.add("spring.datasource.password", mysqlContainer::getPassword);
-        registry.add("spring.data.redis.host", redisContainer::getHost);
-        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
+
+        // Redis
+        registry.add("spring.redis.host",     redisContainer::getHost);
+        registry.add("spring.redis.port",     () -> redisContainer.getMappedPort(6379));
+        registry.add("spring.redis.password", () -> "testpass");
     }
 }
