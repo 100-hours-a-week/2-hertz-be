@@ -11,6 +11,8 @@ import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.webpush.responsecode.FCMEventType;
+import com.hertz.hertz_be.global.webpush.service.FCMService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +46,7 @@ public class AsyncChannelService {
 
     private final SignalMessageRepository signalMessageRepository;
     private final SseChannelService sseChannelService;
+    private final FCMService fcmService;
     private final UserRepository userRepository;
     private final AlarmService alarmService;
 
@@ -68,6 +71,12 @@ public class AsyncChannelService {
                     room.getSenderUser().getId(), room.getSenderUser().getNickname(),
                     room.getReceiverUser().getId(), room.getReceiverUser().getNickname()
             );
+
+        if(fcmService.shouldNotify(FCMEventType.MATCHING_CONVERTED, room.getId())) {
+            fcmService.sendWebPush(room.getSenderUser().getId(), "매칭 상태 전환",room.getReceiverUser().getNickname() + "님과 매칭이 가능합니다 🎉");
+            fcmService.sendWebPush(room.getReceiverUser().getId(), "매칭 상태 전환",room.getSenderUser().getNickname() + "님과 매칭이 가능합니다 🎉");
+        }
+
         }
     }
 

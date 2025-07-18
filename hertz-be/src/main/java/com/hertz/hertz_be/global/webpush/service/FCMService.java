@@ -11,6 +11,7 @@ import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.webpush.responsecode.FCMEventType;
 import com.hertz.hertz_be.global.webpush.token.FCMTokenDao;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Transactional(readOnly = true)
@@ -30,6 +33,7 @@ public class FCMService {
 
     private final FCMTokenDao fcmTokenDao;
     private final UserRepository userRepository;
+    private final Map<FCMEventType, Set<Long>> notifiedMatchingRooms = new ConcurrentHashMap<>();
 
     public ResponseEntity<?> saveToken(Long userId, String token) {
         Map<String, Object> resultMap = new HashMap<>();
@@ -43,6 +47,11 @@ public class FCMService {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
         return new ResponseEntity<>(resultMap, status);
+    }
+
+    public void sendWebPush(Long firstUserId, Long secondUserId, String title, String content) {
+        sendWebPush(firstUserId, title, content);
+        sendWebPush(secondUserId, title, content);
     }
 
     // 사용자에게 push 알림
@@ -85,6 +94,11 @@ public class FCMService {
                         UserResponseCode.USER_NOT_FOUND.getCode(),
                         UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
                         UserResponseCode.USER_NOT_FOUND.getMessage()));
+    }
+
+    public boolean shouldNotify(FCMEventType eventType, Long channelRoomId) {
+        notifiedMatchingRooms.computeIfAbsent(eventType, k -> ConcurrentHashMap.newKeySet());
+        return notifiedMatchingRooms.get(eventType).add(channelRoomId);
     }
 
 }
