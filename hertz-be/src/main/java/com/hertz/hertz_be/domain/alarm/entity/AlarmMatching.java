@@ -24,7 +24,7 @@ public class AlarmMatching extends Alarm{
     @Column(name = "partner_nickname", nullable = false)
     private String partnerNickname;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "signal_room_id", nullable = true)
     private SignalRoom signalRoom;
 
