@@ -30,8 +30,10 @@ import com.hertz.hertz_be.global.infra.ai.dto.response.AiChatReportResponseDto;
 import com.hertz.hertz_be.global.util.AESUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -64,11 +66,13 @@ public class ChannelService {
     private final AESUtil aesUtil;
     private final TuningAiClient tuningAiClient;
 
+    @Value("${channel.message.page.size}")
+    private int channelMessagePageSize;
 
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, size, pageable);
+        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, channelMessagePageSize, pageable);
 
         if (result.isEmpty()) {
             return null;

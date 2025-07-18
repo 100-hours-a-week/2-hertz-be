@@ -63,6 +63,9 @@ public class ChannelService {
     private final WebClient webClient;
     private final AESUtil aesUtil;
 
+    @Value("${channel.message.page.size}")
+    private int channelMessagePageSize;
+
     @Autowired
     public ChannelService(UserRepository userRepository,
                           TuningRepository tuningRepository,
@@ -416,7 +419,7 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, size, pageable);
+        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, channelMessagePageSize, pageable);
 
         if (result.isEmpty()) {
             return null;
