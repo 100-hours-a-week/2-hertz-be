@@ -203,13 +203,13 @@ jobs:
           
           echo "🚀 springboot-be 디플로이먼트 롤아웃 상태 확인..."
           kubectl rollout status deployment/springboot-be \
-            -n hertz-tuning-dev \
+            -n hertz-tuning-stage \
             --timeout=180s
 
           echo "🔍 현재 파드 상태:"
           kubectl get pods \
             -l app=springboot-be \
-            -n hertz-tuning-dev \
+            -n hertz-tuning-stage \
             -o wide
 
       - name: Notify success
