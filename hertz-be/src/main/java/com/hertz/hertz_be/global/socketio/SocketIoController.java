@@ -76,7 +76,7 @@ public class SocketIoController {
                 client.set("userId", userId);
                 client.sendEvent("init_user", userId);
 
-                socketIoSessionManager.registerSession(userId, client.getSessionId());
+                socketIoSessionManager.registerClient(userId, client);
                 log.info("[Connect Success] userId [{}] 접속 완료, 현재 접속자 수={}", userId, getConnectedUserCount());
 
             } catch (Exception e) {
@@ -98,7 +98,7 @@ public class SocketIoController {
             }
 
             if (userId != null) {
-                socketIoSessionManager.unregisterSession(userId);
+                socketIoSessionManager.unregisterClient(userId);
                 log.info("[Disconnect Success] userId={}, 연결 종료, 현재 접속자 수={}", userId, getConnectedUserCount());
             }
         };
