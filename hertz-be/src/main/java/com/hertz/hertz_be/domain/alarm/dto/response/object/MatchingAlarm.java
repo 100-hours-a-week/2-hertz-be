@@ -4,5 +4,6 @@ public record MatchingAlarm(
         String type,
         String title,
         Long channelRoomId,
-        String createdDate
+        String createdDate,
+        int lastPageNumber
 ) implements AlarmItem {}
