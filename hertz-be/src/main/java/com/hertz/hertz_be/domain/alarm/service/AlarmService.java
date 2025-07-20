@@ -9,12 +9,14 @@ import com.hertz.hertz_be.domain.alarm.repository.*;
 import com.hertz.hertz_be.domain.alarm.dto.request.CreateNotifyAlarmRequestDto;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
+import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,10 @@ public class AlarmService {
     private final UserAlarmRepository userAlarmRepository;
     private final UserRepository userRepository;
     private final AsyncAlarmService asyncAlarmService;
+    private final SignalRoomRepository signalRoomRepository;
+
+    @Value("${channel.message.page.size}")
+    private int channelMessagePageSize;
 
     @Transactional
     public void createNotifyAlarm(CreateNotifyAlarmRequestDto dto, Long userId) {
@@ -222,12 +228,17 @@ public class AlarmService {
                     else if (alarm instanceof AlarmMatching matching) {
                         SignalRoom signalRoom = matching.getSignalRoom();
                         Long channelRoomId = (signalRoom != null && !signalRoom.isUserExited(userId)) ? signalRoom.getId() : null;
+                        int lastPageNumber = 0;
+                        if (channelRoomId != null) {
+                            lastPageNumber = signalRoomRepository.findLastPageNumberBySignalRoomId(channelRoomId, channelMessagePageSize);
+                        }
 
                         return new MatchingAlarm(
                                 AlarmCategory.MATCHING.getValue(),
                                 matching.getTitle(),
                                 channelRoomId,
-                                matching.getCreatedAt().toString()
+                                matching.getCreatedAt().toString(),
+                                lastPageNumber
                         );
                     } else if (alarm instanceof AlarmReport report) {
                         return new ReportAlarm(

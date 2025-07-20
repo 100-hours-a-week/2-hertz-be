@@ -142,4 +142,11 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
     """)
     List<Long> findRoomIdsByUserId(@Param("userId") Long userId);
 
+    @Query(value = """
+    SELECT CEIL(COUNT(*) * 1.0 / :pageSize) - 1
+    FROM signal_message
+    WHERE signal_room_id = :signalRoomId
+    """, nativeQuery = true)
+    int findLastPageNumberBySignalRoomId(@Param("signalRoomId") Long signalRoomId, @Param("pageSize") int pageSize);
+
 }
