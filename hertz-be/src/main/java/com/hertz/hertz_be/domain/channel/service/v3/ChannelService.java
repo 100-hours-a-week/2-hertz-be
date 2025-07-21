@@ -229,7 +229,7 @@ public class ChannelService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiver.getId(), true);
+                asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
             }
         });
 

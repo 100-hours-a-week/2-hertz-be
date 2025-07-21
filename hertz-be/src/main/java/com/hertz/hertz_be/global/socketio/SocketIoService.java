@@ -86,7 +86,7 @@ public class SocketIoService {
             @Override
             public void afterCommit() {
                 asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendNewMessageNotifyToPartner(signalMessage, receiverId, false);
+                asyncChannelService.sendNewMessageNotifyToPartner(room, signalMessage, receiverId, false);
             }
         });
 
