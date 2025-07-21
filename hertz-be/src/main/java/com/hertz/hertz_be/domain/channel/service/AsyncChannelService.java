@@ -6,6 +6,7 @@ import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.channel.repository.SignalMessageRepository;
+import com.hertz.hertz_be.domain.channel.repository.SignalRoomRepository;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.common.NewResponseCode;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +38,10 @@ public class AsyncChannelService {
     private long matchingConvertDelayMinutes;
     private final long ONE_MESSAGE = 1L;
 
+
+    @Value("${channel.message.page.size}")
+    private int channelMessagePageSize;
+
     //Todo: 2차 압데이트 전에 장확한 날짜로 수정
     private static final LocalDateTime VERSION_2_UPDATE_DATE = LocalDateTime.of(2025, 6, 20, 12, 0);
 
@@ -46,6 +52,7 @@ public class AsyncChannelService {
     private final SseChannelService sseChannelService;
     private final UserRepository userRepository;
     private final AlarmService alarmService;
+    private final SignalRoomRepository signalRoomRepository;
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
@@ -102,7 +109,7 @@ public class AsyncChannelService {
 
     @Async
     @Transactional
-    public void sendNewMessageNotifyToPartner(SignalMessage signalMessage, Long partnerId, boolean isSignal) {
+    public void sendNewMessageNotifyToPartner(SignalRoom signalRoom, SignalMessage signalMessage, Long partnerId, boolean isSignal) {
         // signalMessage는 detached 상태 → DB에서 최신 상태 조회
         SignalMessage latestMessageForm = signalMessageRepository.findById(signalMessage.getId())
                 .orElseThrow(() -> new BusinessException(
@@ -110,13 +117,15 @@ public class AsyncChannelService {
                         NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
                         NewResponseCode.INTERNAL_SERVER_ERROR.getMessage()
                 ));
+        Optional<SignalRoom> latestSignalRoom = signalRoomRepository.findById(signalRoom.getId());
+        int lastPageNumber = signalRoomRepository.findLastPageNumberBySignalRoomId(latestSignalRoom.get().getId(), channelMessagePageSize);
 
         if (!latestMessageForm.getIsRead()) {
             sseChannelService.updatePartnerChannelList(latestMessageForm, partnerId);
             if (isSignal) {
-                sseChannelService.notifyNewSignal(latestMessageForm, partnerId);
+                sseChannelService.notifyNewSignal(lastPageNumber, latestMessageForm, partnerId);
             } else {
-                sseChannelService.notifyNewMessage(latestMessageForm, partnerId);
+                sseChannelService.notifyNewMessage(lastPageNumber, latestMessageForm, partnerId);
             }
         }
 

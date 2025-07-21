@@ -158,15 +158,15 @@ public class SseChannelService {
         }
     }
 
-    public void notifyNewMessage(SignalMessage signalMessage, Long partnerId) {
-        sendNewSignalOrMessageEvent(signalMessage, partnerId, SseEventName.NEW_MESSAGE_RECEPTION);
+    public void notifyNewMessage(int lastPageNumber, SignalMessage signalMessage, Long partnerId) {
+        sendNewSignalOrMessageEvent(lastPageNumber,signalMessage, partnerId, SseEventName.NEW_MESSAGE_RECEPTION);
     }
 
-    public void notifyNewSignal(SignalMessage signalMessage, Long partnerId) {
-        sendNewSignalOrMessageEvent(signalMessage, partnerId, SseEventName.NEW_SIGNAL_RECEPTION);
+    public void notifyNewSignal(int lastPageNumber, SignalMessage signalMessage, Long partnerId) {
+        sendNewSignalOrMessageEvent(lastPageNumber,signalMessage, partnerId, SseEventName.NEW_SIGNAL_RECEPTION);
     }
 
-    private void sendNewSignalOrMessageEvent(SignalMessage signalMessage, Long partnerId, SseEventName eventName) {
+    private void sendNewSignalOrMessageEvent(int lastPageNumber, SignalMessage signalMessage, Long partnerId, SseEventName eventName) {
         String decryptedMessage = aesUtil.decrypt(signalMessage.getMessage());
 
         NewMessageResponseDto dto = new NewMessageResponseDto(
@@ -176,7 +176,8 @@ public class SseChannelService {
                 decryptedMessage,
                 String.valueOf(signalMessage.getSendAt()),
                 signalMessage.getSenderUser().getProfileImageUrl(),
-                signalMessage.getSignalRoom().getRelationType()
+                signalMessage.getSignalRoom().getRelationType(),
+                lastPageNumber
         );
 
         kafkaProducerService.sendSseEvent(new SseEventDto(partnerId, eventName.getValue(), dto));
