@@ -16,6 +16,7 @@ import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.global.exception.BusinessException;
 import jakarta.persistence.EntityManager;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,9 +45,13 @@ public class AlarmService {
     private final UserRepository userRepository;
     private final AsyncAlarmService asyncAlarmService;
     private final SignalRoomRepository signalRoomRepository;
+    private final RedissonClient redissonClient;
 
     @Value("${channel.message.page.size}")
     private int channelMessagePageSize;
+
+    private static final int MAX_LOCK_ATTEMPTS = 3;
+    private static final long LOCK_RETRY_DELAY_MS = 2000;
 
     @Transactional
     public void createNotifyAlarm(CreateNotifyAlarmRequestDto dto, Long userId) {
@@ -87,55 +92,85 @@ public class AlarmService {
 
     @Transactional
     public void createMatchingAlarm(SignalRoom room, User user, User partner) {
-        String alarmTitleForUser;
-        String alarmTitleForPartner;
-        if (Objects.equals(room.getRelationType(), MatchingStatus.UNMATCHED.getValue())) {
-            alarmTitleForUser = createMatchingFailureMessage(partner.getNickname());
-            alarmTitleForPartner = createMatchingFailureMessage(user.getNickname());
-        } else {
-            alarmTitleForUser = createMatchingSuccessMessage(partner.getNickname());
-            alarmTitleForPartner = createMatchingSuccessMessage(user.getNickname());
+        String lockKey = String.format("lock:alarm-matching:room=%d:user=%d:partner=%d",
+                room.getId(), user.getId(), partner.getId());
+
+        for (int attempt = 1; attempt <= MAX_LOCK_ATTEMPTS; attempt++) {
+            boolean lockAcquired = redissonClient.getLock(lockKey).tryLock();
+            if (lockAcquired) {
+                try {
+                    boolean alreadyExists = alarmMatchingRepository.existsBySignalRoom(room);
+                    if (alreadyExists) return;
+
+                    String alarmTitleForUser;
+                    String alarmTitleForPartner;
+                    if (Objects.equals(room.getRelationType(), MatchingStatus.UNMATCHED.getValue())) {
+                        alarmTitleForUser = createMatchingFailureMessage(partner.getNickname());
+                        alarmTitleForPartner = createMatchingFailureMessage(user.getNickname());
+                    } else {
+                        alarmTitleForUser = createMatchingSuccessMessage(partner.getNickname());
+                        alarmTitleForPartner = createMatchingSuccessMessage(user.getNickname());
+                    }
+
+                    AlarmMatching alarmMatchingForUser = AlarmMatching.builder()
+                            .title(alarmTitleForUser)
+                            .partner(partner)
+                            .partnerNickname(partner.getNickname())
+                            .signalRoom(room)
+                            .isMatched(false)
+                            .build();
+                    AlarmMatching savedAlarmForUser = alarmMatchingRepository.save(alarmMatchingForUser);
+
+                    userAlarmRepository.save(UserAlarm.builder()
+                            .alarm(savedAlarmForUser)
+                            .user(user)
+                            .build());
+
+                    AlarmMatching alarmMatchingForPartner = AlarmMatching.builder()
+                            .title(alarmTitleForPartner)
+                            .partner(user)
+                            .partnerNickname(user.getNickname())
+                            .signalRoom(room)
+                            .isMatched(false)
+                            .build();
+                    AlarmMatching savedAlarmForPartner = alarmMatchingRepository.save(alarmMatchingForPartner);
+
+                    userAlarmRepository.save(UserAlarm.builder()
+                            .alarm(savedAlarmForPartner)
+                            .user(partner)
+                            .build());
+
+                    entityManager.flush();
+
+                    registerAfterCommitCallback(() -> {
+                        asyncAlarmService.updateAlarmNotification(user.getId());
+                        asyncAlarmService.updateAlarmNotification(partner.getId());
+                    });
+
+                    return;
+
+                } finally {
+                    redissonClient.getLock(lockKey).unlock();
+                }
+            } else {
+                try {
+                    Thread.sleep(LOCK_RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new BusinessException(
+                            NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                            NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                            "매칭 알림을 생성하기 위해 분산 Lock을 기다리는 과정에서 문제 발생."
+                    );
+                }
+            }
         }
 
-        AlarmMatching alarmMatchingForUser = AlarmMatching.builder()
-                .title(alarmTitleForUser)
-                .partner(partner)
-                .partnerNickname(partner.getNickname())
-                .signalRoom(room)
-                .isMatched(false)
-                .build();
-        AlarmMatching savedAlarmForUser = alarmMatchingRepository.save(alarmMatchingForUser);
-
-        UserAlarm userAlarmForUser = UserAlarm.builder()
-                .alarm(savedAlarmForUser)
-                .user(user)
-                .build();
-
-        userAlarmRepository.save(userAlarmForUser);
-
-        AlarmMatching alarmMatchingForPartner = AlarmMatching.builder()
-                .title(alarmTitleForPartner)
-                .partner(user)
-                .partnerNickname(user.getNickname())
-                .signalRoom(room)
-                .isMatched(false)
-                .build();
-        AlarmMatching savedAlarmForPartner = alarmMatchingRepository.save(alarmMatchingForPartner);
-
-        UserAlarm userAlarmForPartner = UserAlarm.builder()
-                .alarm(savedAlarmForPartner)
-                .user(partner)
-                .build();
-
-        userAlarmRepository.save(userAlarmForPartner);
-
-        entityManager.flush();
-
-        registerAfterCommitCallback(() -> {
-            asyncAlarmService.updateAlarmNotification(user.getId());
-            asyncAlarmService.updateAlarmNotification(partner.getId());
-        });
-
+        throw new BusinessException(
+                NewResponseCode.INTERNAL_SERVER_ERROR.getCode(),
+                NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
+                "분산 Lock을 통해 매칭 알림을 생성 과정에서 문제 발생."
+        );
     }
 
     @Transactional
