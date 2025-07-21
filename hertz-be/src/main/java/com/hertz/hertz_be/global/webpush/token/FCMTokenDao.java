@@ -14,18 +14,18 @@ public class FCMTokenDao {
 
     public void saveToken(Long userId, String token) {
         tokenRedisTemplate.opsForValue()
-                .set("fcm-token-userId-" + String.valueOf(userId), token);
+                .set("fcm-token-userId-" + userId, token);
     }
 
     public String getToken(Long userId) {
-        return tokenRedisTemplate.opsForValue().get(String.valueOf(userId));
+        return tokenRedisTemplate.opsForValue().get("fcm-token-userId-" + userId);
     }
 
     public void deleteToken(Long userId) {
-        tokenRedisTemplate.delete(String.valueOf(userId));
+        tokenRedisTemplate.delete("fcm-token-userId-" + userId);
     }
 
     public boolean hasKey(Long userId) {
-        return tokenRedisTemplate.hasKey(String.valueOf(userId));
+        return tokenRedisTemplate.hasKey("fcm-token-userId-" + userId);
     }
 }
