@@ -47,8 +47,7 @@ public class SecurityConfig {
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**",
-                                "/api/push/token"
+                                "/webjars/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -62,7 +61,6 @@ public class SecurityConfig {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "http://localhost:5500",
                 "https://hertz-tuning.com",
                 "https://dev.hertz-tuning.com",
                 "https://local.hertz-tuning.com:3000",
