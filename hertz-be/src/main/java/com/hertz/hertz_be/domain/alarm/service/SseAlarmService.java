@@ -2,7 +2,8 @@ package com.hertz.hertz_be.domain.alarm.service;
 
 import com.hertz.hertz_be.domain.alarm.repository.UserAlarmRepository;
 import com.hertz.hertz_be.global.common.SseEventName;
-import com.hertz.hertz_be.global.sse.SseService;
+import com.hertz.hertz_be.global.kafka.dto.SseEventDto;
+import com.hertz.hertz_be.global.kafka.servise.KafkaProducerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,16 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SseAlarmService {
     private final UserAlarmRepository userAlarmRepository;
-    private final SseService sseService;
+    private final KafkaProducerService kafkaProducerService;
 
     public void updateAlarmNotification(Long userId) {
         boolean isThereNewAlarm = userAlarmRepository.isThereNewAlarm(userId);
         if (isThereNewAlarm) {
-            boolean result = sseService.sendToClient(userId, SseEventName.NEW_ALARM.getValue(), "");
-            if (result){log.info("[새 알림 존재 SSE 알림 전송] userId={}", userId);}
+            kafkaProducerService.sendSseEvent(new SseEventDto(userId, SseEventName.NEW_ALARM.getValue(), ""));
         } else {
-            boolean result = sseService.sendToClient(userId, SseEventName.NO_ANY_NEW_ALARM.getValue(), "");
-            if (result){log.info("[새 알림 미존재 SSE 알림 전송] userId={}", userId);}
+            kafkaProducerService.sendSseEvent(new SseEventDto(userId, SseEventName.NO_ANY_NEW_ALARM.getValue(), ""));
         }
     }
 }

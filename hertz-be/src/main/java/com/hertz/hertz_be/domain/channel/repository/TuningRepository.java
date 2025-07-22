@@ -11,6 +11,6 @@ import java.util.Optional;
 
 @Repository
 public interface TuningRepository extends JpaRepository<Tuning, Long> {
-    List<Tuning> findByUser(User user);
     Optional<Tuning> findByUserAndCategory(User user, Category category);
+    List<Tuning> findAllByCategory(Category category);
 }

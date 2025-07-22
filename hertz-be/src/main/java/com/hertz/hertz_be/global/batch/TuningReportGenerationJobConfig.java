@@ -3,7 +3,7 @@ package com.hertz.hertz_be.global.batch;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
 import com.hertz.hertz_be.global.exception.AiServerBadRequestException;
-import com.hertz.hertz_be.global.infra.ai.dto.AiTuningReportGenerationRequest;
+import com.hertz.hertz_be.global.infra.ai.dto.request.AiTuningReportGenerationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.batch.core.Job;

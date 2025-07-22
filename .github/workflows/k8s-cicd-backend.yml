@@ -1,0 +1,229 @@
+name: K8s Backend CI/CD with Rolling Update
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - .github/workflows/cicd-backend.yml
+      - .github/workflows/docker-ci-backend.yml
+  workflow_dispatch:
+    inputs:
+      env:
+        description: '배포할 환경 (main 또는 develop)'
+        required: true
+        default: 'app'
+        type: choice
+        options:
+          - app
+          - main
+          - local
+jobs:
+  backend-ci:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      IMAGE_TAG: ${{ steps.build.outputs.IMAGE_TAG }}
+      SHORT_SHA: ${{ steps.build.outputs.SHORT_SHA }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+    
+      # 4. 태그 정보 생성
+      - name: Generate image tags
+        id: generate-tags
+        run: |
+
+          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
+            BRANCH="${{ github.event.inputs.env }}"
+              else
+            BRANCH="${{ github.ref_name }}"
+          fi
+
+          SANITIZED_BRANCH="${BRANCH//\//-}"
+          SANITIZED_BRANCH=$(echo "$SANITIZED_BRANCH" | sed 's#[^a-zA-Z0-9_.-]#-#g')
+          BRANCH="$SANITIZED_BRANCH"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_TAG="k8s-${BRANCH}-${SHORT_SHA}"
+
+          if [ "$BRANCH" = "main" ]; then
+            ENV_TAG="k8s-prod-latest"
+          else
+            ENV_TAG="k8s-develop-latest"
+          fi
+
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "ENV_TAG=$ENV_TAG" >> $GITHUB_ENV
+          echo "BRANCH=$BRANCH" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+          echo "::add-mask::${{ env.IMAGE_TAG }}"
+          echo "::add-mask::${{ env.ENV_TAG }}"
+
+      - name: Fetch Environment Variables from SSM
+        id: fetch-ssm-params
+        run: |
+          ENV_PATH=""
+          if [ "${{ env.BRANCH }}" = "main" ]; then
+            ENV_PATH="/global/k8s/springboot/prod/"
+          else
+            ENV_PATH="/global/k8s/springboot/dev/"
+          fi
+
+          echo "🛠️ SSM에서 환경 변수 가져오는 중: $ENV_PATH"
+
+          # SSM 파라미터 가져오기 및 파싱
+          # `jq`는 JSON 파싱을 위해 필요합니다. `ubuntu-latest`에는 기본 설치되어 있습니다.
+          # 각 파라미터의 값을 명시적으로 마스킹 처리하고,
+          # Spring Boot 환경 변수 명명 규칙에 맞게 키를 변환하여 GITHUB_ENV에 추가합니다.
+          aws ssm get-parameters-by-path \
+            --path "$ENV_PATH" \
+            --recursive \
+            --with-decryption \
+            --query 'Parameters[*].{Name: Name, Value: Value}' | \
+            jq -r '.[] | (.Name | split("/") | last | gsub("[.-]";"_") | ascii_upcase) + "=" + .Value' > .env_temp
+
+          echo "📋 다음 환경 변수들을 테스트에 적용합니다:"
+          # .env_temp 파일의 각 라인을 읽어 환경 변수로 로드하고 마스킹 처리
+          while IFS='=' read -r key value; do
+            if [[ -n "$key" ]]; then
+              echo "::add-mask::$value" # 민감한 값은 로그에 마스킹 처리
+              echo "$key=$value" >> $GITHUB_ENV # 환경 변수로 설정
+              echo "$key=(masked)" # 로그에 설정된 변수 이름만 표시
+            fi
+          done < .env_temp
+          rm .env_temp # 임시 파일 삭제
+        working-directory: hertz-be/ # 프로젝트의 루트 디렉토리가 아닌 경우 설정
+
+      - name: Run All Tests (Unit and Integration)
+        run: |
+          echo "🛠️ 디버깅: 현재 환경 변수 확인..."
+          # WARNING: 이 명령은 민감한 정보를 포함할 수 있습니다.
+          # 테스트 완료 후에는 반드시 이 라인을 삭제하세요.
+          env | grep -E 'SPRING_|DB_|REDIS_|URL_|SECRET_|KEY_' || true
+          echo "🧪 모든 테스트 실행 중 (단위 및 통합, SSM 환경 변수 사용)..."
+          # Testcontainers를 사용하는 통합 테스트도 이 스텝에서 실행됩니다.
+          # SSM에서 가져온 환경 변수는 자동으로 이 스텝에 적용됩니다.
+          ./gradlew test --info # --info 옵션으로 더 자세한 로그 확인 가능
+        working-directory: hertz-be/ # 프로젝트의 루트 디렉토리가 아닌 경우 설정
+        continue-on-error: true # 테스트 실패 시에도 다음 스텝으로 진행하도록 허용
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ github.sha }}
+          path: hertz-be/build/reports/tests/test/index.html # 실제 보고서 경로로 변경 필요
+          retention-days: 7 # 보고서 보관 기간 (선택 사항)
+
+      
+
+      - name: Build and push
+        id: build
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_TAG="k8s-${BRANCH}-${SHORT_SHA}"
+          ENV_TAG="${{ env.ENV_TAG }}"
+          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY=tuning-springboot
+          
+          docker build \
+            --platform linux/amd64 \
+            --cache-from=type=registry,ref=$ECR_REGISTRY/$REPOSITORY:$ENV_TAG \
+            --cache-to=type=inline \
+            -f hertz-be/Dockerfile \
+            -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            hertz-be/
+            
+          docker tag $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$REPOSITORY:$ENV_TAG
+          docker push $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$REPOSITORY:$ENV_TAG
+          
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
+      
+      
+      - name: Notify Discord on Success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d "{\"content\": \"✅ [k8s BE CI 성공] **${{ env.BRANCH }}** 브랜치\\n> 태그: ${{ env.IMAGE_TAG }}\\n> Commit: ${{ env.SHORT_SHA }}\\n> 이미지: ${{ env.FULL_IMAGE }}\"}" \
+              ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+      
+      - name: Notify Discord on Failure
+        if: failure()
+        run: |
+          WORKFLOW_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d "{\"content\": \"❌ [k8s BE CI 실패] **${{ env.BRANCH }}** 브랜치\\n> Commit: ${{ env.SHORT_SHA }}\\n⚠️ [워크플로우 로그 보기]($WORKFLOW_URL)\"}" \
+              ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+  deployment-monitor:
+    needs: backend-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+              
+      - name: Wait for Image Updater
+        run: |
+          echo "⏳ ArgoCD Image Updater가 ECR 이미지를 감지할 때까지 대기..."
+          sleep 180
+
+      - name: Verify deployment
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          EKS_CLUSTER: ${{ secrets.EKS_CLUSTER_NAME }}    # ex: tuning-eks
+        run: |
+          echo "🔑 kubeconfig 설정 중..."
+          aws eks update-kubeconfig \
+            --region "$AWS_REGION" \
+            --name "$EKS_CLUSTER"
+          
+          echo "🚀 springboot-be 디플로이먼트 롤아웃 상태 확인..."
+          kubectl rollout status deployment/springboot-be \
+            -n hertz-tuning-stage \
+            --timeout=180s
+
+          echo "🔍 현재 파드 상태:"
+          kubectl get pods \
+            -l app=springboot-be \
+            -n hertz-tuning-stage \
+            -o wide
+
+      - name: Notify success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"✅ [K8s BE 롤링 배포 성공] **${{ github.ref_name }}**\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"❌ [K8s BE 롤링 배포 실패] **${{ github.ref_name }}**\"}" \
+               ${{ secrets.DISCORD_WEBHOOK_CICD_URL }}

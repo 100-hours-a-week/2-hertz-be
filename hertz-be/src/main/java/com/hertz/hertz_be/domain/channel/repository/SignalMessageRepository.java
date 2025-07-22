@@ -64,7 +64,7 @@ public interface SignalMessageRepository extends JpaRepository<SignalMessage, Lo
 
     int countBySignalRoom(SignalRoom signalRoom);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("""
     UPDATE SignalMessage sm
     SET sm.isRead = true

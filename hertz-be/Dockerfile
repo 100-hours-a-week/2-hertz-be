@@ -10,8 +10,14 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
+# OpenTelemetry Java Agent 다운로드
+RUN curl -L -o opentelemetry-javaagent.jar \
+  https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
+
 # 빌드된 JAR 복사 (단일 JAR 가정)
 COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-Dloader.path=/app","-javaagent:opentelemetry-javaagent.jar","-jar","app.jar"]
+
+#ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,5 +1,6 @@
 package com.hertz.hertz_be.domain.alarm.dto.response.object;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -9,11 +10,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         property = "type"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = NoticeAlarm.class, name = "NOTICE"),
-        @JsonSubTypes.Type(value = ReportAlarm.class, name = "REPORT"),
-        @JsonSubTypes.Type(value = MatchingAlarm.class, name = "MATCHING")
+        @JsonSubTypes.Type(value = NoticeAlarm.class,  name = "NOTICE"),
+        @JsonSubTypes.Type(value = ReportAlarm.class,  name = "REPORT"),
+        @JsonSubTypes.Type(value = MatchingAlarm.class, name = "MATCHING"),
+        @JsonSubTypes.Type(value = AlertAlarm.class,   name = "ALERT")
 })
-public sealed interface AlarmItem permits NoticeAlarm, ReportAlarm, MatchingAlarm {
+public sealed interface AlarmItem permits AlertAlarm, MatchingAlarm, NoticeAlarm, ReportAlarm {
+    @JsonIgnore
     String type();
     String title();
     String createdDate();

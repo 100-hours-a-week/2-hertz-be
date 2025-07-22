@@ -35,14 +35,15 @@ public class TuningReportController {
      */
     @GetMapping("/reports")
     @Operation(summary = "튜닝 리포트 목록 반환 API")
-    public ResponseEntity<ResponseDto<TuningReportListResponse>> createTuningReport (@RequestParam(defaultValue = "0") int page,
-                                                                                     @RequestParam(defaultValue = "10") int size,
-                                                                                     @RequestParam(defaultValue = "LATEST") TuningReportSortType sort,
-                                                                                     @AuthenticationPrincipal Long userId) {
-
+    public ResponseEntity<ResponseDto<TuningReportListResponse>> createTuningReport(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "LATEST") TuningReportSortType sort,
+            @AuthenticationPrincipal Long userId
+    ) {
         TuningReportListResponse response = tuningReportService.getReportList(userId, page, size, sort);
 
-        if(!response.list().isEmpty()) {
+        if (!response.getList().isEmpty()) {
             return ResponseEntity.ok(new ResponseDto<>(
                     ResponseCode.REPORT_LIST_FETCH_SUCCESS,
                     "튜닝 리포트가 정상적으로 조회되었습니다.",
@@ -55,8 +56,6 @@ public class TuningReportController {
                     null
             ));
         }
-
-
     }
 
     /**

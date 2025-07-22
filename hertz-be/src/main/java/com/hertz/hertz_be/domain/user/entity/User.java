@@ -5,6 +5,7 @@ import com.hertz.hertz_be.domain.alarm.entity.UserAlarm;
 import com.hertz.hertz_be.domain.channel.entity.SignalMessage;
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.Tuning;
+import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import com.hertz.hertz_be.domain.user.entity.enums.AgeGroup;
 import com.hertz.hertz_be.domain.user.entity.enums.Gender;
 import com.hertz.hertz_be.domain.user.entity.enums.MembershipType;
@@ -20,8 +21,8 @@ import java.util.List;
 @Entity
 @Table(name = "user")
 @Getter
-@Setter // Todo: Setter가 있으면 객체지향면에서 좋지 않기 때문에 제거하는게 좋을 것 같아요
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // 생성자를 만들되 외부에서 접근하지 못 하도록 함
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class User {
@@ -105,6 +106,24 @@ public class User {
         User user = new User();
         user.setId(id);
         return user;
+    }
+
+    public void changeRejectCategory(Category category, boolean flag) {
+        switch (category) {
+            case COUPLE -> isCoupleAllowed = flag;
+            case FRIEND -> isFriendAllowed = flag;
+        }
+    }
+
+    public boolean isCategoryAllowed(Category category) {
+        return switch (category) {
+            case FRIEND -> isFriendAllowed;
+            case COUPLE -> isCoupleAllowed;
+        };
+    }
+
+    public void updateOneLineIntroduction(String newOneLineIntroduction) {
+        this.oneLineIntroduction = newOneLineIntroduction;
     }
 
 }

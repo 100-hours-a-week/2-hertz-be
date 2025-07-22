@@ -13,13 +13,15 @@ import java.time.LocalDateTime;
 public interface UserAlarmRepository extends JpaRepository<UserAlarm, Long> {
 
     @Query("""
-        SELECT ua
-        FROM UserAlarm ua
-        JOIN FETCH ua.alarm a
-        WHERE ua.user.id = :userId
-          AND a.createdAt >= :thresholdDate
-        ORDER BY a.createdAt DESC
-    """)
+  SELECT ua
+  FROM UserAlarm ua
+  JOIN FETCH ua.alarm a
+  LEFT JOIN FETCH TREAT(a AS AlarmMatching).signalRoom sr
+  LEFT JOIN FETCH sr.tuningReport tr
+  WHERE ua.user.id = :userId
+    AND a.createdAt >= :thresholdDate
+  ORDER BY a.createdAt DESC
+""")
     Page<UserAlarm> findRecentUserAlarms(
             @Param("userId") Long userId,
             @Param("thresholdDate") LocalDateTime thresholdDate,

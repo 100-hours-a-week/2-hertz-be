@@ -12,4 +12,6 @@ public interface AlarmMatchingRepository extends JpaRepository<AlarmMatching, Lo
     List<AlarmMatching> findAllByPartner(User user);
 
     List<AlarmMatching> findAllBySignalRoomIn(List<SignalRoom> rooms);
+
+    boolean existsBySignalRoom(SignalRoom room);
 }

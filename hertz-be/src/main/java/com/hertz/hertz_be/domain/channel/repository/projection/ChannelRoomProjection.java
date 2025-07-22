@@ -14,4 +14,6 @@ public interface ChannelRoomProjection {
     LocalDateTime getReceiverExitedAt();
     Long getSenderUserId();
     Long getReceiverUserId();
+    String getCategory();
+    int getLastPageNumber();
 }

@@ -13,5 +13,9 @@ public class MessageCreatorUtil {
         return "이번 주 튜닝 결과가 왔어요! 👈확인하러가기";
     }
 
+    public static String createAlertMessageForInappropriateContent() {
+        return "부적절한 표현이 담긴 메시지를 전송하여 경고를 받았어요!";
+    }
+
     private MessageCreatorUtil() {}
 }

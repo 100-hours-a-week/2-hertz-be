@@ -9,5 +9,6 @@ public record NewMessageResponseDto(
         String message,
         String messageSendAt,
         String partnerProfileImage,
-        String relationType
+        String relationType,
+        int lastPageNumber
 ) {}
