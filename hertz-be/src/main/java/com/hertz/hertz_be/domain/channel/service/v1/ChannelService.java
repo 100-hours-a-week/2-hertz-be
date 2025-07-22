@@ -419,22 +419,57 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, channelMessagePageSize, pageable);
+        Page<SignalRoom> signalRooms = signalRoomRepository.findAllOrderByLastMessageTimeDesc(userId, pageable);
 
-        if (result.isEmpty()) {
-            return null;
+        if (signalRooms.isEmpty()) {
+            return new ChannelListResponseDto(List.of(), page, size, true);
         }
 
-        List<ChannelSummaryDto> list = result.getContent().stream()
-                .filter(p -> {
-                    boolean isSender = userId.equals(p.getSenderUserId());
-                    LocalDateTime exitedAt = isSender ? p.getSenderExitedAt() : p.getReceiverExitedAt();
-                    return exitedAt == null;
-                })
-                .map(p -> ChannelSummaryDto.fromProjectionWithDecrypt(p, aesUtil))
+        List<ChannelSummaryDto> list = signalRooms.getContent().stream()
+                .filter(room -> !room.isUserExited(userId)) // 나간 방 제외
+                .map(room -> toChannelSummaryDtoV1(room, userId))
                 .toList();
 
-        return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
+        return new ChannelListResponseDto(list, signalRooms.getNumber(), signalRooms.getSize(), signalRooms.isLast());
+    }
+
+    private ChannelSummaryDto toChannelSummaryDtoV1(SignalRoom room, Long userId) {
+        User partner = room.getPartnerUser(userId);
+        SignalMessage lastMessage = extractLastMessage(room);
+
+        String decryptedMessage = decryptMessageSafe(lastMessage != null ? lastMessage.getMessage() : null);
+        LocalDateTime lastMessageTime = lastMessage != null ? lastMessage.getSendAt() : null;
+        boolean isRead = isMessageReadByUser(lastMessage, userId);
+
+        return new ChannelSummaryDto(
+                room.getId(),
+                partner.getProfileImageUrl(),
+                partner.getNickname(),
+                decryptedMessage,
+                lastMessageTime,
+                isRead,
+                room.getRelationType()
+        );
+    }
+
+    private SignalMessage extractLastMessage(SignalRoom room) {
+        return room.getMessages().stream()
+                .max(Comparator.comparing(SignalMessage::getSendAt))
+                .orElse(null);
+    }
+
+    private String decryptMessageSafe(String encrypted) {
+        if (encrypted == null) return "";
+        try {
+            return aesUtil.decrypt(encrypted);
+        } catch (Exception e) {
+            return "메세지를 표시할 수 없습니다.";
+        }
+    }
+
+    private boolean isMessageReadByUser(SignalMessage message, Long userId) {
+        if (message == null) return true;
+        return message.getSenderUser().getId().equals(userId) || message.getIsRead();
     }
 
     @Transactional
