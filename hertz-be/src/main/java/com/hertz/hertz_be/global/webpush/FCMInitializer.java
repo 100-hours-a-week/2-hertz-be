@@ -6,9 +6,9 @@ import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -20,10 +20,8 @@ public class FCMInitializer {
     private String fcmCredentials;
 
     @PostConstruct
-    public void initialize() throws IOException {
-        ClassPathResource resource = new ClassPathResource(fcmCredentials);
-
-        try (InputStream is = resource.getInputStream()) {
+    public void initialize() {
+        try (InputStream is = resolveInputStream(fcmCredentials)) {
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(is))
                     .build();
@@ -37,5 +35,10 @@ public class FCMInitializer {
         } catch (Exception e) {
             log.error("❌ FCM initialization FAIL", e);
         }
+    }
+
+    private InputStream resolveInputStream(String path) throws IOException {
+        log.info("📂 Loading FCM credentials from path: {}", path);
+        return new FileInputStream(path);
     }
 }
