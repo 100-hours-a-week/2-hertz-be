@@ -87,6 +87,28 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
             Pageable pageable
     );
 
+    @Query(value = """
+    SELECT sr.*
+    FROM signal_room sr
+    LEFT JOIN (
+        SELECT sm.signal_room_id, MAX(sm.send_at) AS last_message_time
+        FROM signal_message sm
+        GROUP BY sm.signal_room_id
+    ) sm_last ON sr.id = sm_last.signal_room_id
+    WHERE sr.sender_user_id = :userId OR sr.receiver_user_id = :userId
+    ORDER BY sm_last.last_message_time DESC
+    """,
+            countQuery = """
+    SELECT COUNT(*)
+    FROM signal_room sr
+    WHERE sr.sender_user_id = :userId OR sr.receiver_user_id = :userId
+    """,
+            nativeQuery = true)
+    Page<SignalRoom> findAllOrderByLastMessageTimeDesc(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
+
     @Modifying
     @Transactional
     @Query("""
