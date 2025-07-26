@@ -7,6 +7,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.WebpushConfig;
+import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
+import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
@@ -97,6 +99,28 @@ public class FCMService {
     public boolean shouldNotify(FCMEventType eventType, Long channelRoomId) {
         notifiedMatchingRooms.computeIfAbsent(eventType, k -> ConcurrentHashMap.newKeySet());
         return notifiedMatchingRooms.get(eventType).add(channelRoomId);
+    }
+
+    public void notifyMatchingConfirmedToPartner(SignalRoom room, User user, User partner) {
+        if(!shouldNotify(FCMEventType.MATCHING_DECIDED_BY_PARTNER, room.getId())) {
+            String title = "매칭 성공!";
+            String content = partner.getNickname() + "님 과의 매칭에 성공했어요!";
+
+            sendWebPush(user.getId(), title, content);
+        }
+    }
+
+    public void notifyMatchingResultToPartner(SignalRoom room, User user, User partner, MatchingStatus matchingStatus) {
+        if (matchingStatus == MatchingStatus.MATCHED) {
+            String title = "매칭 수락 알림";
+            String content = user.getNickname() + "님이 매칭을 수락했어요!";
+            sendWebPush(partner.getId(), title, content);
+
+        } else {
+            String title = "매칭 거절 알림";
+            String content = user.getNickname() + "님이 매칭을 거절했어요.";
+            sendWebPush(partner.getId(), title, content);
+        }
     }
 
 }
