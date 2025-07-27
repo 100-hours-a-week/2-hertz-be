@@ -103,8 +103,8 @@ public class FCMService {
 
     public void notifyMatchingConfirmedToPartner(SignalRoom room, User user, User partner) {
         if(!shouldNotify(FCMEventType.MATCHING_DECIDED_BY_PARTNER, room.getId())) {
-            String title = "매칭 성공!";
-            String content = partner.getNickname() + "님 과의 매칭에 성공했어요!";
+            String title = partner.getNickname() + "님이 매칭을 결정했어요.";
+            String content = "나도 마음을 정해볼까요?";
 
             sendWebPush(user.getId(), title, content);
         }
