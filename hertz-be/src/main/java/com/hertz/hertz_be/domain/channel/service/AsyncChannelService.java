@@ -12,6 +12,7 @@ import com.hertz.hertz_be.domain.user.responsecode.UserResponseCode;
 import com.hertz.hertz_be.global.common.NewResponseCode;
 import com.hertz.hertz_be.domain.user.repository.UserRepository;
 import com.hertz.hertz_be.global.exception.BusinessException;
+import com.hertz.hertz_be.global.webpush.service.FCMService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +54,7 @@ public class AsyncChannelService {
     private final UserRepository userRepository;
     private final AlarmService alarmService;
     private final SignalRoomRepository signalRoomRepository;
+    private final FCMService fcmService;
 
     @Async
     public void notifyMatchingConverted(SignalRoom room) {
@@ -155,8 +157,10 @@ public class AsyncChannelService {
 
         if (partnerStatus == MatchingStatus.SIGNAL) {
             sseChannelService.notifyMatchingConfirmedToPartner(latestRoomForm, user, partner);
+            fcmService.notifyMatchingConfirmedToPartner(latestRoomForm, user, partner);
         } else {
             sseChannelService.notifyMatchingResultToPartner(latestRoomForm, user, partner, matchingStatus);
+            fcmService.notifyMatchingResultToPartner(latestRoomForm, user, partner, matchingStatus);
         }
     }
 
