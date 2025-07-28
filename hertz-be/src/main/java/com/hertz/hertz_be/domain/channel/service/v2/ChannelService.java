@@ -71,18 +71,29 @@ public class ChannelService {
         }
 
         entityManager.flush();
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
-                asyncChannelService.createMatchingAlarm(room, userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.notifyMatchingResultToPartner(room, userId, matchingStatus);
+            asyncChannelService.createMatchingAlarm(room, userId);
         });
 
         if(matchingStatus == MatchingStatus.MATCHED) {
             return signalRoomRepository.findMatchResultByUser(userId, room.getId());
         } else {
             return ChannelResponseCode.MATCH_REJECTION_SUCCESS.getCode();
+        }
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    callback.run();
+                }
+            });
+        } else {
+            log.debug("⚠️ 트랜잭션 비활성 상태: 콜백 즉시 실행");
+            callback.run();
         }
     }
 }
