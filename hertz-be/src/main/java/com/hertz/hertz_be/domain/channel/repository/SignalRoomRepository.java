@@ -2,7 +2,7 @@ package com.hertz.hertz_be.domain.channel.repository;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import com.hertz.hertz_be.domain.channel.repository.projection.SignalRoomRepositoryCustom;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import io.lettuce.core.dynamic.annotation.Param;
@@ -16,7 +16,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
-public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
+public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long>, SignalRoomRepositoryCustom {
     boolean existsBySenderUserAndReceiverUser(User sender, User receiver);
 
     Optional<SignalRoom> findByUserPairSignal(String userPairSignal);
