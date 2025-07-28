@@ -154,12 +154,8 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
         });
 
         return new SendSignalResponseDto(signalRoom.getId());
@@ -360,62 +356,6 @@ public class ChannelService {
         );
     }
 
-
-    @Transactional(readOnly = true)
-    public boolean hasNewMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(
-                        UserResponseCode.USER_NOT_FOUND.getCode(),
-                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                        UserResponseCode.USER_NOT_FOUND.getMessage()
-                ));
-
-        List<SignalRoom> allRooms = Stream.concat(
-                user.getSentSignalRooms().stream(),
-                user.getReceivedSignalRooms().stream()
-        ).collect(Collectors.toList());
-
-        if (allRooms.isEmpty()) return false;
-
-        return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
-
-    }
-
-    public Map<String, List<String>> getUserInterests(Long userId) {
-        Map<String, List<String>> interestsMap = new LinkedHashMap<>();
-
-        userInterestsRepository.findByUserId(userId).stream()
-                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.INTEREST)
-                .forEach(ui -> {
-                    String categoryName = ui.getCategoryItem().getCategory().getName();
-                    String itemName = ui.getCategoryItem().getName();
-                    interestsMap.computeIfAbsent(categoryName, k -> new ArrayList<>()).add(itemName);
-                });
-
-        return interestsMap;
-    }
-
-    public Map<String, List<String>> extractSameInterests(Map<String, List<String>> interests1, Map<String, List<String>> interests2) {
-        Map<String, List<String>> sameInterests = new LinkedHashMap<>();
-
-        for (String category : interests1.keySet()) {
-            List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
-            List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
-
-            Set<String> common = new HashSet<>(list1);
-            common.retainAll(list2);
-
-            if (!common.isEmpty()) {
-                sameInterests.put(category, List.of(common.iterator().next()));
-            } else {
-                sameInterests.put(category, Collections.emptyList());
-            }
-        }
-
-        return sameInterests;
-
-    }
-
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -527,12 +467,8 @@ public class ChannelService {
                 .toList();
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.updateNavbarMessageNotification(userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.updateNavbarMessageNotification(userId);
         });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, messages, messagePage);
@@ -581,13 +517,24 @@ public class ChannelService {
 
         signalMessageRepository.save(signalMessage);
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendNewMessageNotifyToPartner(room, signalMessage, partnerId, false);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.notifyMatchingConverted(room);
+            asyncChannelService.sendNewMessageNotifyToPartner(room, signalMessage, partnerId, false);
         });
+
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    callback.run();
+                }
+            });
+        } else {
+            log.debug("⚠️ 트랜잭션 비활성 상태: 콜백 즉시 실행");
+            callback.run();
+        }
     }
 }

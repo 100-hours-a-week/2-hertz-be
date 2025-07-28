@@ -182,13 +182,9 @@ public class ChannelService {
                 .toList();
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.updateNavbarMessageNotification(userId);
-                asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.updateNavbarMessageNotification(userId);
+            asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
         });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, String.valueOf(room.getCategory()), messages, messagePage);
@@ -265,12 +261,8 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
         });
 
         return new SendSignalResponseDto(signalRoom.getId());
@@ -532,6 +524,20 @@ public class ChannelService {
                     NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
                     "메세지 신고 요청 과정에서 예상치못한 AI 서버 응답을 받았습니다."
             );
+        }
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    callback.run();
+                }
+            });
+        } else {
+            log.debug("⚠️ 트랜잭션 비활성 상태: 콜백 즉시 실행");
+            callback.run();
         }
     }
 
