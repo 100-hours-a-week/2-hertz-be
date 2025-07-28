@@ -72,7 +72,8 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<SignalRoom> signalRooms = signalRoomRepository.findAllOrderByLastMessageTimeDesc(userId, pageable);
+        Page<SignalRoom> signalRooms = signalRoomRepository.findAllOrderByLastMessageTimeWithUsers(userId, pageable);
+
 
         if (signalRooms.isEmpty()) {
             return new ChannelListResponseDto(List.of(), page, size, true);
