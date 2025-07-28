@@ -100,7 +100,7 @@ public class ChannelServiceTest {
         when(aesUtil.decrypt("encrypted-msg")).thenReturn("decrypted-msg");
 
         Page<SignalRoom> roomPage = new PageImpl<>(List.of(room1, room2));
-        when(signalRoomRepository.findAllOrderByLastMessageTimeDesc(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
+        when(signalRoomRepository.findAllOrderByLastMessageTimeWithUsers(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
 
         ChannelListResponseDto result = channelService.getPersonalSignalRoomList(1L, 0, 10);
 
@@ -117,7 +117,7 @@ public class ChannelServiceTest {
         when(room.getMessages()).thenReturn(List.of());
 
         Page<SignalRoom> roomPage = new PageImpl<>(List.of(room));
-        when(signalRoomRepository.findAllOrderByLastMessageTimeDesc(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
+        when(signalRoomRepository.findAllOrderByLastMessageTimeWithUsers(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
 
         ChannelListResponseDto result = channelService.getPersonalSignalRoomList(1L, 0, 10);
 
@@ -139,7 +139,7 @@ public class ChannelServiceTest {
         when(aesUtil.decrypt("bad-encrypted-msg")).thenThrow(new RuntimeException("decryption failed"));
 
         Page<SignalRoom> roomPage = new PageImpl<>(List.of(room));
-        when(signalRoomRepository.findAllOrderByLastMessageTimeDesc(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
+        when(signalRoomRepository.findAllOrderByLastMessageTimeWithUsers(eq(1L), any(PageRequest.class))).thenReturn(roomPage);
 
         ChannelListResponseDto result = channelService.getPersonalSignalRoomList(1L, 0, 10);
 

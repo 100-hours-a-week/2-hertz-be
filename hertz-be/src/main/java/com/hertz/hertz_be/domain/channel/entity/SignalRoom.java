@@ -7,6 +7,7 @@ import com.hertz.hertz_be.domain.tuningreport.entity.TuningReport;
 import com.hertz.hertz_be.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -67,6 +68,7 @@ public class SignalRoom {
     private LocalDateTime senderExitedAt = null;
 
     @OneToMany(mappedBy = "signalRoom")
+    @BatchSize(size = 50)
     @Builder.Default
     private List<SignalMessage> messages = new ArrayList<>();
 
