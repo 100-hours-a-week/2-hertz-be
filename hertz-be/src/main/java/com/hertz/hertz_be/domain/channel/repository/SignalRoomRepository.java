@@ -2,7 +2,7 @@ package com.hertz.hertz_be.domain.channel.repository;
 
 import com.hertz.hertz_be.domain.channel.entity.SignalRoom;
 import com.hertz.hertz_be.domain.channel.entity.enums.MatchingStatus;
-import com.hertz.hertz_be.domain.channel.repository.projection.ChannelRoomProjection;
+import com.hertz.hertz_be.domain.channel.repository.projection.SignalRoomRepositoryCustom;
 import com.hertz.hertz_be.domain.user.entity.User;
 import com.hertz.hertz_be.domain.channel.entity.enums.Category;
 import io.lettuce.core.dynamic.annotation.Param;
@@ -16,7 +16,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
-public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
+public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long>, SignalRoomRepositoryCustom {
     boolean existsBySenderUserAndReceiverUser(User sender, User receiver);
 
     Optional<SignalRoom> findByUserPairSignal(String userPairSignal);
@@ -34,56 +34,24 @@ public interface SignalRoomRepository extends JpaRepository<SignalRoom, Long> {
                                         @Param("category") Category category);
 
     @Query(value = """
-    SELECT 
-        sr.id AS channelRoomId,
-        u.profile_image_url AS partnerProfileImage,
-        u.nickname AS partnerNickname,
-        sm.message AS lastMessage,
-        sm.send_at AS lastMessageTime,
-        sr.sender_user_id AS senderUserId,
-        sr.receiver_user_id AS receiverUserId,
-        sr.sender_exited_at AS senderExitedAt,
-        sr.receiver_exited_at AS receiverExitedAt,
-        sr.category AS category,
-        CASE
-            WHEN sm.sender_user_id = :userId THEN 'true'
-            WHEN sm.sender_user_id != :userId AND sm.is_read = true THEN 'true'
-            ELSE 'false'
-        END AS isRead,
-        CASE
-            WHEN sr.sender_matching_status = 'MATCHED' AND sr.receiver_matching_status = 'MATCHED'
-                THEN 'MATCHING'
-            WHEN sr.sender_matching_status = 'UNMATCHED' OR sr.receiver_matching_status = 'UNMATCHED'
-                THEN 'UNMATCHED'
-            ELSE 'SIGNAL'
-        END AS relationType,
-        CEIL(
-            (SELECT COUNT(*) FROM signal_message sm3 WHERE sm3.signal_room_id = sr.id) / :pageSize * 1.0) - 1 AS lastPageNumber
+    SELECT sr.*
     FROM signal_room sr
-    JOIN user u ON 
-        (CASE 
-            WHEN sr.sender_user_id = :userId THEN sr.receiver_user_id 
-            ELSE sr.sender_user_id 
-         END) = u.id
-    LEFT JOIN signal_message sm ON sm.id = (
-        SELECT sm2.id
-        FROM signal_message sm2
-        WHERE sm2.signal_room_id = sr.id
-        ORDER BY sm2.send_at DESC
-        LIMIT 1
-    )
-    WHERE :userId IN (sr.sender_user_id, sr.receiver_user_id)
-    ORDER BY sm.send_at DESC
+    LEFT JOIN (
+        SELECT sm.signal_room_id, MAX(sm.send_at) AS last_message_time
+        FROM signal_message sm
+        GROUP BY sm.signal_room_id
+    ) sm_last ON sr.id = sm_last.signal_room_id
+    WHERE sr.sender_user_id = :userId OR sr.receiver_user_id = :userId
+    ORDER BY sm_last.last_message_time DESC
     """,
             countQuery = """
     SELECT COUNT(*)
     FROM signal_room sr
-    WHERE :userId IN (sr.sender_user_id, sr.receiver_user_id)
+    WHERE sr.sender_user_id = :userId OR sr.receiver_user_id = :userId
     """,
             nativeQuery = true)
-    Page<ChannelRoomProjection> findChannelRoomsWithPartnerAndLastMessage(
+    Page<SignalRoom> findAllOrderByLastMessageTimeDesc(
             @Param("userId") Long userId,
-            @Param("pageSize") int pageSize,
             Pageable pageable
     );
 

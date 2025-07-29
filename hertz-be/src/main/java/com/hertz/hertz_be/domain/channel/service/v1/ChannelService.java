@@ -154,12 +154,8 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
         });
 
         return new SendSignalResponseDto(signalRoom.getId());
@@ -360,81 +356,60 @@ public class ChannelService {
         );
     }
 
-
-    @Transactional(readOnly = true)
-    public boolean hasNewMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(
-                        UserResponseCode.USER_NOT_FOUND.getCode(),
-                        UserResponseCode.USER_NOT_FOUND.getHttpStatus(),
-                        UserResponseCode.USER_NOT_FOUND.getMessage()
-                ));
-
-        List<SignalRoom> allRooms = Stream.concat(
-                user.getSentSignalRooms().stream(),
-                user.getReceivedSignalRooms().stream()
-        ).collect(Collectors.toList());
-
-        if (allRooms.isEmpty()) return false;
-
-        return signalMessageRepository.existsBySignalRoomInAndSenderUserNotAndIsReadFalse(allRooms, user);
-
-    }
-
-    public Map<String, List<String>> getUserInterests(Long userId) {
-        Map<String, List<String>> interestsMap = new LinkedHashMap<>();
-
-        userInterestsRepository.findByUserId(userId).stream()
-                .filter(ui -> ui.getCategoryItem().getCategory().getCategoryType() == InterestsCategoryType.INTEREST)
-                .forEach(ui -> {
-                    String categoryName = ui.getCategoryItem().getCategory().getName();
-                    String itemName = ui.getCategoryItem().getName();
-                    interestsMap.computeIfAbsent(categoryName, k -> new ArrayList<>()).add(itemName);
-                });
-
-        return interestsMap;
-    }
-
-    public Map<String, List<String>> extractSameInterests(Map<String, List<String>> interests1, Map<String, List<String>> interests2) {
-        Map<String, List<String>> sameInterests = new LinkedHashMap<>();
-
-        for (String category : interests1.keySet()) {
-            List<String> list1 = interests1.getOrDefault(category, Collections.emptyList());
-            List<String> list2 = interests2.getOrDefault(category, Collections.emptyList());
-
-            Set<String> common = new HashSet<>(list1);
-            common.retainAll(list2);
-
-            if (!common.isEmpty()) {
-                sameInterests.put(category, List.of(common.iterator().next()));
-            } else {
-                sameInterests.put(category, Collections.emptyList());
-            }
-        }
-
-        return sameInterests;
-
-    }
-
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, channelMessagePageSize, pageable);
+        Page<SignalRoom> signalRooms = signalRoomRepository.findAllOrderByLastMessageTimeDesc(userId, pageable);
 
-        if (result.isEmpty()) {
-            return null;
+        if (signalRooms.isEmpty()) {
+            return new ChannelListResponseDto(List.of(), page, size, true);
         }
 
-        List<ChannelSummaryDto> list = result.getContent().stream()
-                .filter(p -> {
-                    boolean isSender = userId.equals(p.getSenderUserId());
-                    LocalDateTime exitedAt = isSender ? p.getSenderExitedAt() : p.getReceiverExitedAt();
-                    return exitedAt == null;
-                })
-                .map(p -> ChannelSummaryDto.fromProjectionWithDecrypt(p, aesUtil))
+        List<ChannelSummaryDto> list = signalRooms.getContent().stream()
+                .filter(room -> !room.isUserExited(userId)) // 나간 방 제외
+                .map(room -> toChannelSummaryDtoV1(room, userId))
                 .toList();
 
-        return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
+        return new ChannelListResponseDto(list, signalRooms.getNumber(), signalRooms.getSize(), signalRooms.isLast());
+    }
+
+    private ChannelSummaryDto toChannelSummaryDtoV1(SignalRoom room, Long userId) {
+        User partner = room.getPartnerUser(userId);
+        SignalMessage lastMessage = extractLastMessage(room);
+
+        String decryptedMessage = decryptMessageSafe(lastMessage != null ? lastMessage.getMessage() : null);
+        LocalDateTime lastMessageTime = lastMessage != null ? lastMessage.getSendAt() : null;
+        boolean isRead = isMessageReadByUser(lastMessage, userId);
+
+        return new ChannelSummaryDto(
+                room.getId(),
+                partner.getProfileImageUrl(),
+                partner.getNickname(),
+                decryptedMessage,
+                lastMessageTime,
+                isRead,
+                room.getRelationType()
+        );
+    }
+
+    private SignalMessage extractLastMessage(SignalRoom room) {
+        return room.getMessages().stream()
+                .max(Comparator.comparing(SignalMessage::getSendAt))
+                .orElse(null);
+    }
+
+    private String decryptMessageSafe(String encrypted) {
+        if (encrypted == null) return "";
+        try {
+            return aesUtil.decrypt(encrypted);
+        } catch (Exception e) {
+            return "메세지를 표시할 수 없습니다.";
+        }
+    }
+
+    private boolean isMessageReadByUser(SignalMessage message, Long userId) {
+        if (message == null) return true;
+        return message.getSenderUser().getId().equals(userId) || message.getIsRead();
     }
 
     @Transactional
@@ -492,12 +467,8 @@ public class ChannelService {
                 .toList();
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.updateNavbarMessageNotification(userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.updateNavbarMessageNotification(userId);
         });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, messages, messagePage);
@@ -546,13 +517,25 @@ public class ChannelService {
 
         signalMessageRepository.save(signalMessage);
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.notifyMatchingConverted(room);
-                asyncChannelService.sendNewMessageNotifyToPartner(room, signalMessage, partnerId, false);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.notifyMatchingConverted(room);
+            asyncChannelService.sendNewMessageNotifyToPartner(room, signalMessage, partnerId, false);
         });
+
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    callback.run();
+                }
+            });
+        } else {
+            log.debug("⚠️ 트랜잭션 비활성 상태: 콜백 즉시 실행");
+            callback.run();
+        }
     }
 }
+

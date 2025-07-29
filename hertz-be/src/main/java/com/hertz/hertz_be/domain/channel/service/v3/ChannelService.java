@@ -72,22 +72,63 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public ChannelListResponseDto getPersonalSignalRoomList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ChannelRoomProjection> result = signalRoomRepository.findChannelRoomsWithPartnerAndLastMessage(userId, channelMessagePageSize, pageable);
+        Page<SignalRoom> signalRooms = signalRoomRepository.findAllOrderByLastMessageTimeWithUsers(userId, pageable);
 
-        if (result.isEmpty()) {
-            return null;
+
+        if (signalRooms.isEmpty()) {
+            return new ChannelListResponseDto(List.of(), page, size, true);
         }
 
-        List<ChannelSummaryDto> list = result.getContent().stream()
-                .filter(p -> {
-                    boolean isSender = userId.equals(p.getSenderUserId());
-                    LocalDateTime exitedAt = isSender ? p.getSenderExitedAt() : p.getReceiverExitedAt();
-                    return exitedAt == null;
-                })
-                .map(p -> ChannelSummaryDto.fromProjectionWithDecrypt(p, aesUtil))
+        List<ChannelSummaryDto> list = signalRooms.getContent().stream()
+                .filter(room -> !room.isUserExited(userId))
+                .map(room -> toChannelSummaryDto(room, userId))
                 .toList();
 
-        return new ChannelListResponseDto(list, result.getNumber(), result.getSize(), result.isLast());
+        return new ChannelListResponseDto(list, signalRooms.getNumber(), signalRooms.getSize(), signalRooms.isLast());
+    }
+
+    private ChannelSummaryDto toChannelSummaryDto(SignalRoom room, Long userId) {
+        User partner = room.getPartnerUser(userId);
+        SignalMessage lastMessage = extractLastMessage(room);
+
+        String decryptedMessage = decryptMessageSafe(lastMessage != null ? lastMessage.getMessage() : null);
+        LocalDateTime lastMessageTime = lastMessage != null ? lastMessage.getSendAt() : null;
+        boolean isRead = isMessageReadByUser(lastMessage, userId);
+
+        // 특정 체팅방의 마지막 페이지 번호 계산
+        int lastPageNumber = (int) Math.ceil((room.getMessages().size() * 1.0) / channelMessagePageSize) - 1;
+
+        return new ChannelSummaryDto(
+                room.getId(),
+                partner.getProfileImageUrl(),
+                partner.getNickname(),
+                decryptedMessage,
+                lastMessageTime,
+                isRead,
+                room.getCategory().name(),
+                room.getRelationType(),
+                lastPageNumber
+        );
+    }
+
+    private SignalMessage extractLastMessage(SignalRoom room) {
+        return room.getMessages().stream()
+                .max(Comparator.comparing(SignalMessage::getSendAt))
+                .orElse(null);
+    }
+
+    private String decryptMessageSafe(String encrypted) {
+        if (encrypted == null) return "";
+        try {
+            return aesUtil.decrypt(encrypted);
+        } catch (Exception e) {
+            return "메세지를 표시할 수 없습니다.";
+        }
+    }
+
+    private boolean isMessageReadByUser(SignalMessage message, Long userId) {
+        if (message == null) return true;
+        return message.getSenderUser().getId().equals(userId) || message.getIsRead();
     }
 
     @Transactional
@@ -142,13 +183,9 @@ public class ChannelService {
                 .toList();
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.updateNavbarMessageNotification(userId);
-                asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.updateNavbarMessageNotification(userId);
+            asyncChannelService.notifyMatchingConvertedInChannelRoom(room, userId);
         });
 
         return ChannelRoomResponseDto.of(roomId, partner, room.getRelationType(), isPartnerExited, String.valueOf(room.getCategory()), messages, messagePage);
@@ -225,12 +262,8 @@ public class ChannelService {
         signalMessageRepository.save(signalMessage);
 
         entityManager.flush();
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
-            }
+        registerAfterCommitCallback(() -> {
+            asyncChannelService.sendNewMessageNotifyToPartner(signalRoom, signalMessage, receiver.getId(), true);
         });
 
         return new SendSignalResponseDto(signalRoom.getId());
@@ -492,6 +525,20 @@ public class ChannelService {
                     NewResponseCode.INTERNAL_SERVER_ERROR.getHttpStatus(),
                     "메세지 신고 요청 과정에서 예상치못한 AI 서버 응답을 받았습니다."
             );
+        }
+    }
+
+    protected void registerAfterCommitCallback(Runnable callback) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    callback.run();
+                }
+            });
+        } else {
+            log.debug("⚠️ 트랜잭션 비활성 상태: 콜백 즉시 실행");
+            callback.run();
         }
     }
 

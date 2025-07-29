@@ -17,6 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -32,17 +34,42 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AlarmServiceTest {
 
-    @Mock private AlarmNotificationRepository alarmNotificationRepository;
-    @Mock private AlarmReportRepository alarmReportRepository;
-    @Mock private AlarmMatchingRepository alarmMatchingRepository;
-    @Mock private AlarmAlertRepository alarmAlertRepository;
-    @Mock private AlarmRepository alarmRepository;
-    @Mock private UserAlarmRepository userAlarmRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private AsyncAlarmService asyncAlarmService;
-    @Mock private EntityManager entityManager;
 
-    @InjectMocks private AlarmService alarmService;
+    @Mock
+    private EntityManager entityManager;
+
+    @Mock
+    private AlarmNotificationRepository alarmNotificationRepository;
+
+    @Mock
+    private AlarmMatchingRepository alarmMatchingRepository;
+
+    @Mock
+    private AlarmAlertRepository alarmAlertRepository;
+
+    @Mock
+    private AlarmRepository alarmRepository;
+
+    @Mock
+    private AlarmReportRepository alarmReportRepository;
+
+    @Mock
+    private UserAlarmRepository userAlarmRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private AsyncAlarmService asyncAlarmService;
+
+    @Mock
+    private RedissonClient redissonClient;
+
+    @Mock
+    private RLock rLock;
+
+    @InjectMocks
+    private AlarmService alarmService;
 
     private User user;
     private User partner;
@@ -87,29 +114,39 @@ class AlarmServiceTest {
     @Test
     @DisplayName("매칭 알람 생성 - 매칭 성공")
     void createMatchingAlarm_success() {
+        when(redissonClient.getLock(anyString())).thenReturn(rLock);
+        when(rLock.tryLock()).thenReturn(true);
+
         SignalRoom room = SignalRoomFixture.createMatchedRoom(user, partner);
 
+        when(alarmMatchingRepository.existsBySignalRoom(room)).thenReturn(false);
         when(alarmMatchingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         alarmService.createMatchingAlarm(room, user, partner);
 
         verify(alarmMatchingRepository, times(2)).save(any());
         verify(userAlarmRepository, times(2)).save(any());
-        verify(entityManager, times(1)).flush();
+        verify(entityManager).flush();
+        verify(rLock).unlock(); // 락 해제 검증
     }
 
     @Test
     @DisplayName("매칭 알람 생성 - 매칭 실패")
     void createMatchingAlarm_failed() {
+        when(redissonClient.getLock(anyString())).thenReturn(rLock);
+        when(rLock.tryLock()).thenReturn(true);
+
         SignalRoom room = SignalRoomFixture.createUnmatchedRoom(user, partner);
 
+        when(alarmMatchingRepository.existsBySignalRoom(room)).thenReturn(false);
         when(alarmMatchingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         alarmService.createMatchingAlarm(room, user, partner);
 
         verify(alarmMatchingRepository, times(2)).save(any());
         verify(userAlarmRepository, times(2)).save(any());
-        verify(entityManager, times(1)).flush();
+        verify(entityManager).flush();
+        verify(rLock).unlock(); // 락 해제 검증
     }
 
     @Test
