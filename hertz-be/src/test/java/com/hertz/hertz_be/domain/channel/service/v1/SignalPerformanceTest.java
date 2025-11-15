@@ -56,7 +56,7 @@ public class SignalPerformanceTest {
         ReflectionTestUtils.setField(channelService, "entityManager", entityManager);
     }
 
-    @RepeatedTest(50)
+    @RepeatedTest(500)
     @DisplayName("Polling 기반 채팅 API 응답 속도 측정")
     void sendSignal_polling(RepetitionInfo repetitionInfo) throws Exception {
         SendSignalRequestDto dto;
