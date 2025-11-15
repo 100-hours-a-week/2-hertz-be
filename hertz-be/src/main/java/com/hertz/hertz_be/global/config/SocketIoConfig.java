@@ -7,14 +7,17 @@ import com.hertz.hertz_be.global.socketio.CustomJsonSupport;
 import com.hertz.hertz_be.global.util.SocketIoTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import com.corundumstudio.socketio.AuthorizationResult;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
+@Profile("!test")
 public class SocketIoConfig {
 
     @Value("${socketio.server.hostname}")
@@ -27,6 +30,7 @@ public class SocketIoConfig {
     private final SocketIoTokenUtil socketIoTokenUtil;
 
     @Bean
+    @ConditionalOnProperty(name = "socketio.enabled", havingValue = "true", matchIfMissing = true)
     public SocketIOServer socketIoServer() {
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         config.setHostname(hostname);
